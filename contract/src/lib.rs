@@ -35,6 +35,8 @@ mod tests;
 mod tests_batch;
 #[cfg(test)]
 mod tests_mech;
+#[cfg(test)]
+mod tests_fuzz;
 
 use types::*;
 
