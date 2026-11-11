@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { ConnectButton } from "../components/Header";
 import { PackArt } from "../components/PackArt";
 import { BLOCK_TIME_S } from "../config";
-import { formatDuration, formatNear, formatUsd, yoctoToNumber } from "../lib/format";
+import { formatDuration, formatNear, formatNearExact, formatUsd, yoctoToNumber } from "../lib/format";
 import { nearUsd } from "../lib/prices";
 import { useAsync } from "../lib/useAsync";
 import { getPackCount, getRushState, getSeries, getSeriesCount } from "../near/contract";
@@ -92,11 +92,11 @@ function PackOffer({
         <h2>{series.name}</h2>
         <p className="muted">{series.cards_per_pack} cards · at least one burnable</p>
         <div className="offer__price">
-          <span className="offer__near">{formatNear(series.price)} NEAR</span>
+          <span className="offer__near">{formatNearExact(series.price)} NEAR</span>
           {usd != null && <span className="offer__usd">≈ {formatUsd(price * usd)}</span>}
         </div>
         <p className="small muted">
-          + storage deposit: {formatNear(storageMax, 3)} NEAR is attached to pay for the cards' on-chain storage (
+          + storage deposit: {formatNearExact(storageMax)} NEAR is attached to pay for the cards' on-chain storage (
           {usedText}).
         </p>
         {!connected ? (
@@ -104,7 +104,7 @@ function PackOffer({
         ) : confirm ? (
           <div className="confirm">
             <p>
-              You will pay <strong>{formatNear(series.price)} NEAR</strong> plus the storage deposit. The cards are drawn
+              You will pay <strong>{formatNearExact(series.price)} NEAR</strong> plus the storage deposit. The cards are drawn
               on-chain; the purchase cannot be cancelled once signed.
             </p>
             <div className="row">

@@ -14,14 +14,22 @@ export function yoctoToNumber(yocto: string | bigint): number {
   return Number(BigInt(yocto) / 10n ** 16n) / 1e8;
 }
 
-/** NEAR décimal saisi par l'utilisateur → yoctoNEAR (chaîne). */
+/** Montant exact, toutes les décimales utiles : pour un prix que le joueur va payer (jamais arrondi à 0). */
+export function formatNearExact(yocto: string | bigint): string {
+  return formatNear(yocto, 24);
+}
+
+/** NEAR décimal saisi par l'utilisateur → yoctoNEAR (chaîne). Refuse « 1.2.3 », « 1,000.5 » et plus de 24 décimales. */
 export function parseNear(near: string): string {
-  const [w, f = ""] = near.trim().replace(",", ".").split(".");
-  if (!/^\d*$/.test(w) || !/^\d*$/.test(f) || (!w && !f)) throw new Error("Invalid amount");
+  const parts = near.trim().replace(",", ".").split(".");
+  if (parts.length > 2) throw new Error("Invalid amount");
+  const [w, f = ""] = parts;
+  if (!/^\d*$/.test(w) || !/^\d*$/.test(f) || (!w && !f) || f.length > 24) throw new Error("Invalid amount");
   return (BigInt(w || "0") * YOCTO + BigInt((f + "0".repeat(24)).slice(0, 24))).toString();
 }
 
 export function formatUsd(v: number): string {
+  if (!Number.isFinite(v) || v < 0) return "—";
   if (v >= 100) return `$${v.toFixed(0)}`;
   if (v >= 1) return `$${v.toFixed(2)}`;
   if (v >= 0.01) return `$${v.toFixed(3)}`;
@@ -38,6 +46,7 @@ export function formatQty(v: number): string {
   if (!Number.isFinite(v)) return "—";
   if (v >= 1000) return COMPACT.format(v);
   if (v >= 1) return PLAIN.format(v);
+  if (v <= 0) return "0";
   return v.toPrecision(3);
 }
 

@@ -8,7 +8,7 @@ import { CardDetail } from "../components/CardDetail";
 import { Modal } from "../components/Modal";
 import { loadCatalog } from "../lib/catalog";
 import { fetchSales, fetchTrending } from "../lib/indexer";
-import { formatNear, formatUsd, RARITY_LABEL, shortAccount, yoctoToNumber } from "../lib/format";
+import { formatNearExact, formatUsd, RARITY_LABEL, shortAccount, yoctoToNumber } from "../lib/format";
 import { nearUsd } from "../lib/prices";
 import { useAsync } from "../lib/useAsync";
 import { getCard, getListings } from "../near/contract";
@@ -108,7 +108,7 @@ export function Market() {
             cardId: r.card?.card_id ?? null,
             rarity: r.card!.rarity,
             ticker: r.ticker,
-            line: `${n} listed · from ${formatNear(r.listing.price)} NEAR`,
+            line: `${n} listed · from ${formatNearExact(r.listing.price)} NEAR`,
             tokenId: r.tokenId,
           };
         }),
@@ -179,7 +179,7 @@ export function Market() {
               <li key={`${s.token_id}-${s.height}`}>
                 <Card cardId={s.kind === "mythic" ? null : s.card_id} rarity={s.rarity ?? "common"} size="sm" tilt={false} />
                 <span className="sales__ticker">{tickerOf(s.card_id, s.kind)}</span>
-                <span className="sales__price">{formatNear(s.price)} NEAR</span>
+                <span className="sales__price">{formatNearExact(s.price)} NEAR</span>
                 <small className="muted">{new Date(s.ts).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</small>
               </li>
             ))}
@@ -206,7 +206,7 @@ export function Market() {
                 <span className={`rarity-text-${r.card?.rarity ?? "common"}`}>{RARITY_LABEL[r.card?.rarity ?? "common"]}</span>
                 <strong>{r.ticker}</strong>
                 <span className="listing__price">
-                  {formatNear(r.listing.price)} NEAR
+                  {formatNearExact(r.listing.price)} NEAR
                   {nearPrice != null && <small> ≈ {formatUsd(yoctoToNumber(r.listing.price) * nearPrice)}</small>}
                 </span>
                 <small className="muted">by {shortAccount(r.listing.seller_id)}</small>

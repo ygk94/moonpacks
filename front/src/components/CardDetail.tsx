@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { estimateTokens, type TokenEstimate } from "../lib/backing";
 import { loadCatalog, STATE_LABEL, type CatalogEntry } from "../lib/catalog";
-import { formatNear, formatQty, formatUsd, parseNear, RARITY_LABEL } from "../lib/format";
+import { formatNearExact, formatQty, formatUsd, parseNear, RARITY_LABEL, yoctoToNumber } from "../lib/format";
 import { coinUsd, nearUsd } from "../lib/prices";
 import { getCard, getConfig, getResurrected } from "../near/contract";
 import { humanError } from "../near/errors";
@@ -162,8 +162,8 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
 
         {card.listing && (
           <p className="listing-note">
-            Listed for <strong>{formatNear(card.listing.price)} NEAR</strong>
-            {usd != null && ` (≈ ${formatUsd(Number(formatNear(card.listing.price, 6)) * usd)})`}
+            Listed for <strong>{formatNearExact(card.listing.price)} NEAR</strong>
+            {usd != null && ` (≈ ${formatUsd(yoctoToNumber(card.listing.price) * usd)})`}
           </p>
         )}
 
