@@ -9,7 +9,8 @@
 //   GET /sales?limit=20               dernières ventes
 //   GET /resurrected                  cartes devenues brûlables (card_resurrected)
 //   GET /history?series_id=0          événements utiles au rejeu complet d'une série (vérificateur)
-//   GET /events?event=…&limit=50      événements bruts
+//   GET /events?event=…&limit=50      événements bruts (dont pack_refunded et revenue_withdrawn du contrat v3,
+//                                     stockés comme les autres mais affichés nulle part dans le front)
 // Lancement : npm run indexer (depuis front/). Variables : voir .env.example (INDEXER_*).
 
 import { mkdirSync } from "node:fs";
@@ -17,13 +18,15 @@ import { createServer } from "node:http";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { eventsFromTx, rankTrending, tokensFromReveal } from "./lib.mjs";
+import { eventsFromTx, listenHost, rankTrending, tokensFromReveal } from "./lib.mjs";
 
 const env = process.env;
 const CONTRACT = env.INDEXER_CONTRACT_ID ?? env.VITE_CONTRACT_ID ?? "app2.memaster-demo-j7xg7z.testnet";
 const TX_API = env.INDEXER_TX_API ?? "https://tx.test.fastnear.com";
 const RPC = env.INDEXER_RPC_URL ?? env.VITE_RPC_URL ?? "https://rpc.testnet.fastnear.com";
 const PORT = Number(env.INDEXER_PORT ?? 8787);
+// Écoute locale par défaut ; INDEXER_HOST=0.0.0.0 pour l'ouvrir au réseau local (API en lecture seule).
+const HOST = listenHost(env);
 const POLL_MS = Number(env.INDEXER_POLL_MS ?? 3000);
 // Une transaction n'est lue qu'une fois ce nombre de blocs passé : le tirage (3 blocs) et ses reçus sont finis.
 const SETTLE_BLOCKS = 20;
@@ -253,7 +256,7 @@ createServer((req, res) => {
   } catch (e) {
     return send(res, 500, { error: String(e.message ?? e) });
   }
-}).listen(PORT, () => console.log(`[indexer] ${CONTRACT}, API on http://localhost:${PORT}`));
+}).listen(PORT, HOST, () => console.log(`[indexer] ${CONTRACT}, API on http://${HOST}:${PORT}`));
 
 function hideMythic(r) {
   return r.kind === "mythic" ? { ...r, card_id: null } : r;

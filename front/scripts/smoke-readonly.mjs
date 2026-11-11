@@ -4,7 +4,7 @@
 //
 // Prérequis : `npm run dev` (et `npm run indexer` pour la vérification complète), puis
 //   npx playwright install chromium-headless-shell   (une fois)
-//   npm run smoke [-- --out DOSSIER] [--base http://localhost:5173/] [--account compte.testnet]
+//   npm run smoke [-- --out DOSSIER] [--base http://127.0.0.1:5173/] [--account compte.testnet]
 // Captures dans smoke-captures/ (ignoré par git). Code de sortie 1 si une page a une erreur, hors cours
 // publics (CoinGecko limite le débit sans clé, ce qui n'est pas une erreur du front).
 
@@ -14,7 +14,7 @@ import { chromium } from "playwright";
 
 const args = process.argv.slice(2);
 const opt = (name, def) => (args.includes(name) ? args[args.indexOf(name) + 1] : def);
-const BASE = opt("--base", "http://localhost:5173/");
+const BASE = opt("--base", "http://127.0.0.1:5173/");
 const OUT = resolve(opt("--out", "smoke-captures")) + "/";
 const ACCOUNT = opt("--account", "buyer1.memaster-demo-j7xg7z.testnet");
 mkdirSync(OUT, { recursive: true });

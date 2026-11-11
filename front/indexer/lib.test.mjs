@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eventsFromTx, rankTrending, tokensFromReveal } from "./lib.mjs";
+import { eventsFromTx, listenHost, rankTrending, tokensFromReveal } from "./lib.mjs";
 
 const C = "app2.memaster-demo-j7xg7z.testnet";
 const log = (event, data) => `EVENT_JSON:${JSON.stringify({ standard: "memaster", version: "1.0.0", event, data: [data] })}`;
@@ -77,5 +77,46 @@ describe("rankTrending", () => {
     expect(out[0]).toMatchObject({ sales: 2, listings: 0, volume: "7", last_price: "4", score: 4 });
     expect(out[2]).toMatchObject({ kind: "mythic", listings: 2 });
     expect(rankTrending(rows, 1)).toHaveLength(1);
+  });
+});
+
+describe("contract v3 events", () => {
+  it("keeps pack_refunded, revenue_withdrawn and the v3 fields without failing", () => {
+    const tx = {
+      receipts: [
+        receipt(20, 0, C, [
+          log("pack_refunded", { pack_id: 4, owner_id: "b.testnet", price: "1", storage_refund: "2", total: "3", storage_used: 90, by: "x.testnet" }),
+        ]),
+        receipt(21, 0, C, [log("revenue_withdrawn", { amount: "5", to: "owner.testnet", balance_before: "9", committed: "1" })]),
+        receipt(22, 0, C, [log("card_redeemed", { token_id: 41, owner_id: "b.testnet", freed_bytes: 16, storage_refund: "160000000000000000000" })]),
+        receipt(23, 0, C, [
+          log("pack_revealed", {
+            pack_id: 5,
+            series_id: 1,
+            draws: [{ token_id: 50, kind: "visible", index: 0, final_rarity: "common" }],
+            storage: { prepaid_bytes: 1605, used_bytes: 1034, refund: "5710000000000000000000" },
+          }),
+        ]),
+      ],
+    };
+    const out = eventsFromTx(tx, C);
+    expect(out.map((e) => [e.event, e.token_id])).toEqual([
+      ["pack_refunded", null],
+      ["revenue_withdrawn", null],
+      ["card_redeemed", "41"],
+      ["pack_revealed", null],
+    ]);
+    expect(out[0].data.total).toBe("3");
+    expect(tokensFromReveal(out[3].data, () => "abc")).toEqual([
+      { token_id: "50", series_id: 1, kind: "visible", card_index: 0, card_id: "abc", rarity: "common" },
+    ]);
+  });
+});
+
+describe("listen address", () => {
+  it("listens on the local machine only by default", () => {
+    expect(listenHost({})).toBe("127.0.0.1");
+    expect(listenHost({ INDEXER_HOST: "" })).toBe("127.0.0.1");
+    expect(listenHost({ INDEXER_HOST: "0.0.0.0" })).toBe("0.0.0.0");
   });
 });

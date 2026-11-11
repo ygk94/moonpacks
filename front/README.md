@@ -10,7 +10,8 @@ Depuis `front/` (Node 20+ et Python 3 requis) :
 npm install && npm run dev
 ```
 
-Puis ouvrir http://localhost:5173. `npm run dev` prépare d'abord les fichiers publics (`scripts/prepare-assets.mjs`),
+Puis ouvrir http://127.0.0.1:5173. Vite n'écoute que sur la machine (`127.0.0.1`) ; pour ouvrir le front au réseau
+local (un téléphone, par exemple) : `DEV_HOST=0.0.0.0 npm run dev`. `npm run dev` prépare d'abord les fichiers publics (`scripts/prepare-assets.mjs`),
 puis lance Vite :
 
 - `public/catalog.json` : fiche publique de chaque carte (ticker, nom, chaîne, état), tirée de
@@ -32,12 +33,14 @@ npm run indexer
 
 Ce petit service (`indexer/`, Node seul, SQLite intégré `node:sqlite`) lit les transactions du contrat avec l'API
 de fastnear (`tx.test.fastnear.com` : `/v0/account`, puis `/v0/transactions`, reçus et journaux compris). Il garde
-les événements NEP-297 dans `indexer/data/` (ignoré par git) et expose une API en lecture seule sur le port 8787 :
+les événements NEP-297 dans `indexer/data/` (ignoré par git) et expose une API en lecture seule sur
+`127.0.0.1:8787` (`INDEXER_HOST=0.0.0.0` pour l'ouvrir au réseau local, `INDEXER_PORT` pour le port) :
 `/status`, `/trending?hours=24`, `/sales`, `/resurrected` et `/events?event=…`. Il ne parcourt pas les blocs :
 neardata renvoie vite des 429. Il ne lit une transaction qu'une fois passés 20 blocs, quand le tirage est fini.
 
-En dev, le front l'interroge sur `http://localhost:8787`, ou sur `VITE_INDEXER_URL` si elle est définie. S'il ne
-répond pas, « Trending » se rabat sur les annonces du contrat.
+En dev, le front l'interroge sur `http://127.0.0.1:8787`, ou sur `VITE_INDEXER_URL` si elle est définie. S'il ne
+répond pas, « Trending » se rabat sur les annonces du contrat. Les événements du contrat v3 `pack_refunded` et `revenue_withdrawn` sont gardés
+comme les autres (lisibles par `/events?event=…`), sans être affichés dans le front.
 
 Pagination : `/v0/account` est lu en ordre croissant, par pages de 100 (`resume_token`). Le curseur n'avance
 qu'après une page pleine et entièrement lue, et le dédoublonnage par hash couvre la relecture de la dernière page.

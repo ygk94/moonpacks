@@ -87,3 +87,8 @@ export function rankTrending(rows, limit = 8) {
     .slice(0, limit)
     .map(({ last_ts: _, ...g }) => g);
 }
+
+/** Adresse d'écoute de l'API : la machine seule par défaut, `INDEXER_HOST` pour l'ouvrir (ex. 0.0.0.0). */
+export function listenHost(env) {
+  return env.INDEXER_HOST || "127.0.0.1";
+}
