@@ -25,6 +25,8 @@ Depuis la racine du dépôt : `PYTHONPATH=art python3 -m memaster_art --catalogu
 
 Options :
 
+- `--langue en` : textes visibles des SVG en anglais (libellés de rareté, état, pic, mention). Le ticker et le nom du
+  coin ne changent pas. Le front s'en sert (`front/scripts/prepare-assets.mjs`) ; les métadonnées JSON restent en français.
 - `--planche` : planches HTML de contact, 50 cartes par page (`planche-01.html`, …), à ouvrir dans un navigateur.
 - `--base-url https://…/` : préfixe des champs `media` et `reference`. Vide par défaut : chemins relatifs.
 - `--mythiques 1,2,3` : passe ces N° en mythique (règle v2). On peut aussi donner un ticker, mais il vise toutes
