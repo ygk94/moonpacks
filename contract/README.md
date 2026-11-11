@@ -241,7 +241,8 @@ cargo near build non-reproducible-wasm          # → target/near/memaster.wasm 
 (cd mock-redeemer && cargo near build non-reproducible-wasm)
 (cd mock-oracle && cargo near build non-reproducible-wasm)
 
-cargo test --lib                                # 113 tests unitaires (python3 requis pour les tests des scripts)
+cargo test --lib                                # 126 tests unitaires (python3 requis pour les tests des scripts et le fuzz)
+MEMASTER_FUZZ_CASES=5000 cargo test --lib tests_fuzz -- --nocapture   # fuzz différentiel plus long (MEMASTER_FUZZ_SEED pour rejouer)
 cargo test --test sandbox -- --nocapture        # 20 tests sandbox, mesures imprimées (~70 s, en parallèle)
 MECH_VECTORS_OUT=../verifier/tests/vectors/sandbox_mech_vectors.json \
   cargo test --test sandbox -- mechanics_end_to_end   # régénère les événements réels du vérificateur
@@ -310,6 +311,14 @@ brûlable, table de valeur gold), légendaires épuisées (montée à la mythiqu
 exemplaire ressuscité après son tirage (montant de l'oracle) et après (part de la valeur), 14 refus de validation
 (bornes de la table normale, paliers, poids nuls, multiplicateurs, dépassement, planchers, nombre d'emplacements),
 brûlable garantie exigée, stockage prépayé (gold pack plus long et valeur), série sans valeur inchangée.
+
+**Revue du 12/11 (13, `src/tests_fuzz.rs`, `src/tests_limits.rs`).** Fuzz différentiel du tirage : tables valides au
+hasard (toutes les mécaniques, poids jusqu'à u32::MAX, prix extrêmes), état au hasard (plafonds atteints, raretés
+épuisées, burns jusqu'au plancher, résurrections), contrat et vérificateur Python (`verifier/tests/crosscheck.py`)
+comparés au bit près (tirages, valeur, pitié, gold rush), graine fixe et graine d'horloge à chaque `cargo test` ;
+validateur hors ligne (`scripts/validate_series.py`) d'accord avec `validate_table` sur des tables mutées au hasard ;
+pitié au plafond du compteur, burns au plancher, raretés et mythique épuisées, 40 refus de validation, table aux
+bornes, `retry_delay_blocks` minimal.
 
 **Sandbox (20)** :
 
