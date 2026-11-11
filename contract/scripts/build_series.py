@@ -35,7 +35,8 @@ Exemple (near-cli-rs) :
 
 Mécaniques (`"mechanics"` dans les paramètres, voir docs/mecaniques-spec.md) : table or et table rush
 données en poids ou en multiplicateurs des poids de base (la commune compense), pitié, plancher des
-burns, paramètres du rush. Le contrat ne connaît pas la valeur des cartes : c'est ce script qui
+burns (plancher et a priori K), paramètres du rush, cartes ressuscitables (`resurrection` : liste de
+card_id, ou règle `dead_epic_legendary` = épiques et légendaires mortes du catalogue, non adossées). Le contrat ne connaît pas la valeur des cartes : c'est ce script qui
 contrôle la couverture (`coverage_check`, valeurs moyennes par rareté en multiples du prix) et refuse
 une table rush au-delà de `max_rush` (80 %). Les couvertures calculées vont dans manifest.json.
 
@@ -68,6 +69,7 @@ MAX_URL_LEN = 256
 MAX_ASSET_ID_LEN = 128
 MAX_CARDS_PER_CALL = 200
 CARDS_PER_CHUNK = 50
+MAX_RESURRECTABLE = 200
 STORAGE_BYTE_COST = 10 ** 19          # yoctoNEAR par octet (protocole NEAR)
 # Marges de storage_bound (octets) : enregistrement de série (champs fixes, flux de hachage,
 # compteurs des mythiques) à la création, dernier card_id réécrit à chaque appel, et par bloc de
@@ -183,7 +185,7 @@ def build(params, catalogue, secrets_path, new_secrets):
     overrides = params.get("card_overrides", {})
     media_t, ref_t = params.get("media_template"), params.get("reference_template")
 
-    cards, mythic_entries, renamed = [], [], {}
+    cards, mythic_entries, renamed, etat = [], [], {}, {}
     for c in cards_src:
         rarity = RARITY_FR[c["rarete"]]
         if rarity == "mythic":
@@ -211,6 +213,7 @@ def build(params, catalogue, secrets_path, new_secrets):
             "reference": fmt(ref_t, cid),
             "backing": burn.get(c["id"]),
         }
+        etat[cid] = c.get("etat") or ""
         check_len(card["card_id"], MAX_ID_LEN, "card_id")
         check_len(card["title"], MAX_TITLE_LEN, f"title de {cid}")
         check_len(card["media"], MAX_URL_LEN, "media")
@@ -234,7 +237,7 @@ def build(params, catalogue, secrets_path, new_secrets):
     }
     coverage = None
     if params.get("mechanics"):
-        table["mechanics"], coverage = build_mechanics(params, table)
+        table["mechanics"], coverage = build_mechanics(params, table, etat)
     return table, renamed, coverage
 
 
@@ -257,12 +260,38 @@ def table_coverage(weights, cards_per_pack, value):
     return cards_per_pack * sum(weights[r] / total * float(value.get(r, 0)) for r in canon.RARITY_NAMES)
 
 
-def build_mechanics(params, table):
+def resurrectable_indices(spec, cards, etat):
+    """Index (croissants) des cartes ressuscitables : `card_ids` explicites, ou la règle
+    `dead_epic_legendary` (épiques et légendaires « mort… » dans le catalogue, non adossées).
+    Le contrat refuse toute autre carte (rare, commune, adossée par la table)."""
+    index = {c["card_id"]: i for i, c in enumerate(cards)}
+    if "card_ids" in spec:
+        out = []
+        for cid in spec["card_ids"]:
+            if cid not in index:
+                raise SystemExit(f"resurrection : carte inconnue {cid}")
+            out.append(index[cid])
+    elif spec.get("rule") == "dead_epic_legendary":
+        out = [i for i, c in enumerate(cards) if c["rarity"] in ("epic", "legendary")
+               and etat.get(c["card_id"], "").startswith("mort")]
+    else:
+        raise SystemExit("mechanics.resurrection : card_ids ou rule = dead_epic_legendary")
+    out = sorted(set(out))
+    for i in out:
+        c = cards[i]
+        if c["rarity"] not in ("epic", "legendary") or c["backing"] is not None:
+            raise SystemExit(f"resurrection : {c['card_id']} n'est pas une épique ou légendaire non adossée")
+    if len(out) > MAX_RESURRECTABLE:
+        raise SystemExit(f"resurrection : {len(out)} cartes, {MAX_RESURRECTABLE} au plus")
+    return out
+
+
+def build_mechanics(params, table, etat=None):
     """Mécaniques de la table (hachées avec elle). Contrôle hors chaîne de la couverture : le contrat
     n'a pas la valeur des cartes, c'est ce script qui refuse une table rush trop généreuse."""
     m = params["mechanics"]
     base = table["rarity_weights"]
-    out = {"gold_weights": None, "pity": None, "burn": None, "rush": None}
+    out = {"gold_weights": None, "pity": None, "burn": None, "rush": None, "resurrection": None}
     if m.get("gold_weights") or m.get("gold_multipliers"):
         out["gold_weights"] = m.get("gold_weights") or scaled_weights(base, m["gold_multipliers"])
     if m.get("pity"):
@@ -275,6 +304,8 @@ def build_mechanics(params, table):
         out["rush"] = {k: int(r[k]) for k in ("ratio_bps", "min_packs", "window_blocks", "baseline_blocks",
                                                "bucket_blocks", "duration_blocks", "cooldown_blocks")}
         out["rush"]["weights"] = weights
+    if m.get("resurrection"):
+        out["resurrection"] = {"eligible": resurrectable_indices(m["resurrection"], table["cards"], etat or {})}
     coverage = None
     chk = m.get("coverage_check")
     if chk:
@@ -374,6 +405,8 @@ def main(argv=None):
         "deposit_total_near": f"{sum(int(d) for d in deposits.values()) / 10 ** 24:.3f}",
         "renamed_ids": renamed,
         "mechanics": table.get("mechanics"),
+        "resurrectable": [table["cards"][i]["card_id"] for i in
+                          ((table.get("mechanics") or {}).get("resurrection") or {}).get("eligible", [])],
         "coverage": coverage,
         "secrets_file": os.path.relpath(secrets_path, CONTRACT),
     }

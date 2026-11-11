@@ -83,7 +83,7 @@ fn big_table(n: usize) -> SeriesTable {
 
 fn new_contract() -> Contract {
     set(owner(), 0, 10);
-    Contract::new(owner(), None, None, None, Some(100))
+    Contract::new(owner(), None, None, None, Some(100), None)
 }
 
 /// Charge `t` par lots de `lot` cartes ; renvoie l'identifiant de série.

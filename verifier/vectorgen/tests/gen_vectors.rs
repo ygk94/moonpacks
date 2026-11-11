@@ -323,7 +323,21 @@ fn mech_vectors() {
                 prior_k: if rng.chance(1, 4) { 0 } else { rng.below(40) as u32 },
             }),
             rush: rng.chance(1, 2).then(|| rand_rush(&mut rng)),
+            resurrection: None,
         };
+        // Cartes ressuscitables : épiques et légendaires non adossées, la moitié environ.
+        let eligible: Vec<u32> = table
+            .cards
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| matches!(c.rarity, Rarity::Epic | Rarity::Legendary) && c.backing.is_none())
+            .map(|(i, _)| i as u32)
+            .filter(|_| rng.chance(1, 2))
+            .collect();
+        let mut mech = mech;
+        if !eligible.is_empty() && rng.chance(3, 4) {
+            mech.resurrection = Some(ResurrectionParams { eligible });
+        }
         table.mechanics = Some(mech.clone());
         let table_json = serde_json::to_string(&table).unwrap();
         let table_hash = sha(&[table_json.as_bytes()]);
@@ -347,16 +361,22 @@ fn mech_vectors() {
             .collect();
         let burned: Vec<u32> = minted.iter().map(|m| rng.below(*m as u64 + 1) as u32).collect();
         let mut cards: Vec<DrawCard> = table.cards.iter().map(DrawCard::from).collect();
-        for c in cards.iter_mut() {
-            if !c.backed && rng.chance(1, 6) {
-                c.backed = true; // ressuscitée
+        let resurrectable: Vec<u32> = mech.resurrection.as_ref().map(|r| r.eligible.clone()).unwrap_or_default();
+        for &i in &resurrectable {
+            if rng.chance(2, 3) {
+                cards[i as usize].backed = true; // ressuscitée
             }
         }
         let backed: Vec<bool> = cards.iter().map(|c| c.backed).collect();
         let mut mythic_minted: Vec<u32> =
             table.mythics.iter().map(|m| (m.cap as u64).saturating_sub(rng.below(3)) as u32).collect();
         let (minted_before, mythic_before) = (minted.clone(), mythic_minted.clone());
-        let bv = mech.burn.as_ref().map(|b| draw::BurnView { burned: &burned, floor_bps: b.floor_bps, prior_k: b.prior_k });
+        let bv = mech.burn.as_ref().map(|b| draw::BurnView {
+            burned: &burned,
+            floor_bps: b.floor_bps,
+            prior_k: b.prior_k,
+            resurrectable: &resurrectable,
+        });
         let mut draws = Vec::new();
         for slot in 0..table.cards_per_pack {
             let d = draw::draw_slot_mech(&weights, &cards, &table.mythics, &minted, &mythic_minted, bv.as_ref(), &acc, slot);

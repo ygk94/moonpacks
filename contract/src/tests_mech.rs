@@ -105,12 +105,12 @@ fn gold() -> RarityWeights {
 }
 
 fn mech(pity: Option<PityParams>, burn: bool, rush: Option<RushParams>) -> Mechanics {
-    Mechanics { gold_weights: Some(gold()), pity, burn: burn.then_some(BurnParams { floor_bps: 2_500, prior_k: PRIOR_K }), rush }
+    Mechanics { gold_weights: Some(gold()), pity, burn: burn.then_some(BurnParams { floor_bps: 2_500, prior_k: PRIOR_K }), rush, resurrection: None }
 }
 
 fn contract_with(t: SeriesTable) -> Contract {
     set(owner(), 0, 10);
-    let mut c = Contract::new(owner(), Some("redeemer.test".parse().unwrap()), None, None, Some(100));
+    let mut c = Contract::new(owner(), Some("redeemer.test".parse().unwrap()), None, None, Some(100), None);
     let id = c.create_series(t);
     c.open_series(id);
     c
@@ -259,10 +259,12 @@ fn renormalization_keeps_burnable_share_exact() {
             .collect();
         let minted: Vec<u32> = (0..n).map(|_| rnd(30) as u32).collect();
         let burned: Vec<u32> = minted.iter().map(|m| if *m == 0 { 0 } else { rnd(*m as u64 + 1) as u32 }).collect();
-        let bv = draw::BurnView { burned: &burned, floor_bps: FLOOR, prior_k: (rnd(3) * 10) as u32 };
+        // Une partie des brûlables sont des ressuscitées (ratio moyen des autres).
+        let resurrectable: Vec<u32> = (0..n as u32).filter(|_| rnd(3) == 0).collect();
+        let bv = draw::BurnView { burned: &burned, floor_bps: FLOOR, prior_k: (rnd(3) * 10) as u32, resurrectable: &resurrectable };
         let f = draw::burn_factors(&cards, &minted, &bv, Rarity::Common);
         let ws: Vec<u128> =
-            (0..n).map(|i| draw::in_rarity_weight(&cards[i], minted[i], burned[i], &bv, f)).collect();
+            (0..n).map(|i| draw::in_rarity_weight(&cards[i], i, minted[i], &bv, f)).collect();
         let base: Vec<u128> = (0..n)
             .map(|i| draw::available_weight_compact(&cards[i..=i], &[], &minted[i..=i], &[], Rarity::Common) as u128)
             .collect();
@@ -298,7 +300,7 @@ fn burn_mech() -> Mechanics {
 }
 
 fn burn_mech_k(prior_k: u32) -> Mechanics {
-    Mechanics { gold_weights: None, pity: None, burn: Some(BurnParams { floor_bps: FLOOR, prior_k }), rush: None }
+    Mechanics { gold_weights: None, pity: None, burn: Some(BurnParams { floor_bps: FLOOR, prior_k }), rush: None, resurrection: None }
 }
 
 #[test]
@@ -327,7 +329,7 @@ fn burns_shift_weight_between_burnables_of_the_rarity() {
     // Les tirages suivants = tirage de référence avec les compteurs de burn.
     let s = c.series_ref(0).clone();
     let (mut minted, burned) = (s.minted.clone(), c.get_series(0).burned);
-    let bv = draw::BurnView { burned: &burned, floor_bps: FLOOR, prior_k: 0 };
+    let bv = draw::BurnView { burned: &burned, floor_bps: FLOOR, prior_k: 0, resurrectable: &[] };
     let id = buy_reveal(&mut c, alice(), 99, 300);
     let p = pack(&c, id);
     let acc: [u8; 32] = hex_decode(p["acc"].as_str().unwrap()).unwrap().try_into().unwrap();
@@ -363,6 +365,7 @@ fn exhausted_card_stays_at_zero_after_burns() {
         pity: Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 1 }),
         burn: Some(BurnParams { floor_bps: FLOOR, prior_k: PRIOR_K }),
         rush: None,
+        resurrection: None,
     }));
     t.cards[0].cap = Some(1);
     let mut c = contract_with(t);
@@ -512,15 +515,14 @@ fn epic_table(m: Option<Mechanics>) -> SeriesTable {
 
 #[test]
 fn resurrection_makes_existing_and_future_cards_burnable() {
-    let mut c = contract_with(epic_table(Some(burn_mech())));
+    let mut c = contract_with(epic_table(Some(res_mech(&[6]))));
     for k in 0..6u8 {
         buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
     }
     let b = backed_tokens(&c, &alice(), "epic_b");
     assert!(!b.is_empty());
     assert!(c.get_backing(b[0].clone()).is_none());
-    set(owner(), 0, 100);
-    c.set_price_oracle(Some(oracle()));
+    install_oracle(&mut c, 100);
     set(oracle(), NEAR, 101);
     let backing = Backing { asset_id: "nep141:revived.near".into(), amount: U128(77) };
     c.set_resurrected(0, 6, backing.clone());
@@ -543,20 +545,17 @@ fn resurrection_makes_existing_and_future_cards_burnable() {
     assert_eq!(c.get_backing(nb[0].clone()).unwrap().amount, U128(78));
 }
 
+/// Une carte hors des épiques et légendaires non adossées ne peut pas figurer dans la liste
+/// ressuscitable : la table est refusée.
 fn resurrect(index: u32) {
-    let mut c = contract_with(table(None));
-    set(owner(), 0, 100);
-    c.set_price_oracle(Some(oracle()));
-    set(oracle(), NEAR, 101);
-    c.set_resurrected(0, index, Backing { asset_id: "x".into(), amount: U128(1) });
+    contract_with(table(Some(res_mech(&[index]))));
 }
 
 #[test]
 #[should_panic(expected = "Réservé à l'oracle de prix")]
 fn resurrection_is_oracle_only() {
-    let mut c = contract_with(table(None));
-    set(owner(), 0, 100);
-    c.set_price_oracle(Some(oracle()));
+    let mut c = contract_with(table(Some(res_mech(&[6]))));
+    install_oracle(&mut c, 100);
     set(owner(), NEAR, 101);
     c.set_resurrected(0, 6, Backing { asset_id: "x".into(), amount: U128(1) });
 }
@@ -591,7 +590,7 @@ fn rejects(m: Mechanics, msg: &str) {
 #[test]
 fn invalid_mechanics_are_rejected() {
     let pity = |n| Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: n });
-    rejects(Mechanics { gold_weights: None, pity: pity(3), burn: None, rush: None }, "pity exige gold_weights");
+    rejects(Mechanics { gold_weights: None, pity: pity(3), burn: None, rush: None, resurrection: None }, "pity exige gold_weights");
     rejects(mech(pity(0), false, None), "n_max");
     rejects(mech(Some(PityParams { p0_ppm: 2_000_000, k_ppm: 0, n_max: 3 }), false, None), "ppm");
     rejects(mech(None, false, Some(rush(15_000, 2, 25, 100, 10, 5, 0))), "multiples");
@@ -604,10 +603,10 @@ fn invalid_mechanics_are_rejected() {
     let mut same = rush(15_000, 2, 10, 100, 10, 5, 0);
     same.weights = gold();
     rejects(mech(None, false, Some(same)), "distincte de la table or");
-    rejects(Mechanics { gold_weights: Some(w(1, 0, 0, 0, 0)), pity: None, burn: None, rush: None }, "engagement");
-    rejects(Mechanics { gold_weights: None, pity: None, burn: Some(BurnParams { floor_bps: 10_001, prior_k: 0 }), rush: None }, "floor_bps");
+    rejects(Mechanics { gold_weights: Some(w(1, 0, 0, 0, 0)), pity: None, burn: None, rush: None, resurrection: None }, "engagement");
+    rejects(Mechanics { gold_weights: None, pity: None, burn: Some(BurnParams { floor_bps: 10_001, prior_k: 0 }), rush: None, resurrection: None }, "floor_bps");
     // Table or qui donne du poids à une rareté sans carte : refusée à l'ouverture.
-    let mut t = table(Some(Mechanics { gold_weights: Some(w(0, 1, 0, 0, 0)), pity: None, burn: None, rush: None }));
+    let mut t = table(Some(Mechanics { gold_weights: Some(w(0, 1, 0, 0, 0)), pity: None, burn: None, rush: None, resurrection: None }));
     t.rarity_weights = w(0, 0, 9, 30, 960);
     t.cards.remove(0);
     let r = std::panic::catch_unwind(|| contract_with(t));
@@ -720,4 +719,88 @@ fn early_burns_are_smoothed_by_prior() {
     let share_ppm = ew[9] * 1_000_000 / total;
     assert!(share_ppm < 110_000, "part de la 10ᵉ épique : {share_ppm} ppm (10 % sans burn)");
     assert!(share_ppm > 100_000, "elle gagne quand même un peu : {share_ppm} ppm");
+}
+
+/// Mécaniques d'une série où les épiques mortes `dead` (index de table) sont ressuscitables.
+fn res_mech(dead: &[u32]) -> Mechanics {
+    Mechanics { resurrection: Some(ResurrectionParams { eligible: dead.to_vec() }), ..burn_mech() }
+}
+
+/// Oracle de prix installé en deux temps : proposition, puis acceptation après le délai.
+fn install_oracle(c: &mut Contract, at: u64) {
+    set(owner(), 0, at);
+    c.propose_price_oracle(Some(oracle()));
+    set(owner(), 0, at + DEFAULT_ORACLE_DELAY_BLOCKS);
+    c.accept_price_oracle();
+}
+
+/// Revue, point 3 : une carte ressuscitée entre dans le calcul des burns avec le ratio moyen des
+/// brûlables de sa rareté, pas avec un poids plein. Quatre épiques adossées entièrement brûlées
+/// (au plancher), une épique morte émise 100 fois puis ressuscitée : sa part parmi les brûlables
+/// doit rester sa part de base (20 %), pas 50 %.
+#[test]
+fn resurrected_card_enters_with_mean_ratio() {
+    let mut t = table(Some(res_mech(&[4])));
+    t.rarity_weights = w(0, 0, 100, 0, 900);
+    t.cards = (0..4).map(|i| card(&format!("e{i}"), Rarity::Epic, 100, None, true)).collect();
+    t.cards.push(card("dead", Rarity::Epic, 100, None, false));
+    t.cards.push(card("com", Rarity::Common, 1, None, false));
+    let mut c = contract_with(t);
+    for i in 0..5 {
+        c.series.get_mut(0).unwrap().minted[i] = 100;
+        if i < 4 {
+            c.series_burns.get_mut(&0).unwrap().burned[i] = 100;
+        }
+    }
+    install_oracle(&mut c, 50);
+    set(oracle(), NEAR, 101);
+    c.set_resurrected(0, 4, Backing { asset_id: "nep141:dead.near".into(), amount: U128(1) });
+    let rates = c.get_rates(0, None, None);
+    let ew: Vec<u128> = rates["rarities"][2]["cards"].as_array().unwrap().iter().map(|x| x["effective_weight"].as_str().unwrap().parse().unwrap()).collect();
+    let share_ppm = ew[4] * 1_000_000 / ew.iter().sum::<u128>();
+    assert!(share_ppm <= 200_000, "part de la ressuscitée parmi les brûlables : {share_ppm} ppm (base 20 %)");
+}
+
+/// Revue, point 3 : l'oracle ne ressuscite que les cartes engagées dans la table hachée.
+#[test]
+#[should_panic(expected = "non ressuscitable")]
+fn resurrection_limited_to_hashed_list() {
+    let mut c = contract_with(epic_table(Some(res_mech(&[]))));
+    install_oracle(&mut c, 50);
+    set(oracle(), NEAR, 101);
+    c.set_resurrected(0, 6, Backing { asset_id: "x".into(), amount: U128(1) });
+}
+
+/// Revue, point 3 : le changement d'oracle se fait en deux temps, avec un délai et un événement
+/// à chaque étape ; le retrait est immédiat.
+#[test]
+fn oracle_change_is_two_step_with_delay() {
+    let mut c = contract_with(epic_table(Some(res_mech(&[6]))));
+    set(owner(), 0, 100);
+    c.propose_price_oracle(Some(oracle()));
+    let logs = near_sdk::test_utils::get_logs();
+    assert!(logs.iter().any(|l| l.contains("price_oracle_proposed") && l.contains("\"effective_from\":144100")), "{logs:?}");
+    assert_eq!(c.get_config()["price_oracle_id"], Value::Null, "pas encore actif");
+    // Avant le délai : refus ; l'oracle proposé ne peut rien faire.
+    set(owner(), 0, 100 + DEFAULT_ORACLE_DELAY_BLOCKS - 1);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.accept_price_oracle()));
+    assert!(r.is_err());
+    set(oracle(), NEAR, 200);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        c.set_resurrected(0, 6, Backing { asset_id: "x".into(), amount: U128(1) })
+    }));
+    assert!(r.is_err(), "oracle proposé mais pas accepté");
+    // Seul l'owner propose et accepte.
+    set(alice(), 0, 300);
+    assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.propose_price_oracle(Some(alice())))).is_err());
+    set(owner(), 0, 100 + DEFAULT_ORACLE_DELAY_BLOCKS);
+    c.accept_price_oracle();
+    assert!(near_sdk::test_utils::get_logs().iter().any(|l| l.contains("price_oracle_accepted")));
+    assert_eq!(c.get_config()["price_oracle_id"], oracle().to_string());
+    assert_eq!(c.get_config()["price_oracle_pending"], Value::Null);
+    // Retrait immédiat.
+    set(owner(), 0, 200_000);
+    c.revoke_price_oracle();
+    assert!(near_sdk::test_utils::get_logs().iter().any(|l| l.contains("price_oracle_revoked")));
+    assert_eq!(c.get_config()["price_oracle_id"], Value::Null);
 }

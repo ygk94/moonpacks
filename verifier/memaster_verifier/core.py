@@ -125,12 +125,21 @@ TAG_GOLD = 2
 @dataclass(frozen=True)
 class Burn:
     """État des burns pour un tirage : ``burned[i]``, ``backed[i]`` (adossée par la table ou
-    ressuscitée), plancher en points de base, a priori ``K``."""
+    ressuscitée), plancher en points de base, a priori ``K``, cartes ressuscitables de la table
+    (``mechanics.resurrection.eligible``)."""
 
     burned: list
     backed: list
     floor_bps: int
     prior_k: int = 0
+    resurrectable: tuple = ()
+
+    def resurrected(self, i: int) -> bool:
+        return self.backed[i] and i in self.resurrectable
+
+
+def _floor_weight(w: int, floor_bps: int) -> int:
+    return max(w * floor_bps // 10_000, 1)
 
 
 def raw_burn_weight(w: int, minted: int, burned: int, cap, floor_bps: int, prior_k: int = 0) -> int:
@@ -140,26 +149,55 @@ def raw_burn_weight(w: int, minted: int, burned: int, cap, floor_bps: int, prior
     if minted == 0:
         return w
     circ = max(minted - burned, 0) + prior_k
-    return max(w * circ // (minted + prior_k), max(w * floor_bps // 10_000, 1))
+    return max(w * circ // (minted + prior_k), _floor_weight(w, floor_bps))
 
 
-def burn_factors(table: dict, minted: list[int], burn: Burn, rarity: str) -> tuple[int, int]:
-    e = b = 0
-    for i, (c, n) in enumerate(zip(table["cards"], minted)):
-        if c["rarity"] != rarity or not burn.backed[i]:
-            continue
-        e += raw_burn_weight(c["weight"], n, burn.burned[i], c.get("cap"), burn.floor_bps, burn.prior_k)
-        b += _available(c["weight"], n, c.get("cap"))
-    return e, b
+@dataclass(frozen=True)
+class BurnFactors:
+    e: int
+    b: int
+    e0: int
+    b0: int
 
 
-def in_rarity_weight(table: dict, i: int, minted: int, burn: Burn, f: tuple[int, int]) -> int:
+def burnable_raw(table: dict, i: int, minted: int, burn: Burn, e0: int, b0: int) -> int:
+    """Poids brut d'une brûlable ; une carte ressuscitée prend le ratio moyen ``e0 / b0`` des
+    brûlables de la table dans sa rareté, borné par son propre poids brut."""
     c = table["cards"][i]
-    e, b = f
+    own = raw_burn_weight(c["weight"], minted, burn.burned[i], c.get("cap"), burn.floor_bps, burn.prior_k)
+    if own == 0 or b0 == 0 or not burn.resurrected(i):
+        return own
+    return min(own, max(c["weight"] * e0 // b0, _floor_weight(c["weight"], burn.floor_bps)))
+
+
+def burn_factors(table: dict, minted: list[int], burn: Burn, rarity: str) -> BurnFactors:
+    e0 = b0 = 0
+    cards = table["cards"]
+    for i, (c, n) in enumerate(zip(cards, minted)):
+        if c["rarity"] != rarity or not burn.backed[i] or burn.resurrected(i):
+            continue
+        e0 += raw_burn_weight(c["weight"], n, burn.burned[i], c.get("cap"), burn.floor_bps, burn.prior_k)
+        b0 += _available(c["weight"], n, c.get("cap"))
+    e, b = e0, b0
+    for i, (c, n) in enumerate(zip(cards, minted)):
+        if c["rarity"] != rarity or not burn.resurrected(i):
+            continue
+        e += burnable_raw(table, i, n, burn, e0, b0)
+        b += _available(c["weight"], n, c.get("cap"))
+    return BurnFactors(e, b, e0, b0)
+
+
+def in_rarity_weight(table: dict, i: int, minted: int, burn: Burn, f: BurnFactors) -> int:
+    c = table["cards"][i]
     if burn.backed[i]:
-        return 0 if e == 0 else raw_burn_weight(c["weight"], minted, burn.burned[i], c.get("cap"), burn.floor_bps, burn.prior_k) * b
+        return 0 if f.e == 0 else burnable_raw(table, i, minted, burn, f.e0, f.b0) * f.b
     a = _available(c["weight"], minted, c.get("cap"))
-    return a if e == 0 else a * e
+    return a if f.e == 0 else a * f.e
+
+
+def resurrectable(table: dict) -> tuple:
+    r = (table.get("mechanics") or {}).get("resurrection")
+    return tuple(r["eligible"]) if r else ()
 
 
 def available_weight_mech(table, minted, mythic_minted, burn: Burn | None, rarity: str) -> int:

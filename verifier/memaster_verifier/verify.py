@@ -437,9 +437,15 @@ class SeriesReplay:
         if ev.get("burn_seq") is not None and ev.get("kind") == "visible":
             self.pending_burns[int(ev["burn_seq"])] = int(ev["index"])
 
-    def on_resurrected(self, ev: dict) -> None:
+    def on_resurrected(self, ev: dict) -> Report | None:
+        i = int(ev["card_index"])
+        rep = None
+        if i not in core.resurrectable(self.table):
+            rep = Report(f"Résurrection de la carte {i} (série {ev.get('series_id')})")
+            rep.errors.append(f"carte {i} absente de mechanics.resurrection.eligible (table hachée) : résurrection interdite")
         if ev.get("previous") is None:
-            self.pending_res[int(ev["resurrect_seq"])] = int(ev["card_index"])
+            self.pending_res[int(ev["resurrect_seq"])] = i
+        return rep
 
     def _advance(self, burn_seq: int | None, res_seq: int | None) -> list[str]:
         missing = []
@@ -475,7 +481,10 @@ class SeriesReplay:
                 missing = self._advance(em.get("burn_seq"), em.get("resurrect_seq"))
                 if not missing:
                     mech.update(
-                        burn=core.Burn(list(self.burned), list(self.backed), self.mech["burn"]["floor_bps"], self.mech["burn"]["prior_k"]),
+                        burn=core.Burn(
+                            list(self.burned), list(self.backed), self.mech["burn"]["floor_bps"],
+                            self.mech["burn"]["prior_k"], core.resurrectable(self.table),
+                        ),
                         burn_seq=self.burn_seq,
                         resurrect_seq=self.resurrect_seq,
                     )
@@ -494,7 +503,7 @@ class SeriesReplay:
         if name == "card_redeemed":
             self.on_redeemed(ev)
         elif name == "card_resurrected":
-            self.on_resurrected(ev)
+            return self.on_resurrected(ev)
         elif name == "pack_revealed":
             return self.on_revealed(ev)
         return None

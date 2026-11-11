@@ -99,6 +99,7 @@ fn validate_coverage(header: &SeriesTable, cards: &[DrawCard]) {
             && cards.iter().any(|c| c.rarity == Rarity::Common && c.cap.is_none() && c.weight > 0),
         "Il faut au moins une commune sans plafond et de poids non nul"
     );
+    crate::mechanics::validate_resurrectable(header, cards);
 }
 
 /// Validation complète d'une table (à la création non partielle, et toujours à l'ouverture).

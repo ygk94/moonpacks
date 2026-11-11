@@ -110,7 +110,7 @@ fn table() -> SeriesTable {
 
 fn setup() -> Contract {
     set(owner(), 0, 10);
-    let mut c = Contract::new(owner(), Some(redeemer()), None, None, Some(100));
+    let mut c = Contract::new(owner(), Some(redeemer()), None, None, Some(100), None);
     let id = c.create_series(table());
     c.open_series(id);
     c
@@ -139,7 +139,7 @@ fn buy_and_reveal(c: &mut Contract, buyer: AccountId, seed_byte: u8) -> u64 {
 #[should_panic(expected = "commune sans plafond")]
 fn table_without_unlimited_common_is_rejected() {
     set(owner(), 0, 1);
-    let mut c = Contract::new(owner(), None, None, None, None);
+    let mut c = Contract::new(owner(), None, None, None, None, None);
     let mut t = table();
     for x in t.cards.iter_mut() {
         if x.rarity == Rarity::Common {
@@ -153,7 +153,7 @@ fn table_without_unlimited_common_is_rejected() {
 #[should_panic(expected = "engagements")]
 fn visible_mythic_card_is_rejected() {
     set(owner(), 0, 1);
-    let mut c = Contract::new(owner(), None, None, None, None);
+    let mut c = Contract::new(owner(), None, None, None, None, None);
     let mut t = table();
     t.cards[0].rarity = Rarity::Mythic;
     c.create_series(t);
@@ -163,7 +163,7 @@ fn visible_mythic_card_is_rejected() {
 #[should_panic(expected = "Réservé à l'owner")]
 fn only_owner_creates_series() {
     set(owner(), 0, 1);
-    let mut c = Contract::new(owner(), None, None, None, None);
+    let mut c = Contract::new(owner(), None, None, None, None, None);
     set(alice(), 0, 1);
     c.create_series(table());
 }
@@ -582,7 +582,7 @@ fn buy_with_stale_price_fails() {
 #[should_panic(expected = "Poids mythique sans engagement de poids non nul")]
 fn mythic_weight_needs_a_weighted_commitment() {
     set(owner(), 0, 1);
-    let mut c = Contract::new(owner(), None, None, None, None);
+    let mut c = Contract::new(owner(), None, None, None, None, None);
     let mut t = table();
     t.mythics[0].weight = 0;
     c.create_series(t);
@@ -592,7 +592,7 @@ fn mythic_weight_needs_a_weighted_commitment() {
 #[should_panic(expected = "content_hash en double")]
 fn duplicate_content_hash_is_rejected() {
     set(owner(), 0, 1);
-    let mut c = Contract::new(owner(), None, None, None, None);
+    let mut c = Contract::new(owner(), None, None, None, None, None);
     let mut t = table();
     let sel = hex_decode(SEL).unwrap();
     let (c2, _) = crate::mythic::compute_commitments("autre", &sel, &mythic_content());

@@ -108,12 +108,16 @@ async fn setup_with(hooks: bool, retry_delay: u64) -> Result<Env> {
         .call("new")
         .args_json(json!({
             "owner_id": owner.id(), "redeemer_id": redeemer.id(), "retry_delay_blocks": retry_delay,
+            "oracle_delay_blocks": ORACLE_DELAY,
         }))
         .transact()
         .await?
         .into_result()?;
     Ok(Env { worker, contract, redeemer, owner, alice, bob, carol })
 }
+
+/// Délai du changement d'oracle dans le sandbox (24 h en production).
+const ORACLE_DELAY: u64 = 10;
 
 async fn setup() -> Result<Env> {
     setup_with(false, 30).await
@@ -1302,6 +1306,8 @@ async fn max_size_series_fits() -> Result<()> {
             cooldown_blocks: 36_000,
             weights: weights(2, 2, 2, 2, 1),
         }),
+        // Toutes les cartes sont adossées par la table : aucune n'est ressuscitable.
+        resurrection: None,
     });
     t.royalties = (0..10).map(|i| Royalty { account_id: format!("r{i}.test.near").parse().unwrap(), bps: 100 }).collect();
     let mut first = t.clone();
@@ -1501,7 +1507,12 @@ async fn mechanics_end_to_end() -> Result<()> {
     let oc = env.worker.root_account()?.create_subaccount("oracle").initial_balance(NearToken::from_near(20)).transact().await?.into_result()?;
     let oracle = oc.deploy(wasm_oracle().await).await?.into_result()?;
     oracle.call("new").args_json(json!({ "memaster": env.contract.id(), "operator": env.owner.id() })).transact().await?.into_result()?;
-    env.owner.call(env.contract.id(), "set_price_oracle").args_json(json!({ "price_oracle_id": oracle.id() })).transact().await?.into_result()?;
+    // Changement d'oracle en deux temps : refusé avant le délai, accepté après.
+    env.owner.call(env.contract.id(), "propose_price_oracle").args_json(json!({ "price_oracle_id": oracle.id() })).transact().await?.into_result()?;
+    let r = env.owner.call(env.contract.id(), "accept_price_oracle").args_json(json!({})).transact().await?;
+    assert!(format!("{:?}", r.failures()).contains("non écoulé"), "{:?}", r.failures());
+    env.worker.fast_forward(ORACLE_DELAY).await?;
+    env.owner.call(env.contract.id(), "accept_price_oracle").args_json(json!({})).transact().await?.into_result()?;
 
     let mut t = table(
         "Mécaniques",
@@ -1536,6 +1547,8 @@ async fn mechanics_end_to_end() -> Result<()> {
             cooldown_blocks: 20,
             weights: weights(0, 30, 150, 250, 570),
         }),
+        // leg_b et epic_c, non adossées par la table.
+        resurrection: Some(ResurrectionParams { eligible: vec![1, 4] }),
     });
     let sid = open_series(&env, &t).await?;
     let prepaid = series_view(&env, sid).await?["storage_per_pack"].as_u64().unwrap();

@@ -61,6 +61,13 @@ pub(crate) fn validate_mechanics(t: &SeriesTable) {
         require!(p.n_max >= 1 && p.n_max <= MAX_PITY_N, "pity.n_max hors bornes (1 à 10 000)");
         require!(p.p0_ppm as u64 <= PPM && p.k_ppm as u64 <= PPM, "pity : probabilités en ppm (≤ 10⁶)");
     }
+    if let Some(r) = &m.resurrection {
+        require!(r.eligible.len() <= MAX_RESURRECTABLE, "resurrection.eligible : 200 cartes au plus");
+        require!(
+            r.eligible.windows(2).all(|p| p[0] < p[1]),
+            "resurrection.eligible : index strictement croissants"
+        );
+    }
     if let Some(b) = &m.burn {
         require!(b.floor_bps <= 10_000, "burn.floor_bps ≤ 10 000");
         require!(b.prior_k <= MAX_BURN_PRIOR_K, "burn.prior_k ≤ 1 000 000");
@@ -88,6 +95,24 @@ pub(crate) fn validate_mechanics(t: &SeriesTable) {
     }
 }
 
+/// Cartes ressuscitables de la table (liste vide sans `mechanics.resurrection`).
+pub(crate) fn resurrectable(t: &SeriesTable) -> &[u32] {
+    t.mechanics.as_ref().and_then(|m| m.resurrection.as_ref()).map(|r| r.eligible.as_slice()).unwrap_or(&[])
+}
+
+/// Contrôles de la liste ressuscitable qui portent sur les cartes (à l'ouverture, et à la création
+/// d'une table complète) : chaque index désigne une épique ou une légendaire non adossée.
+pub(crate) fn validate_resurrectable(t: &SeriesTable, cards: &[DrawCard]) {
+    for &i in resurrectable(t) {
+        let c = cards.get(i as usize).unwrap_or_else(|| env::panic_str("resurrection.eligible : index de carte inconnu"));
+        require!(
+            matches!(c.rarity, Rarity::Epic | Rarity::Legendary),
+            "resurrection.eligible : cartes épiques et légendaires seulement"
+        );
+        require!(!c.backed, "resurrection.eligible : carte déjà adossée par la table");
+    }
+}
+
 pub(crate) fn burn_params(t: &SeriesTable) -> Option<&BurnParams> {
     t.mechanics.as_ref().and_then(|m| m.burn.as_ref())
 }
@@ -95,7 +120,8 @@ pub(crate) fn burn_params(t: &SeriesTable) -> Option<&BurnParams> {
 #[near]
 impl Contract {
     /// Résurrection d'un coin mort, réservée à l'oracle de prix : la carte visible `card_index`,
-    /// **épique ou légendaire** (rare et commune refusées), devient brûlable contre `backing`,
+    /// **engagée dans la table hachée** (`mechanics.resurrection.eligible` : épiques et légendaires
+    /// non adossées seulement), devient brûlable contre `backing`,
     /// pour les cartes à venir **et** pour les exemplaires existants (l'adossement est lu à la
     /// demande). Un nouvel appel remplace l'adossement. Refusé pour une carte déjà adossée par la
     /// table. Le stockage ajouté est payé par l'appelant (excédent rendu). Événement
@@ -113,6 +139,10 @@ impl Contract {
             "Série non ouverte"
         );
         require!((card_index as usize) < s.draw_cards.len(), "Index de carte inconnu");
+        require!(
+            resurrectable(&s.table).binary_search(&card_index).is_ok(),
+            "Carte non ressuscitable : absente de mechanics.resurrection.eligible (table hachée)"
+        );
         let card = self.card_def(series_id, card_index);
         require!(
             matches!(card.rarity, Rarity::Epic | Rarity::Legendary),

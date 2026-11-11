@@ -57,7 +57,7 @@ class MechVectors(unittest.TestCase):
         burns = 0
         for c in MECH["cases"]:
             t, m = c["table"], c["table"]["mechanics"]
-            burn = core.Burn(c["burned"], c["backed"], m["burn"]["floor_bps"], m["burn"]["prior_k"]) if m["burn"] else None
+            burn = core.Burn(c["burned"], c["backed"], m["burn"]["floor_bps"], m["burn"]["prior_k"], core.resurrectable(t)) if m["burn"] else None
             burns += burn is not None and any(c["burned"])
             mm, mmm = list(c["minted"]), list(c["mythic_minted"])
             got = core.draw_pack(t, mm, mmm, bytes.fromhex(c["acc"]), core.mode_weights(t, c["mode"]), burn)
@@ -83,7 +83,7 @@ class MechVectors(unittest.TestCase):
             t, m = c["table"], c["table"]["mechanics"]
             if not m["burn"]:
                 continue
-            burn = core.Burn(c["burned"], c["backed"], m["burn"]["floor_bps"], m["burn"]["prior_k"])
+            burn = core.Burn(c["burned"], c["backed"], m["burn"]["floor_bps"], m["burn"]["prior_k"], core.resurrectable(t))
             for r in ("legendary", "epic", "rare", "common"):
                 f = core.burn_factors(t, c["minted"], burn, r)
                 idx = [i for i, x in enumerate(t["cards"]) if x["rarity"] == r]
@@ -111,6 +111,31 @@ class ReviewFixes(unittest.TestCase):
         self.assertLess(share[20], 0.11)
         self.assertEqual(core.raw_burn_weight(100, 1, 1, None, 2_500, 20), 95)
         self.assertEqual(core.raw_burn_weight(100, 60, 60, None, 2_500, 20), 25)
+
+    def test_resurrected_card_enters_with_mean_ratio(self):
+        # 4 épiques adossées toutes brûlées, une morte (index 4) émise 100 fois puis ressuscitée.
+        t = {"cards": [{"rarity": "epic", "weight": 100, "cap": None} for _ in range(5)],
+             "mechanics": {"resurrection": {"eligible": [4]}}}
+        minted = [100] * 5
+        burn = core.Burn([100] * 4 + [0], [True] * 5, 2_500, 20, core.resurrectable(t))
+        f = core.burn_factors(t, minted, burn, "epic")
+        ws = [core.in_rarity_weight(t, i, minted[i], burn, f) for i in range(5)]
+        self.assertEqual(ws[4] * 5, sum(ws))  # part de base : 20 %
+        # Hors liste, elle compterait comme une adossée de la table, à poids plein : 50 %.
+        full = core.Burn([100] * 4 + [0], [True] * 5, 2_500, 20, ())
+        f = core.burn_factors(t, minted, full, "epic")
+        ws = [core.in_rarity_weight(t, i, minted[i], full, f) for i in range(5)]
+        self.assertGreater(ws[4] * 2, sum(ws) - 1)
+
+    def test_resurrection_outside_hashed_list_is_rejected(self):
+        table = json.loads(SBX["table_raw"])
+        items = copy.deepcopy(items_of(SBX))
+        for n, e in items:
+            if n == "card_resurrected":
+                e["card_index"] = 5  # la rare, absente de mechanics.resurrection.eligible
+                break
+        reports, _ = verify.replay_series(table, items)
+        self.assertTrue(any("absente de mechanics.resurrection.eligible" in x for r in reports for x in r.errors))
 
 
 class SandboxMechanics(unittest.TestCase):

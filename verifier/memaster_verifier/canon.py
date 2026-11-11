@@ -142,6 +142,10 @@ def rush_json(r: dict) -> str:
     )
 
 
+def resurrection_json(r: dict) -> str:
+    return _obj([("eligible", "[" + ",".join(_u32(i) for i in r["eligible"]) + "]")])
+
+
 def mechanics_json(m: dict) -> str:
     """`Mechanics` : tous les champs, `null` pour une option absente, dans l'ordre de `types.rs`."""
     return _obj(
@@ -150,6 +154,7 @@ def mechanics_json(m: dict) -> str:
             ("pity", _opt(m.get("pity"), pity_json)),
             ("burn", _opt(m.get("burn"), burn_json)),
             ("rush", _opt(m.get("rush"), rush_json)),
+            ("resurrection", _opt(m.get("resurrection"), resurrection_json)),
         ]
     )
 

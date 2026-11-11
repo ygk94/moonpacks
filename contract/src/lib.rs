@@ -110,6 +110,10 @@ pub const GLOBAL_CHUNK: u32 = 64;
 pub const MAX_RUSH_BUCKETS: u64 = 96;
 /// Bornes du compteur de pitié.
 pub const MAX_PITY_N: u32 = 10_000;
+/// Cartes ressuscitables au plus par série (`ResurrectionParams::eligible`).
+pub const MAX_RESURRECTABLE: usize = 200;
+/// Délai par défaut du changement d'oracle : 24 h à 0,6 s par bloc.
+pub const DEFAULT_ORACLE_DELAY_BLOCKS: u64 = 144_000;
 /// Borne de l'a priori des burns (`BurnParams::prior_k`).
 pub const MAX_BURN_PRIOR_K: u32 = 1_000_000;
 pub const PPM: u64 = 1_000_000;
@@ -139,6 +143,8 @@ pub struct Contract {
     redeemer_id: Option<AccountId>,
     /// Oracle de prix abstrait (résurrection des coins morts), comme le redeemer.
     price_oracle_id: Option<AccountId>,
+    /// Changement d'oracle en attente (`propose_price_oracle`, puis `accept_price_oracle`).
+    price_oracle_pending: Option<OracleProposal>,
     config: Config,
     metadata: NFTContractMetadata,
     series: Vector<Series>,
@@ -177,6 +183,7 @@ impl Contract {
         metadata: Option<NFTContractMetadata>,
         reveal_steps: Option<u8>,
         retry_delay_blocks: Option<u64>,
+        oracle_delay_blocks: Option<u64>,
     ) -> Self {
         let metadata = metadata.unwrap_or(NFTContractMetadata {
             spec: NFT_METADATA_SPEC.to_string(),
@@ -197,9 +204,11 @@ impl Contract {
             owner_id,
             redeemer_id,
             price_oracle_id: None,
+            price_oracle_pending: None,
             config: Config {
                 reveal_steps,
                 retry_delay_blocks: retry_delay_blocks.unwrap_or(100),
+                oracle_delay_blocks: oracle_delay_blocks.unwrap_or(DEFAULT_ORACLE_DELAY_BLOCKS),
             },
             metadata,
             series: Vector::new(StorageKey::Series),
@@ -230,11 +239,57 @@ impl Contract {
         events::emit("redeemer_set", near_sdk::serde_json::json!({ "redeemer_id": redeemer_id }));
     }
 
-    /// Change l'oracle de prix (résurrection des coins morts). `None` désactive la résurrection.
-    pub fn set_price_oracle(&mut self, price_oracle_id: Option<AccountId>) {
+    /// Propose un nouvel oracle de prix (résurrection des coins morts), `None` pour n'en plus avoir.
+    /// Le changement n'a lieu qu'à `accept_price_oracle`, au plus tôt `oracle_delay_blocks` blocs
+    /// plus tard (24 h par défaut) : les joueurs voient venir tout changement de ceux qui peuvent
+    /// rendre une carte brûlable. Une nouvelle proposition remplace la précédente et relance le délai.
+    pub fn propose_price_oracle(&mut self, price_oracle_id: Option<AccountId>) {
         self.assert_owner();
-        self.price_oracle_id = price_oracle_id.clone();
-        events::emit("price_oracle_set", near_sdk::serde_json::json!({ "price_oracle_id": price_oracle_id }));
+        let h = env::block_height();
+        let p = OracleProposal {
+            price_oracle_id,
+            proposed_at: h,
+            effective_from: h.saturating_add(self.config.oracle_delay_blocks),
+        };
+        events::emit(
+            "price_oracle_proposed",
+            near_sdk::serde_json::json!({
+                "price_oracle_id": p.price_oracle_id, "current": self.price_oracle_id,
+                "proposed_at": p.proposed_at, "effective_from": p.effective_from,
+            }),
+        );
+        self.price_oracle_pending = Some(p);
+    }
+
+    /// Applique le changement d'oracle proposé, une fois le délai écoulé (owner).
+    pub fn accept_price_oracle(&mut self) {
+        self.assert_owner();
+        let p = self.price_oracle_pending.clone().unwrap_or_else(|| env::panic_str("Aucun changement d'oracle proposé"));
+        require!(
+            env::block_height() >= p.effective_from,
+            format!("Délai du changement d'oracle non écoulé : bloc {} au plus tôt", p.effective_from)
+        );
+        let previous = std::mem::replace(&mut self.price_oracle_id, p.price_oracle_id.clone());
+        self.price_oracle_pending = None;
+        events::emit(
+            "price_oracle_accepted",
+            near_sdk::serde_json::json!({
+                "price_oracle_id": p.price_oracle_id, "previous": previous,
+                "proposed_at": p.proposed_at, "block_height": env::block_height(),
+            }),
+        );
+    }
+
+    /// Retire l'oracle de prix tout de suite (owner), par exemple si sa clé est compromise. Retirer
+    /// l'oracle ne fait que supprimer des résurrections futures : pas de délai. Une proposition en
+    /// attente reste en attente.
+    pub fn revoke_price_oracle(&mut self) {
+        self.assert_owner();
+        let previous = self.price_oracle_id.take();
+        events::emit(
+            "price_oracle_revoked",
+            near_sdk::serde_json::json!({ "previous": previous, "block_height": env::block_height() }),
+        );
     }
 
     /// Fait échouer le dernier reçu du tirage (build `test-hooks` seulement).

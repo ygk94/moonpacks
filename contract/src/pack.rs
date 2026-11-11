@@ -255,7 +255,13 @@ impl Contract {
         let seeds_ev = Self::seeds_json(pack_id, &pack, &series.table_hash.unwrap_or([0; 32]));
         self.packs.insert(pack_id, pack);
 
-        let bv = burned.as_ref().map(|(b, p)| draw::BurnView { burned: b, floor_bps: p.floor_bps, prior_k: p.prior_k });
+        let resurrectable = crate::mechanics::resurrectable(&series.table).to_vec();
+        let bv = burned.as_ref().map(|(b, p)| draw::BurnView {
+            burned: b,
+            floor_bps: p.floor_bps,
+            prior_k: p.prior_k,
+            resurrectable: &resurrectable,
+        });
         let mut draws = Vec::with_capacity(n as usize);
         let mut records = Vec::with_capacity(n as usize);
         let mut minted_tokens = Vec::with_capacity(n as usize);

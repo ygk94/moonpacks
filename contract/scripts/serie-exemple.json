@@ -81,6 +81,10 @@
         "rare": 1.17
       }
     },
+    "resurrection": {
+      "_doc": "Cartes que l'oracle de prix pourra ressusciter, engagées dans la table hachée : épiques et légendaires « mort… » du catalogue, non adossées (200 au plus).",
+      "rule": "dead_epic_legendary"
+    },
     "coverage_check": {
       "_doc": "Valeur moyenne d'un emplacement par rareté, en multiples du prix du pack, déduite de la série 3 (base 58,6 %, or 184 %, rush 80 %).",
       "rarity_value": {

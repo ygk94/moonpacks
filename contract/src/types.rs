@@ -178,6 +178,17 @@ pub struct Mechanics {
     pub burn: Option<BurnParams>,
     /// Gold rush collectif, avec sa propre table de taux.
     pub rush: Option<RushParams>,
+    /// Cartes que l'oracle de prix peut ressusciter. Sans ce champ, aucune résurrection.
+    pub resurrection: Option<ResurrectionParams>,
+}
+
+/// Ensemble des cartes ressuscitables, engagé dans la table hachée : index de cartes visibles
+/// **épiques ou légendaires, non adossées par la table**, strictement croissants (200 au plus).
+/// L'oracle de prix ne peut rendre brûlable qu'une carte de cette liste.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResurrectionParams {
+    pub eligible: Vec<u32>,
 }
 
 /// Pitié : probabilité d'un gold pack `min(10⁶, p0_ppm + k_ppm × n)` ppm, `n` = packs consécutifs
@@ -480,6 +491,17 @@ pub struct Config {
     pub reveal_steps: u8,
     /// Délai, en blocs, avant qu'un `retry_reveal` soit permis.
     pub retry_delay_blocks: u64,
+    /// Délai, en blocs, entre `propose_price_oracle` et `accept_price_oracle` (24 h par défaut).
+    pub oracle_delay_blocks: u64,
+}
+
+/// Changement d'oracle de prix proposé, acceptable à partir de `effective_from`.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OracleProposal {
+    pub price_oracle_id: Option<AccountId>,
+    pub proposed_at: u64,
+    pub effective_from: u64,
 }
 
 /// NEP-199.

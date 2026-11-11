@@ -202,6 +202,7 @@ mod tests {
                 cooldown_blocks: 36_000,
                 weights: RarityWeights { mythic: 3, legendary: 30, epic: 241, rare: 936, common: 8_790 },
             }),
+            resurrection: Some(ResurrectionParams { eligible: vec![0, 3] }),
         });
         let json = String::from_utf8(near_sdk::serde_json::to_vec(&t).unwrap()).unwrap();
         assert!(json.ends_with(concat!(
@@ -210,7 +211,8 @@ mod tests {
             r#""pity":{"p0_ppm":20000,"k_ppm":10000,"n_max":30},"burn":{"floor_bps":2500,"prior_k":20},"#,
             r#""rush":{"ratio_bps":25000,"min_packs":50,"window_blocks":6000,"baseline_blocks":144000,"#,
             r#""bucket_blocks":1500,"duration_blocks":3000,"cooldown_blocks":36000,"#,
-            r#""weights":{"mythic":3,"legendary":30,"epic":241,"rare":936,"common":8790}}}}"#,
+            r#""weights":{"mythic":3,"legendary":30,"epic":241,"rare":936,"common":8790}},"#,
+            r#""resurrection":{"eligible":[0,3]}}}"#,
         )), "{json}");
         let (before, after) = header_json_parts(&t);
         assert_eq!([before, after].concat(), json.into_bytes());

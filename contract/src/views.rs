@@ -85,6 +85,8 @@ impl Contract {
             "owner_id": self.owner_id,
             "redeemer_id": self.redeemer_id,
             "price_oracle_id": self.price_oracle_id,
+            "price_oracle_pending": self.price_oracle_pending,
+            "oracle_delay_blocks": self.config.oracle_delay_blocks,
             "reveal_steps": self.config.reveal_steps,
             "retry_delay_blocks": self.config.retry_delay_blocks,
             "gas": {
@@ -203,10 +205,11 @@ impl Contract {
         let burned = self.series_burns.get(&series_id).map(|b| b.burned.clone());
         let bp = crate::mechanics::burn_params(t);
         let (floor, prior_k) = bp.map(|b| (b.floor_bps, b.prior_k)).unwrap_or((0, 0));
-        let bv = burned.as_ref().map(|b| draw::BurnView { burned: b, floor_bps: floor, prior_k });
-        let burn_f: Vec<(u128, u128)> = Rarity::ALL
+        let resurrectable = crate::mechanics::resurrectable(t);
+        let bv = burned.as_ref().map(|b| draw::BurnView { burned: b, floor_bps: floor, prior_k, resurrectable });
+        let burn_f: Vec<draw::BurnFactors> = Rarity::ALL
             .iter()
-            .map(|r| bv.as_ref().map(|bv| draw::burn_factors(&s.draw_cards, &s.minted, bv, *r)).unwrap_or((0, 0)))
+            .map(|r| bv.as_ref().map(|bv| draw::burn_factors(&s.draw_cards, &s.minted, bv, *r)).unwrap_or_default())
             .collect();
         let rarities: Vec<Value> = Rarity::ALL
             .iter()
@@ -242,7 +245,7 @@ impl Contract {
                                 "burnable": c.backing.is_some() || self.resurrected.contains_key(&(series_id, i as u32)),
                                 "ppm": ppm(rw, total, c.weight as u64, sum),
                                 // Poids dans la rareté (renormalisé entre brûlables) et part en ppm de la rareté.
-                                "effective_weight": bv.as_ref().map(|bv| U128(draw::in_rarity_weight(&s.draw_cards[i], s.minted[i], bv.burned[i], bv, burn_f[r.index()]))),
+                                "effective_weight": bv.as_ref().map(|bv| U128(draw::in_rarity_weight(&s.draw_cards[i], i, s.minted[i], bv, burn_f[r.index()]))),
                             })
                         })
                         .collect();
