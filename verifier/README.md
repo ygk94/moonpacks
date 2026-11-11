@@ -9,6 +9,25 @@ données publiques : la table de la série, les événements `pack_revealed` et 
   Le code ne réutilise rien du Rust : il suit la spécification du contrat, et sa concordance octet par octet est
   vérifiée par des vecteurs tirés du contrat lui-même (voir « Tests »).
 
+## Séries à mécaniques
+
+Les mécaniques (`docs/mecaniques-spec.md`) sont dans la table hachée (`mechanics`, absent pour une série sans
+mécanique : `canon.py` ne l'écrit alors pas, et les hash d'avant ne bougent pas). Tout l'état qui influence un tirage est
+journalisé, et le vérificateur le **rejoue à partir des événements seuls**, sans archive d'état (`verify.SeriesReplay`) :
+
+| Mécanique | Événements lus | Ce qui est recalculé |
+|---|---|---|
+| Pitié | `pack_revealed.mechanics.pity` | `gold_roll = roll(acc, 0, 2) mod 10⁶`, `p = min(10⁶, p0 + k·n)`, décision (`n + 1 ≥ N` ou `gold_roll < p`), `after`, et le compteur de chaque compte chaîné d'un booster au suivant |
+| Table de taux | `pack_revealed.mechanics.mode` | `gold` si la pitié l'accorde, sinon `rush` si le pack est rush, sinon `base` ; `rarity_roll` avec les poids de cette table |
+| Gold rush | `pack_bought.rush` (hauteurs) | anneau de seaux rejoué (`core.rush_on_buy`) : `active`, `window_count`, `baseline_count`, `triggered`, et égalité avec `pack_revealed.mechanics.rush` |
+| Burns | `card_redeemed.burn_seq`, `card_resurrected.resurrect_seq`, `pack_revealed.mechanics.burn_seq` / `resurrect_seq` | compteurs de burn et brûlables au moment du tirage, poids renormalisés entre brûlables de la rareté, choix de la carte ; un numéro de séquence manquant est signalé |
+
+`pack --event FICHIER --table table.json` sur une série à mécaniques rejoue tous les événements utiles du fichier
+(`pack_bought`, `pack_revealed`, `card_redeemed`, `card_resurrected`), dans l'ordre du fichier. `stats` compare les
+raretés visées au mélange des tables effectivement utilisées, booster par booster ; le test par carte est omis quand la
+rareté est pilotée par les burns. Sans `pack_bought`, le rush n'est pas recoupé (seul le drapeau journalisé sert).
+Sans `card_redeemed`, le choix de la carte d'une série à burns n'est pas recalculé (vérification partielle).
+
 ## Ce qui est vérifié
 
 | Commande | Vérification |
@@ -52,7 +71,8 @@ Si l'on passe plusieurs événements à `--event` (sans `--pack-id`), ils sont t
   résultat peut être recalculé à partir de données publiques, mais pas par ce script. L'échec ne dépend pas du
   résultat (README du contrat, « Tirage », point 6).
 - **L'exhaustivité des événements.** Le rejeu (`--history`, `stats --replay`) suppose une liste complète et ordonnée
-  des `pack_revealed` de la série, venant d'un indexeur ou d'un nœud d'archive. Le RPC ne liste pas les événements.
+  des `pack_revealed` de la série (et, pour une série à mécaniques, des `pack_bought`, `card_redeemed` et
+  `card_resurrected` ; les numéros `burn_seq` et `resurrect_seq` détectent un burn ou une résurrection manquants), venant d'un indexeur ou d'un nœud d'archive. Le RPC ne liste pas les événements.
   Une liste incomplète fausse l'état des plafonds, donc les boosters suivants paraissent non conformes. L'ordre de
   deux tirages finalisés dans le même bloc ne se déduit pas des événements : l'ordre du fichier fait foi.
 - **Le code source.** `code` compare le code déployé à un wasm local. Sans build reproductible, ce qui n'est pas
@@ -60,7 +80,11 @@ Si l'on passe plusieurs événements à `--event` (sans `--pack-id`), ils sont t
   sont immuables par le code, pas par la gouvernance.
 - **Les mythiques non révélées.** Avant la révélation, seuls l'engagement, le poids et le plafond sont publics. L'owner
   peut ne jamais révéler.
-- **Les `token_id` et les métadonnées NFT** ne sont pas recoupés avec les tirages.
+- **Les `token_id` et les métadonnées NFT** ne sont pas recoupés avec les tirages (`token_id = pack_id × 10 +
+  emplacement` ; les métadonnées sont reconstruites par le contrat depuis la table).
+- **La couverture de la table rush** (≤ 80 %) n'est pas vérifiable sans la valeur des cartes : elle est contrôlée hors
+  chaîne par `contract/scripts/build_series.py` (`manifest.json["coverage"]`).
+- **La décision de l'oracle de prix** (résurrection) n'est pas vérifiée : seul son effet est rejoué.
 - Un `pack_revealed` d'un nœud RPC est cru tel que le nœud le sert. Pour s'en passer, il faut interroger plusieurs
   nœuds.
 
@@ -111,7 +135,7 @@ Codes de sortie : `0` vérifié, `1` non conforme (ou écart statistique signifi
 
 ```bash
 cd verifier
-python3 -m unittest discover -s tests -t . -v      # 27 tests, < 1 s, hors ligne
+python3 -m unittest discover -s tests -t . -v      # 41 tests (1 sauté sans scripts/out/), < 1 s, hors ligne
 ```
 
 `tests/test_pages.py` (6 tests) simule le RPC à partir d'une table : en-tête, pages de 200, 37 et 1 cartes, page
@@ -121,6 +145,11 @@ obtenu par pages est celui de la table complète (`table_hash.txt`, calcul d'ava
 `contract/scripts/out/serie-v2/` s'il existe. La concordance avec le vrai contrat est testée en sandbox
 (`catalogue_v2_batched_load_and_packs`, `max_size_series_fits` dans `contract/tests/sandbox.rs`).
 
+`tests/test_mechanics.py` (14 tests) : concordance avec `mech_vectors.json`, renormalisation des burns (part des
+brûlables exacte), rejeu des événements réels de `sandbox_mech_vectors.json` (pitié, rush, burns jusqu'à la dernière
+carte, résurrection), et événements falsifiés détectés (compteur de pitié, décision or, drapeau rush, burn manquant,
+burns ignorés), CLI compris.
+
 Les vecteurs de `tests/vectors/` sont générés depuis le contrat par le crate Rust `vectorgen/`, qui dépend de
 `../contract` sans le modifier :
 
@@ -129,6 +158,11 @@ Les vecteurs de `tests/vectors/` sont générés depuis le contrat par le crate 
   proches de `u64::MAX`, et des chaînes avec guillemets, antislash, caractères de contrôle, DEL, U+2028, BOM et
   emojis. Les vecteurs couvrent `serde_json::to_string(table)`, le hash, `initial_acc`, `mix`, `roll` et les tirages
   complets avec les compteurs. S'y ajoutent 60 engagements mythiques ;
+- `mech_vectors.json` (test `mech_vectors`) : 120 tables à mécaniques passées au code compilé de `memaster::draw`
+  (`pity_is_gold`, `pack_mode`, `mode_weights`, `draw_slot_mech` avec burns et résurrections), et 30 séquences de 250
+  achats pour `rush_on_buy` ;
+- `sandbox_mech_vectors.json` : événements réels de `contract/tests/sandbox.rs` `mechanics_end_to_end`
+  (`MECH_VECTORS_OUT=… cargo test --test sandbox -- mechanics_end_to_end`) ;
 - `sandbox_vectors.json` (test `sandbox_vectors`) : le wasm du contrat est déployé dans near-sandbox. Trois séries y
   sont ouvertes : 90 boosters avec plafonds et mythique, 4 boosters à retombées en cascade, et une table Unicode.
   Pour chaque booster, le fichier garde l'événement réel, `minted` avant l'achat et le hash de transaction, ainsi
@@ -139,7 +173,7 @@ Les vecteurs de `tests/vectors/` sont générés depuis le contrat par le crate 
 
 ```bash
 cd verifier/vectorgen
-cargo test --test gen_vectors draw_vectors                   # vecteurs purs, sans réseau
+cargo test --test gen_vectors -- draw_vectors mech_vectors  # vecteurs purs, sans réseau
 NEAR_SANDBOX_BIN_PATH=/chemin/near-sandbox \
   cargo test --test gen_vectors sandbox_vectors -- --nocapture   # ~90 s
 ```
@@ -148,7 +182,9 @@ NEAR_SANDBOX_BIN_PATH=/chemin/near-sandbox \
 construire avec `cargo near build non-reproducible-wasm` dans `contract/`. Sans `NEAR_SANDBOX_BIN_PATH`,
 near-workspaces télécharge le binaire near-sandbox. `SKIP_PY_RPC=1` saute l'appel au CLI Python.
 
-Résultat au 11/11/2026 : les 200 cas purs et les 96 boosters réels concordent tous, sans exception. Le premier
+Résultat au 11/11/2026 : les 200 cas purs et les 96 boosters réels concordent tous, sans exception. Après
+l'introduction des mécaniques et du stockage minimal par carte, `draw_vectors.json` régénéré est identique au bit près
+(aucune différence git) ; `sandbox_vectors.json` (anciens `token_id`) n'a pas été régénéré et passe toujours. Le premier
 booster d'une série n'est plus servi par `EXPERIMENTAL_tx_status` du sandbox (`NOT_OBSERVED`) après quelques
 centaines de blocs. D'où le conseil d'un nœud d'archive pour les transactions anciennes.
 
@@ -156,9 +192,9 @@ centaines de blocs. D'où le conseil d'un nœud d'archive pour les transactions 
 
 | Fichier | Rôle |
 |---|---|
-| `memaster_verifier/core.py` | Algorithme de `draw.rs`, hash de table, engagements mythiques |
+| `memaster_verifier/core.py` | Algorithme de `draw.rs` (mécaniques comprises : pitié, table de taux, burns renormalisés, rush), hash de table, engagements mythiques |
 | `memaster_verifier/canon.py` | Sérialisation identique à `serde_json` pour `SeriesTable` et `MythicContent` |
-| `memaster_verifier/verify.py` | Vérifications de table (entière ou par pages), de booster, de mythique ; rejeu d'une série |
+| `memaster_verifier/verify.py` | Vérifications de table (entière ou par pages), de booster, de mythique ; rejeu d'une série, `SeriesReplay` (événements mêlés des mécaniques) |
 | `memaster_verifier/stats.py` | χ² d'adéquation (fonction gamma incomplète, sans scipy) |
 | `memaster_verifier/rpc.py` | Client JSON-RPC NEAR (`query`, `EXPERIMENTAL_tx_status`, `view_account`) |
 | `memaster_verifier/cli.py` | Commandes `table`, `pack`, `mythic`, `stats`, `code` ; lecture paginée de la table (`fetch_table_pages`) |
