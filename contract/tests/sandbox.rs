@@ -895,7 +895,7 @@ async fn insufficient_deposit_or_gas() -> Result<()> {
     Ok(())
 }
 
-/// `retry_reveal` : le dernier reçu échoue (build test-hooks), relance après délai par un tiers.
+/// `retry_reveal` : le dernier reçu échoue (build test-hooks), relance après délai par l'acheteur (un tiers est refusé).
 #[tokio::test]
 async fn retry_reveal_after_failed_draw() -> Result<()> {
     let env = setup_with(true, 20).await?;
@@ -921,8 +921,11 @@ async fn retry_reveal_after_failed_draw() -> Result<()> {
     env.owner.call(cid, "test_set_reveal_failure").args_json(json!({ "fail": false })).transact().await?.into_result()?;
     env.worker.fast_forward(25).await?;
     // Gaz insuffisant pour la chaîne : refusé.
-    assert!(env.carol.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).gas(Gas::from_tgas(50)).transact().await?.is_failure());
+    assert!(env.alice.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).gas(Gas::from_tgas(50)).transact().await?.is_failure());
+    // v3 : un tiers ne peut pas relancer le pack d'un autre (ni épuiser ses tentatives).
     let x = env.carol.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
+    assert!(format!("{:?}", x.failures()).contains("E_NOT_PACK_OWNER"), "{:?}", x.failures());
+    let x = env.alice.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
     assert!(x.is_success(), "{:?}", x.failures());
     let ev = revealed(&x);
     assert_eq!(ev["attempt"], 1);
@@ -934,7 +937,7 @@ async fn retry_reveal_after_failed_draw() -> Result<()> {
     assert_eq!(n, "5");
     // Une seconde relance est refusée.
     env.worker.fast_forward(25).await?;
-    assert!(env.carol.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?.is_failure());
+    assert!(env.alice.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?.is_failure());
     Ok(())
 }
 
@@ -1976,21 +1979,25 @@ async fn worst_case_cascade_with_burns_fits() -> Result<()> {
 /// (prix + stockage prépayé non utilisé), sans aucun tirage possible ensuite.
 #[tokio::test]
 async fn stuck_pack_is_refunded_once() -> Result<()> {
-    let env = setup_with(true, 2).await?;
+    let env = setup_with(true, 20).await?;
     let sid = simple_backed_series(&env).await?;
     let cid = env.contract.id();
     env.owner.call(cid, "test_set_reveal_failure").args_json(json!({ "fail": true })).transact().await?.into_result()?;
     let r = buy(&env, &env.alice, sid).await?;
     assert!(!r.receipt_failures().is_empty(), "le dernier reçu doit échouer");
     let s0 = env.worker.view_account(cid).await?.storage_usage;
-    // MAX_ATTEMPTS = 10 : 9 relances qui échouent encore, puis la 10e fait passer en Stuck.
+    // Un tiers ne peut pas épuiser les tentatives du pack d'Alice.
+    env.worker.fast_forward(21).await?;
+    let x = env.carol.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
+    assert!(format!("{:?}", x.failures()).contains("E_NOT_PACK_OWNER"));
+    // MAX_ATTEMPTS = 10 : 9 relances de l'acheteur qui échouent encore, puis la 10e fait passer en Stuck.
     for _ in 0..9 {
-        env.worker.fast_forward(3).await?;
-        let x = env.carol.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
+        env.worker.fast_forward(21).await?;
+        let x = env.alice.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
         assert!(x.is_success(), "{:?}", x.failures());
     }
-    env.worker.fast_forward(3).await?;
-    let x = env.carol.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
+    env.worker.fast_forward(21).await?;
+    let x = env.alice.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
     assert_eq!(events(&x.logs(), "pack_stuck").len(), 1);
     let pack: Value = env.contract.view("get_pack").args_json(json!({ "pack_id": 0 })).await?.json()?;
     assert_eq!(pack["status"], "stuck");
@@ -2011,7 +2018,7 @@ async fn stuck_pack_is_refunded_once() -> Result<()> {
     let prepaid: u128 = pack["storage_prepaid"].as_str().unwrap().parse()?;
     let expect = NEAR / 10 + prepaid.saturating_sub(used as u128 * 10u128.pow(19));
     assert_eq!(total, expect);
-    env.worker.fast_forward(3).await?;
+    env.worker.fast_forward(21).await?;
     let b1 = env.alice.view_account().await?.balance.as_yoctonear();
     assert_eq!(b1 - b0, total, "l'acheteur reçoit exactement le prix et le stockage non utilisé");
     println!("  remboursé : {:.5} NEAR (prix 0,1 + stockage {:.5}), gaz {:.2} Tgas", total as f64 / 1e24,
@@ -2025,8 +2032,8 @@ async fn stuck_pack_is_refunded_once() -> Result<()> {
     // Pas de second remboursement, pas de relance, pas de tirage.
     let x = env.alice.call(cid, "refund_stuck_pack").args_json(json!({ "pack_id": 0 })).transact().await?;
     assert!(format!("{:?}", x.failures()).contains("E_ALREADY_REFUNDED"));
-    env.worker.fast_forward(3).await?;
-    let x = env.carol.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
+    env.worker.fast_forward(21).await?;
+    let x = env.alice.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
     assert!(format!("{:?}", x.failures()).contains("E_ALREADY_REVEALED"));
     let n: String = env.contract.view("nft_supply_for_owner").args_json(json!({ "account_id": env.alice.id() })).await?.json()?;
     assert_eq!(n, "0");
@@ -2037,7 +2044,7 @@ async fn stuck_pack_is_refunded_once() -> Result<()> {
 /// réserve). Après un retrait maximal, les achats et les remboursements du tirage passent encore.
 #[tokio::test]
 async fn withdraw_revenue_respects_commitments() -> Result<()> {
-    let env = setup_with(true, 2).await?;
+    let env = setup_with(true, 20).await?;
     let sid = simple_backed_series(&env).await?;
     let cid = env.contract.id();
     // Un pack tiré (une carte mise en vente) et un pack resté en attente (dernier reçu en échec).
@@ -2088,8 +2095,8 @@ async fn withdraw_revenue_respects_commitments() -> Result<()> {
 
     // Les engagements restent honorés : le pack en attente se tire (remboursement du stockage compris),
     // un nouvel achat passe, l'annonce se retire avec son dépôt.
-    env.worker.fast_forward(3).await?;
-    let x = env.carol.call(cid, "retry_reveal").args_json(json!({ "pack_id": 1 })).max_gas().transact().await?;
+    env.worker.fast_forward(21).await?;
+    let x = env.bob.call(cid, "retry_reveal").args_json(json!({ "pack_id": 1 })).max_gas().transact().await?;
     assert!(x.is_success() && x.receipt_failures().is_empty(), "{:?}", x.failures());
     let r = buy(&env, &env.carol, sid).await?;
     assert!(r.is_success() && r.receipt_failures().is_empty(), "{:?}", r.failures());

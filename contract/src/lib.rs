@@ -109,6 +109,9 @@ pub const MYTHIC_TITLE: &str = "?";
 pub const MYTHIC_DESCRIPTION: &str = "?";
 /// Image « ? » (SVG en URI `data:`, 500 × 700 comme les cartes), identique pour toutes les mythiques.
 pub const MYTHIC_MEDIA: &str = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20500%20700'%3E%3Crect%20width='500'%20height='700'%20rx='24'%20fill='%230b0507'/%3E%3Ctext%20x='250'%20y='470'%20font-size='360'%20font-family='serif'%20font-weight='700'%20fill='%23ffcf4a'%20text-anchor='middle'%3E%3F%3C/text%3E%3C/svg%3E";
+/// Prix maximal d'une annonce (10⁹ NEAR, au-delà de l'offre totale) : le calcul des redevances
+/// (`prix × bps`, 5 000 bps au plus) reste loin de `u128::MAX`.
+pub const MAX_LISTING_PRICE: u128 = 1_000_000_000 * 1_000_000_000_000_000_000_000_000;
 /// Dépôt d'une annonce de marché.
 pub const LISTING_DEPOSIT: NearToken = NearToken::from_millinear(5);
 /// Réserve minimale gardée sur le contrat par `withdraw_revenue`, au-delà des engagements : elle

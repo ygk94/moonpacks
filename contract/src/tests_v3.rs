@@ -289,7 +289,7 @@ fn stuck_pack(c: &mut Contract) -> u64 {
     let mut h = 20;
     for _ in 0..MAX_ATTEMPTS {
         h += 200;
-        set(bob(), 0, h);
+        set(alice(), 0, h);
         c.retry_reveal(p);
     }
     assert_eq!(c.get_pack(p).unwrap()["status"], "stuck");
@@ -372,6 +372,41 @@ fn revealed_pack_can_never_become_stuck() {
         assert!(r.is_err());
     }
     assert_eq!(c.get_pack(p).unwrap()["status"], "revealed");
+}
+
+#[test]
+#[should_panic(expected = "E_NOT_PACK_OWNER")]
+fn third_party_cannot_retry_someone_elses_pack() {
+    // Un tiers ne peut pas épuiser les tentatives d'un pack (ni le pousser vers `Stuck`).
+    let mut c = contract_with(table(false));
+    let p = buy(&mut c, alice(), 20);
+    set(bob(), 0, 1_000);
+    c.retry_reveal(p);
+}
+
+#[test]
+#[should_panic(expected = "E_PRICE_TOO_HIGH")]
+fn huge_listing_price_is_rejected() {
+    let mut c = contract_with(table(false));
+    let p = buy(&mut c, alice(), 20);
+    reveal(&mut c, p, 4, 20);
+    let tid = first_backed(&c, &alice());
+    set(alice(), LISTING_DEPOSIT.as_yoctonear(), 30);
+    c.list(tid, U128(MAX_LISTING_PRICE + 1));
+}
+
+#[test]
+fn max_listing_price_pays_royalties_without_overflow() {
+    let mut t = table(false);
+    t.royalties = vec![Royalty { account_id: bob(), bps: 5_000 }];
+    let mut c = contract_with(t);
+    let p = buy(&mut c, alice(), 20);
+    reveal(&mut c, p, 4, 20);
+    let tid = first_backed(&c, &alice());
+    let payout = c.nft_payout(tid.clone(), U128(MAX_LISTING_PRICE), None);
+    assert_eq!(payout.payout[&bob()].0, MAX_LISTING_PRICE / 2);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.nft_payout(tid, U128(u128::MAX), None)));
+    assert!(r.is_err(), "montant extrême refusé proprement (E_AMOUNT_TOO_LARGE)");
 }
 
 // ----------------------------------------------------------------- 4. retrait des recettes

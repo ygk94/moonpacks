@@ -16,6 +16,10 @@ impl Contract {
         require!(owner == seller, "E_LIST_NOT_OWNER: Seul le propriétaire peut vendre");
         require!(self.card_state(&token_id) == CardState::Normal, "E_CARD_REDEEMING: Carte en cours de burn");
         require!(price.0 > 0, "E_ZERO_PRICE: Prix nul");
+        require!(
+            price.0 <= MAX_LISTING_PRICE,
+            format!("E_PRICE_TOO_HIGH: Prix trop élevé : {} yoctoNEAR au plus", MAX_LISTING_PRICE)
+        );
         require!(self.listings.get(&token_id).is_none(), "E_ALREADY_LISTED: Déjà en vente");
         let deposit = env::attached_deposit().as_yoctonear();
         let need = LISTING_DEPOSIT.as_yoctonear();

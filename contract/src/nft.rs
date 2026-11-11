@@ -379,6 +379,10 @@ impl Contract {
             .live(token_id)
             .map(|(_, _, p)| self.series_ref(p.series_id).table.royalties.clone())
             .unwrap_or_default();
+        require!(
+            balance <= u128::MAX / 10_000,
+            "E_AMOUNT_TOO_LARGE: Montant trop élevé pour le calcul des redevances"
+        );
         let mut payout: HashMap<AccountId, U128> = HashMap::new();
         let mut paid: u128 = 0;
         for r in royalties.iter() {

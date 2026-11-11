@@ -168,8 +168,9 @@ impl Contract {
     }
 
     /// Relance le tirage d'un booster resté `Pending` (aucune carte écrite) après
-    /// `retry_delay_blocks` blocs sans progrès. Ouvert à tous ; les graines sont nouvelles
-    /// et `acc` continue d'accumuler.
+    /// `retry_delay_blocks` blocs sans progrès. **Réservé à l'acheteur du pack** (v3) : un tiers ne
+    /// peut ni épuiser ses tentatives ni le faire passer en `Stuck`. Les graines sont nouvelles et
+    /// `acc` continue d'accumuler.
     ///
     /// Le résultat qu'aurait donné un dernier reçu échoué **peut être recalculé** : sa graine vaut
     /// `hash(action_hash || random_value)`, deux valeurs publiques, et `acc` avant ce reçu est
@@ -190,6 +191,12 @@ impl Contract {
         require!(
             env::block_height() >= pack.last_progress_height + delay,
             "E_RETRY_TOO_EARLY: Délai de relance non écoulé"
+        );
+        // Seul l'acheteur relance : un tiers ne peut pas épuiser les tentatives d'un pack (ni le
+        // pousser vers `Stuck`, donc vers un remboursement que l'acheteur n'a pas demandé).
+        require!(
+            env::predecessor_account_id() == pack.owner_id,
+            "E_NOT_PACK_OWNER: Seul l'acheteur du pack peut relancer le tirage"
         );
         if pack.attempt + 1 >= MAX_ATTEMPTS {
             pack.status = PackStatus::Stuck;

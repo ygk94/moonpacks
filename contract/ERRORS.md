@@ -33,6 +33,9 @@ arguments (`Failed to deserialize input from JSON`), `The contract is not initia
 | `E_ALREADY_REVEALED` | Tirage déjà écrit : remboursement interdit | This pack is already revealed: refund refused. | public | pack.rs |
 | `E_ALREADY_REFUNDED` | Pack déjà remboursé | This pack has already been refunded. | public | pack.rs |
 | `E_NOT_STUCK` | Seul un pack bloqué (stuck) est remboursable | Only a stuck pack can be refunded. | public | pack.rs |
+| `E_NOT_PACK_OWNER` | Seul l'acheteur du pack peut relancer le tirage | Only the buyer of this pack can retry the reveal. | public | pack.rs |
+| `E_PRICE_TOO_HIGH` | Prix trop élevé : {} yoctoNEAR au plus | Price too high: {} yoctoNEAR at most. | public | market.rs |
+| `E_AMOUNT_TOO_LARGE` | Montant trop élevé pour le calcul des redevances | Amount too large for the royalty computation. | public | nft.rs |
 | `E_UNKNOWN_PACK` | Pack inconnu | Unknown pack. | public | nft.rs, pack.rs |
 | `E_UNKNOWN_SERIES` | Série inconnue | Unknown series. | public | lib.rs, pack.rs, series.rs |
 | `E_SERIES_NOT_OPEN` | Série non ouverte | This series is not open. | owner, oracle | mechanics.rs, series.rs |
