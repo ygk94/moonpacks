@@ -1,0 +1,158 @@
+// Connexion wallet (near-connect) : MetaMask (comptes 0x…, NEP-518) en tête, wallets NEAR natifs en secours.
+
+import { NearConnector, type NearWalletBase } from "@hot-labs/near-connect";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { CONTRACT_ID, NETWORK, RPC_URL } from "../config";
+import { failureOf } from "./events";
+import { txStatus, type TxOutcome } from "./rpc";
+
+// Identifiant near-connect du connecteur « Ethereum Wallets » (MetaMask et autres wallets EVM).
+export const EVM_WALLET_ID = "ethereum-wallets";
+
+export interface WalletOption {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  evm: boolean;
+}
+
+interface CallOptions {
+  deposit?: string;
+  gas?: string;
+}
+
+interface WalletState {
+  accountId: string | null;
+  walletName: string | null;
+  isEvm: boolean;
+  ready: boolean;
+  options: WalletOption[];
+  connect: (walletId: string) => Promise<void>;
+  disconnect: () => Promise<void>;
+  /** Signe et envoie un appel au contrat ; rejette avec le message de panique si la transaction échoue. */
+  call: (method: string, args: Record<string, unknown>, opts?: CallOptions) => Promise<TxOutcome>;
+}
+
+const Ctx = createContext<WalletState | null>(null);
+
+const connector = new NearConnector({
+  network: NETWORK,
+  providers: { testnet: [RPC_URL] },
+  features: { testnet: true, signAndSendTransaction: true },
+  autoConnect: true,
+});
+
+const isEvmAccount = (id: string | null) => !!id && /^0x[0-9a-f]{40}$/i.test(id);
+
+export function WalletProvider({ children }: { children: ReactNode }) {
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [wallet, setWallet] = useState<NearWalletBase | null>(null);
+  const [ready, setReady] = useState(false);
+  const [options, setOptions] = useState<WalletOption[]>([]);
+
+  useEffect(() => {
+    const refreshOptions = () => {
+      const list = connector.availableWallets
+        .filter((w) => w.manifest.features?.testnet !== false)
+        .map((w) => ({
+          id: w.manifest.id,
+          name: w.manifest.id === EVM_WALLET_ID ? "MetaMask" : w.manifest.name,
+          icon: w.manifest.icon,
+          description: w.manifest.id === EVM_WALLET_ID ? "MetaMask and other Ethereum wallets" : w.manifest.description,
+          evm: w.manifest.id === EVM_WALLET_ID,
+        }))
+        // MetaMask en premier, puis l'ordre du manifeste.
+        .sort((a, b) => Number(b.evm) - Number(a.evm));
+      setOptions(list);
+    };
+    const onIn = (t: { wallet: NearWalletBase; accounts: { accountId: string }[] }) => {
+      setWallet(t.wallet);
+      setAccountId(t.accounts[0]?.accountId ?? null);
+    };
+    const onOut = () => {
+      setWallet(null);
+      setAccountId(null);
+    };
+    connector.on("wallet:signIn", onIn);
+    connector.on("wallet:signOut", onOut);
+    connector.on("selector:walletsChanged", refreshOptions);
+    connector.on("selector:manifestUpdated", refreshOptions);
+    connector.whenManifestLoaded
+      .then(async () => {
+        refreshOptions();
+        try {
+          const { wallet: w, accounts } = await connector.getConnectedWallet();
+          setWallet(w);
+          setAccountId(accounts[0]?.accountId ?? null);
+        } catch {
+          // aucun wallet connecté
+        }
+      })
+      .finally(() => setReady(true));
+    return () => {
+      connector.off("wallet:signIn", onIn);
+      connector.off("wallet:signOut", onOut);
+      connector.off("selector:walletsChanged", refreshOptions);
+      connector.off("selector:manifestUpdated", refreshOptions);
+    };
+  }, []);
+
+  const connect = useCallback(async (walletId: string) => {
+    const w = await connector.connect({ walletId });
+    const accounts = await w.getAccounts({ network: NETWORK });
+    setWallet(w);
+    setAccountId(accounts[0]?.accountId ?? null);
+  }, []);
+
+  const disconnect = useCallback(async () => {
+    await connector.disconnect();
+    setWallet(null);
+    setAccountId(null);
+  }, []);
+
+  const call = useCallback(
+    async (method: string, args: Record<string, unknown>, opts: CallOptions = {}) => {
+      if (!wallet || !accountId) throw new Error("Connect a wallet first.");
+      const out = (await wallet.signAndSendTransaction({
+        network: NETWORK,
+        signerId: accountId,
+        receiverId: CONTRACT_ID,
+        actions: [
+          {
+            type: "FunctionCall",
+            params: { methodName: method, args, gas: opts.gas ?? "100000000000000", deposit: opts.deposit ?? "0" },
+          },
+        ],
+      })) as unknown as Partial<TxOutcome>;
+      // Certains wallets ne renvoient que le hash : on relit alors la transaction et ses reçus.
+      const full =
+        out?.receipts_outcome && out.status ? (out as TxOutcome) : await txStatus(out!.transaction!.hash, accountId);
+      const failure = failureOf(full);
+      if (failure) throw new Error(failure);
+      return full;
+    },
+    [wallet, accountId],
+  );
+
+  const value = useMemo<WalletState>(
+    () => ({
+      accountId,
+      walletName: wallet?.manifest.id === EVM_WALLET_ID ? "MetaMask" : (wallet?.manifest.name ?? null),
+      isEvm: isEvmAccount(accountId) || wallet?.manifest.id === EVM_WALLET_ID,
+      ready,
+      options,
+      connect,
+      disconnect,
+      call,
+    }),
+    [accountId, wallet, ready, options, connect, disconnect, call],
+  );
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export function useWallet(): WalletState {
+  const v = useContext(Ctx);
+  if (!v) throw new Error("useWallet outside WalletProvider");
+  return v;
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+# Généré par scripts/prepare-assets.mjs (visuels de art/ et catalogue public)
+public/cards/
+public/catalog.json
+.env*
+!.env.example
+*.tsbuildinfo
