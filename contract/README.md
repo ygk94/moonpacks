@@ -359,7 +359,10 @@ near contract call-function as-transaction <contrat> append_series_cards \
 ```
  Les 3 mythiques ne sont que des engagements, produits par `gen_mythics.py` ; leurs préimages et
 leurs vrais noms ne vont que dans `scripts/secrets/` (ignoré par git, mode 600). Les sels existants sont réutilisés,
-donc le hash est stable d'une exécution à l'autre. Médias : `ipfs://TODO/<id>.svg`. Les cartes sont triées par
+donc le hash est stable d'une exécution à l'autre ; `--sels FICHIER` reprend les sels d'un autre fichier de secrets
+(par card_id) sans en tirer de neufs. Médias : `media_template` (`ipfs://TODO/<id>.svg` dans l'exemple), ou
+`--media-base ipfs://<CID>`, qui donne `ipfs://<CID>/<card_id>.svg` et, pour toutes les mythiques, le visuel « ? »
+commun `ipfs://<CID>/mythique.svg` (`mythic_media`, jamais nommé d'après le vrai id). Les cartes sont triées par
 `card_id`. Un identifiant de plus de 64 octets est raccourci (voir `manifest.json`). Le script refuse d'écrire si
 un vrai nom de mythique apparaît dans une sortie publique.
 
@@ -376,6 +379,29 @@ Mesures (sandbox, 1 646 cartes visibles + 3 engagements, table de 275 Ko) :
 | Booster v2, gold pack ultra rare (pitié en ppb, garantie de test `n_max = 20` pour mesurer un gold), mythique 5 / 2·10⁷, valeur 75 % (22 boosters dont un gold, 11/11) | 29,9 Tgas au plus en tout, `buy_pack` 8,1 Tgas, dernier reçu **15,7 Tgas** ; **stockage 971 o au plus, 1 605 o prépayés** |
 | **Testnet** (`app2`, 31 boosters de la série v2 actuelle, aucun gold, 11/11) | 29,3 – 30,6 Tgas en tout (moyenne 29,9), `buy_pack` 8,2 – 8,3 Tgas, dernier reçu 14,7 – 15,9 Tgas ; stockage 1 034 o au premier achat d'un compte (1 091 o pour le tout premier booster), 602 o ensuite, 1 605 o prépayés |
 | Taille maximale (2 000 cartes aux chaînes maximales) | lot de 188 Ko, `append_series_cards` 88 Tgas au plus, `open_series` 10,7 Tgas, 1,66 Mo de stockage (16,6 NEAR payés par l'owner) ; booster de 10 cartes : `buy_pack` 9 Tgas, dernier reçu 61 Tgas (avant) ; avec le stockage minimal et toutes les mécaniques : `buy_pack` 10,3 Tgas, dernier reçu 24,3 Tgas au plus, stockage 1 254 o au premier achat ; raretés épuisées en cascade (`worst_case_cascade_with_burns_fits`) : dernier reçu 49,1 Tgas au plus ; avec gold pack de 10 emplacements et table de valeur : dernier reçu 23,3 Tgas au plus (normal et gold), stockage 1 266 o au premier achat, 2 025 o prépayés, cascade 48,4 Tgas |
+
+### Séries de démo « entrée » et « standard » (`docs/series-demo.md`)
+
+Deux séries sur le catalogue de démo complet (1 527 cartes visibles + 3 engagements), mêmes mécaniques que
+`serie-exemple.json`, tables de valeur de `sim/resultats/serie5/tables-valeur.json`, 9 brûlables reliées à de vrais
+actifs NEAR Intents par adresse de contrat. Rien n'est déployé.
+
+| Fichier | Rôle |
+|---|---|
+| `scripts/intents_brulables.py` | Rapprochement brûlables -> 1Click `/v0/tokens` par adresse, devis `dry`, correspondance `docs/data/intents-brulables-demo.json` |
+| `scripts/series_demo.py` | Écrit `scripts/serie-demo-entree.json` (0,20 $ = 0,0552 NEAR) et `scripts/serie-demo-standard.json` (0,50 $ = 0,1381 NEAR), au cours donné |
+| `scripts/ipfs_media.py` | Dossier IPFS des SVG anglais (`prepare`), CID local (`cid`, `npx ipfs-car@3.1.0`), envoi du CAR (`upload`, `PINATA_JWT` ou `W3S_TOKEN`, `--dry-run`) |
+| `scripts/tests/` | Tests de ces trois scripts et des options de `build_series.py` : `python3 -m unittest discover -s contract/scripts/tests` |
+
+```bash
+cd contract
+python3 -I scripts/build_series.py scripts/serie-demo-entree.json --catalogue ../docs/data/catalogue-demo.json \
+    --sels scripts/secrets/serie-v2.json [--series-id N]
+```
+
+`table_hash` : entrée `2064056b…5a313a40`, standard `382c5a38…eaf4310f` (tables dans `docs/data/series-demo/`).
+Visuels : `ipfs://bafybeifejdd5hvm44qa6qv5s3m2avywhdrydhn2rwypccttz52eu5viuia/…`, CID calculé en local, pas encore
+envoyé.
 
 ### Gaz des vues (série de taille maximale)
 
