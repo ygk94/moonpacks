@@ -261,7 +261,7 @@ cd contract
 rustup target add wasm32-unknown-unknown        # requis par cargo-near (wasm32v1-none ne suffit pas)
 cargo install cargo-near --locked               # 0.23.0
 
-cargo near build non-reproducible-wasm          # → target/near/memaster.wasm (594 632 octets ; v2 : 580 961)
+cargo near build non-reproducible-wasm          # → target/near/memaster.wasm (595 094 octets ; v2 : 580 961)
 (cd mock-redeemer && cargo near build non-reproducible-wasm)
 (cd mock-oracle && cargo near build non-reproducible-wasm)
 
@@ -508,7 +508,7 @@ L'adossement fixe d'une table sans valeur et celui des mythiques, qui ne sont pa
 | `redeem` réussi, total / `on_redeem_complete` au plus | 8,19 / 3,96 Tgas | 8,96 / 4,27 Tgas (budget 20) |
 | Pack `Stuck` remboursé | impossible | 3,4 Tgas |
 | `withdraw_revenue` | (n'existait pas) | 3,0 Tgas |
-| wasm | 580 961 o | 594 632 o (+13 671) |
+| wasm | 580 961 o | 595 094 o (+14 133) |
 
 Sur testnet, la v2 mesure 29,3 – 30,6 Tgas par booster (moyenne 29,9) et 602 à 1 091 o : la v3 devrait donner
 environ 30,6 – 31,9 Tgas, avec environ 567 à 999 o de stockage rendus par pack (à mesurer au redéploiement).
