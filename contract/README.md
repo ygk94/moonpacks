@@ -3,8 +3,10 @@
 Contrat unique pour les cartes NFT, les boosters, le tirage, les mythiques secrètes, le marché intégré, le burn et les
 mécaniques de série (pitié et gold pack à planchers, rareté pilotée par les burns, gold rush, résurrection, valeur
 aléatoire par pack : `docs/mecaniques-spec.md`).
-Phase 3 de `docs/plan.md`. **Déployé sur testnet le 11/11/2026 (`app.memaster-demo-j7xg7z.testnet`, version sans valeur
-aléatoire ; mesures dans `docs/testnet.md`), jamais sur mainnet.**
+Phase 3 de `docs/plan.md`. **Déployé sur testnet le 11/11/2026, jamais sur mainnet** : version actuelle (gold pack
+ultra rare sans garantie, mythique 1 sur 10⁶, valeur aléatoire par pack, mythiques anonymes) sur
+`app2.memaster-demo-j7xg7z.testnet` ; première version, sans valeur aléatoire, laissée sur
+`app.memaster-demo-j7xg7z.testnet`. Mesures dans `docs/testnet.md`.
 
 - near-sdk **5.30.1** et near-contract-standards **5.30.1** (dernières versions sur crates.io le 11/11/2026)
 - tests sandbox : near-workspaces **0.24.0** (avec near-sandbox 0.4.0), build par cargo-near-build 0.11.5
@@ -172,7 +174,8 @@ l'état scellé des mythiques sont **reconstruits à la lecture** depuis la tabl
 `nft_tokens_for_owner`, `get_card` et `get_backing` gardent leur forme. `reveal_mythic` ne réécrit plus les cartes.
 Série v2 : **3 965 o → 848 o par pack** au plus sans mécanique, 964 o avec toutes (premier achat d'un compte compris),
 971 o avec le gold pack à planchers et la table de valeur (7 o par pack pour la valeur : `bps` et masque des brûlables).
-Détail et mesures dans `docs/mecaniques-spec.md`.
+Sur testnet, le stockage dépend de la longueur du compte acheteur : 1 034 o au premier achat d'un compte de 35
+caractères, 602 o ensuite (1 605 o prépayés, calculés pour 64 caractères, voir `docs/testnet.md`). Détail et mesures dans `docs/mecaniques-spec.md`.
 
 ### Mécaniques
 
@@ -371,6 +374,7 @@ Mesures (sandbox, 1 646 cartes visibles + 3 engagements, table de 275 Ko) :
 | Booster v2, stockage minimal, toutes les mécaniques | 29,5 Tgas au plus en tout, `buy_pack` 8,0 Tgas, dernier reçu 15,5 Tgas ; stockage 964 o au plus, 1 597 o prépayés (848 o sans mécanique) |
 | Booster v2, gold pack à planchers et table de valeur (22 boosters dont un gold) | 29,6 Tgas au plus en tout, `buy_pack` 8,1 Tgas, dernier reçu **15,4 Tgas** ; **stockage 971 o au plus, 1 605 o prépayés** |
 | Booster v2, gold pack ultra rare (pitié en ppb, garantie de test `n_max = 20` pour mesurer un gold), mythique 5 / 2·10⁷, valeur 75 % (22 boosters dont un gold, 11/11) | 29,9 Tgas au plus en tout, `buy_pack` 8,1 Tgas, dernier reçu **15,7 Tgas** ; **stockage 971 o au plus, 1 605 o prépayés** |
+| **Testnet** (`app2`, 31 boosters de la série v2 actuelle, aucun gold, 11/11) | 29,3 – 30,6 Tgas en tout (moyenne 29,9), `buy_pack` 8,2 – 8,3 Tgas, dernier reçu 14,7 – 15,9 Tgas ; stockage 1 034 o au premier achat d'un compte (1 091 o pour le tout premier booster), 602 o ensuite, 1 605 o prépayés |
 | Taille maximale (2 000 cartes aux chaînes maximales) | lot de 188 Ko, `append_series_cards` 88 Tgas au plus, `open_series` 10,7 Tgas, 1,66 Mo de stockage (16,6 NEAR payés par l'owner) ; booster de 10 cartes : `buy_pack` 9 Tgas, dernier reçu 61 Tgas (avant) ; avec le stockage minimal et toutes les mécaniques : `buy_pack` 10,3 Tgas, dernier reçu 24,3 Tgas au plus, stockage 1 254 o au premier achat ; raretés épuisées en cascade (`worst_case_cascade_with_burns_fits`) : dernier reçu 49,1 Tgas au plus ; avec gold pack de 10 emplacements et table de valeur : dernier reçu 23,3 Tgas au plus (normal et gold), stockage 1 266 o au premier achat, 2 025 o prépayés, cascade 48,4 Tgas |
 
 ### Gaz des vues (série de taille maximale)
@@ -503,7 +507,9 @@ au-delà de `required_deposit` est rendu, dans `buy_pack`, avant tout tirage. Le
   reste bloquée en `Redeeming`.
 - **Owner.** L'owner garde la clé : pas de gel du code, pas de build reproductible configuré. Les tables ouvertes sont
   immuables par le code, pas par la gouvernance.
-- **Hors sandbox.** Rien n'a été mesuré sur testnet. MetaMask n'a pas été testé de bout en bout.
+- **Hors sandbox.** Mesuré sur testnet (deux déploiements, `docs/testnet.md`), pas sur mainnet. Aucun gold pack ni
+  aucune mythique n'est sorti sur testnet (probabilités trop faibles pour 31 boosters) : ces chemins ne sont couverts
+  que par les tests unitaires et sandbox. MetaMask n'a pas été testé de bout en bout.
 
 ## TODO
 
@@ -512,8 +518,8 @@ au-delà de `required_deposit` est rendu, dans `buy_pack`, avant tout tirage. Le
 - Retrait des revenus avec garde-fous (réserve ≥ engagements, plafond par coin).
 - Build reproductible (`[package.metadata.near.reproducible_build]`), suppression des clés d'accès complet après
   déploiement, publication du hash du code.
-- Mesure sur testnet : rythme des reçus, gaz, recalcul externe de `random_seed` à partir de `random_value` et
-  `action_hash`.
+- Recalcul externe de `random_seed` à partir de `random_value` et `action_hash` (rythme des reçus et gaz mesurés sur
+  testnet, `docs/testnet.md`).
 - Script de vérification public (JS ou Python) reprenant `verify_pack_event` de `tests/sandbox.rs`.
 - Indexation des cartes scellées en attente de révélation.
 - Revue de sécurité et audit avant tout public.

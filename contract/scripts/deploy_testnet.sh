@@ -20,6 +20,10 @@
 #   RETRY_DELAY_BLOCKS   délai de retry_reveal (défaut 100, valeur par défaut du contrat)
 #   ORACLE_DELAY_BLOCKS  délai d'installation de l'oracle (défaut 30 sur testnet ; 144 000 = 24 h en prod)
 #   SERIES_PARAMS        paramètres de build_series.py (défaut scripts/serie-exemple.json)
+#   TABLES_VALEUR        tables de valeur passées à build_series.py --tables-valeur (optionnel,
+#                        ex. ../sim/resultats/serie5/tables-valeur.json)
+#   SERIES_OUT           dossier des arguments générés (défaut scripts/out/<slug>) ; à changer pour
+#                        un second contrat, afin de ne pas écraser la table du premier
 #   SKIP_BUILD=1         ne pas reconstruire les wasm
 #   SKIP_CONTROL=1       ne pas créer la série de contrôle sans mécanique
 set -euo pipefail
@@ -165,11 +169,13 @@ fi
 
 # 5. Série v2 à mécaniques (par lots, dépôts du manifeste)
 SLUG=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['slug'])" "$SERIES_PARAMS")
-OUT=$CONTRACT_DIR/scripts/out/$SLUG
+OUT=${SERIES_OUT:-$CONTRACT_DIR/scripts/out/$SLUG}
+BUILD_ARGS=(--series-id 0 --out "$OUT")
+[ -n "${TABLES_VALEUR:-}" ] && BUILD_ARGS+=(--tables-valeur "$TABLES_VALEUR")
 NSER=$(view "$CONTRACT_ID" get_series_count)
 if [ "$NSER" = 0 ]; then
   log "Série $SLUG : build_series.py"
-  python3 "$HERE/build_series.py" "$SERIES_PARAMS" --series-id 0
+  python3 "$HERE/build_series.py" "$SERIES_PARAMS" "${BUILD_ARGS[@]}"
   for f in $(python3 -c "import json,sys; print(' '.join(json.load(open(sys.argv[1]))['calls']))" "$OUT/manifest.json"); do
     dep=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['deposits'][sys.argv[2]])" "$OUT/manifest.json" "$f")
     m=${f%%.*}

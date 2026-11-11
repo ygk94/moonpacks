@@ -1,0 +1,1182 @@
+{
+ "packs": [
+  {
+   "tx": "5b7f8y36hZmBugEFqxLRtRT2rB3UHoTtJns18esRR1LQ",
+   "signer": "buyer1.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "serial",
+   "round": 0,
+   "pack_id": 0,
+   "status": "ok",
+   "tx_height": 277270640,
+   "buy_height": 277270641,
+   "step_heights": [
+    277270642,
+    277270643,
+    277270644
+   ],
+   "reveal_height": 277270644,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30146399175443,
+   "near_burnt": 0.0029253668925442997,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8278177772048,
+    "reveal_step#2": 2609908854543,
+    "reveal_step#3": 2617262794968,
+    "reveal_step#4": 15439163278439,
+    "?": 223182562500
+   },
+   "gas_buy": 8278177772048,
+   "gas_final": 15439163278439,
+   "gas_steps": [
+    2609908854543,
+    2617262794968,
+    15439163278439
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.621165037155151,
+   "storage_delta": 1091
+  },
+  {
+   "tx": "2WQiuPQE3Wf3iPDYpEfaz7Egw6F2kuz5gZi2X2skS3bS",
+   "signer": "buyer2.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "serial",
+   "round": 0,
+   "pack_id": 1,
+   "status": "ok",
+   "tx_height": 277270663,
+   "buy_height": 277270664,
+   "step_heights": [
+    277270665,
+    277270666,
+    277270667
+   ],
+   "reveal_height": 277270667,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29482515895452,
+   "near_burnt": 0.0028589785645452,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8285598818168,
+    "reveal_step#2": 2614483664151,
+    "reveal_step#3": 2621837604576,
+    "reveal_step#4": 14758709333112,
+    "?": 223182562500
+   },
+   "gas_buy": 8285598818168,
+   "gas_final": 14758709333112,
+   "gas_steps": [
+    2614483664151,
+    2621837604576,
+    14758709333112
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.734735012054443,
+   "storage_delta": 1034
+  },
+  {
+   "tx": "459CM3Q91F7b97gViUupHmqq55auU3pfif3LZoXyM4cW",
+   "signer": "buyer3.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "serial",
+   "round": 0,
+   "pack_id": 2,
+   "status": "ok",
+   "tx_height": 277270686,
+   "buy_height": 277270687,
+   "step_heights": [
+    277270688,
+    277270689,
+    277270690
+   ],
+   "reveal_height": 277270690,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29879945932583,
+   "near_burnt": 0.0028987215682582997,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8292438818168,
+    "reveal_step#2": 2614483664151,
+    "reveal_step#3": 2621837604576,
+    "reveal_step#4": 15149299370243,
+    "?": 223182562500
+   },
+   "gas_buy": 8292438818168,
+   "gas_final": 15149299370243,
+   "gas_steps": [
+    2614483664151,
+    2621837604576,
+    15149299370243
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.866883993148804,
+   "storage_delta": 1034
+  },
+  {
+   "tx": "HY4FjuWRJ5ZtCKrrtb899FSWqGv2F3Rq2fSvBkD98fz3",
+   "signer": "buyer1.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "serial",
+   "round": 1,
+   "pack_id": 3,
+   "status": "ok",
+   "tx_height": 277270709,
+   "buy_height": 277270710,
+   "step_heights": [
+    277270711,
+    277270712,
+    277270713
+   ],
+   "reveal_height": 277270713,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29802452453384,
+   "near_burnt": 0.0028909722203384,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8329869067630,
+    "reveal_step#2": 2614483664151,
+    "reveal_step#3": 2621837604576,
+    "reveal_step#4": 15034375641582,
+    "?": 223182562500
+   },
+   "gas_buy": 8329869067630,
+   "gas_final": 15034375641582,
+   "gas_steps": [
+    2614483664151,
+    2621837604576,
+    15034375641582
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.654315710067749,
+   "storage_delta": 602
+  },
+  {
+   "tx": "EuiP4itRb4rPw6TH7mEoA747yLLhWmHjLoDrPSPRcBz5",
+   "signer": "buyer2.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "serial",
+   "round": 1,
+   "pack_id": 4,
+   "status": "ok",
+   "tx_height": 277270733,
+   "buy_height": 277270734,
+   "step_heights": [
+    277270735,
+    277270736,
+    277270737
+   ],
+   "reveal_height": 277270737,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30648637578160,
+   "near_burnt": 0.0029755907328160003,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8329869067630,
+    "reveal_step#2": 2614483664151,
+    "reveal_step#3": 2621837604576,
+    "reveal_step#4": 15880560766358,
+    "?": 223182562500
+   },
+   "gas_buy": 8329869067630,
+   "gas_final": 15880560766358,
+   "gas_steps": [
+    2614483664151,
+    2621837604576,
+    15880560766358
+   ],
+   "failed_receipts": 0,
+   "latency_s": 6.152102947235107,
+   "storage_delta": 602
+  },
+  {
+   "tx": "AVASgJQxtXFMRp8L8Kyz1TBsCaLoFfxt571FR3Szfyip",
+   "signer": "buyer3.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "serial",
+   "round": 1,
+   "pack_id": 5,
+   "status": "ok",
+   "tx_height": 277270756,
+   "buy_height": 277270757,
+   "step_heights": [
+    277270758,
+    277270759,
+    277270760
+   ],
+   "reveal_height": 277270760,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30040890024777,
+   "near_burnt": 0.0029148159774777,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8329869067630,
+    "reveal_step#2": 2614483664151,
+    "reveal_step#3": 2621837604576,
+    "reveal_step#4": 15272813212975,
+    "?": 223182562500
+   },
+   "gas_buy": 8329869067630,
+   "gas_final": 15272813212975,
+   "gas_steps": [
+    2614483664151,
+    2621837604576,
+    15272813212975
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.83338475227356,
+   "storage_delta": 602
+  },
+  {
+   "tx": "FNBbYVMyqzyErFjEiZezSmrLEr97DGdqAYFj8FEtX4z4",
+   "signer": "buyer1.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 0,
+   "pack_id": 8,
+   "status": "ok",
+   "tx_height": 277270779,
+   "buy_height": 277270780,
+   "step_heights": [
+    277270781,
+    277270782,
+    277270783
+   ],
+   "reveal_height": 277270783,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29287442097498,
+   "near_burnt": 0.0028394711847498,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8237442020378,
+    "reveal_step#2": 2568883664151,
+    "reveal_step#3": 2576237604576,
+    "reveal_step#4": 14702992332948,
+    "?": 223182562500
+   },
+   "gas_buy": 8237442020378,
+   "gas_final": 14702992332948,
+   "gas_steps": [
+    2568883664151,
+    2576237604576,
+    14702992332948
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.563824892044067,
+   "storage_delta": null
+  },
+  {
+   "tx": "7VEpzJ4uaHH6h3cEX2mLiEWhbxHDkph6Wo4PzSvyAeKA",
+   "signer": "buyer2.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 0,
+   "pack_id": 6,
+   "status": "ok",
+   "tx_height": 277270779,
+   "buy_height": 277270780,
+   "step_heights": [
+    277270781,
+    277270782,
+    277270783
+   ],
+   "reveal_height": 277270783,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30406316000681,
+   "near_burnt": 0.0029513585750681,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8330922020378,
+    "reveal_step#2": 2614483664151,
+    "reveal_step#3": 2621837604576,
+    "reveal_step#4": 15637186236131,
+    "?": 223182562500
+   },
+   "gas_buy": 8330922020378,
+   "gas_final": 15637186236131,
+   "gas_steps": [
+    2614483664151,
+    2621837604576,
+    15637186236131
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.5606043338775635,
+   "storage_delta": null
+  },
+  {
+   "tx": "G7d9NQB3qRZxPW4wVtUCCcxDytYYP3B9jMNhMKQi7RrS",
+   "signer": "buyer3.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 0,
+   "pack_id": 7,
+   "status": "ok",
+   "tx_height": 277270779,
+   "buy_height": 277270780,
+   "step_heights": [
+    277270781,
+    277270782,
+    277270783
+   ],
+   "reveal_height": 277270783,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29279565224767,
+   "near_burnt": 0.0028386834974767003,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8237442020378,
+    "reveal_step#2": 2568883664151,
+    "reveal_step#3": 2576237604576,
+    "reveal_step#4": 14695115460217,
+    "?": 223182562500
+   },
+   "gas_buy": 8237442020378,
+   "gas_final": 14695115460217,
+   "gas_steps": [
+    2568883664151,
+    2576237604576,
+    14695115460217
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.557692766189575,
+   "storage_delta": null
+  },
+  {
+   "tx": "H3e6MU9tCFV9GYsKfXWfFY2nXdLkKJ5F611JXK3oyADy",
+   "signer": "buyer1.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 1,
+   "pack_id": 11,
+   "status": "ok",
+   "tx_height": 277270806,
+   "buy_height": 277270807,
+   "step_heights": [
+    277270808,
+    277270809,
+    277270810
+   ],
+   "reveal_height": 277270810,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30036135284079,
+   "near_burnt": 0.0029143405034079,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8240412101443,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 15447774957492,
+    "?": 223182562500
+   },
+   "gas_buy": 8240412101443,
+   "gas_final": 15447774957492,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    15447774957492
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.990299940109253,
+   "storage_delta": null
+  },
+  {
+   "tx": "DPd72RPFmvnidsqxNCmBsNnnL3tFTeiSJeW5tMAJZZdc",
+   "signer": "buyer2.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 1,
+   "pack_id": 9,
+   "status": "ok",
+   "tx_height": 277270806,
+   "buy_height": 277270807,
+   "step_heights": [
+    277270808,
+    277270809,
+    277270810
+   ],
+   "reveal_height": 277270810,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30310238380439,
+   "near_burnt": 0.0029417508130439,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8333398435212,
+    "reveal_step#2": 2614483664151,
+    "reveal_step#3": 2621837604576,
+    "reveal_step#4": 15538632201055,
+    "?": 223182562500
+   },
+   "gas_buy": 8333398435212,
+   "gas_final": 15538632201055,
+   "gas_steps": [
+    2614483664151,
+    2621837604576,
+    15538632201055
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.989840030670166,
+   "storage_delta": null
+  },
+  {
+   "tx": "73YsTsymFMMwuzWT5nx87HTLHKJeQGTmZaf5isRX4nG4",
+   "signer": "buyer3.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 1,
+   "pack_id": 10,
+   "status": "ok",
+   "tx_height": 277270806,
+   "buy_height": 277270807,
+   "step_heights": [
+    277270808,
+    277270809,
+    277270810
+   ],
+   "reveal_height": 277270810,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29740825029106,
+   "near_burnt": 0.0028848094779106003,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8240412101443,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 15152464702519,
+    "?": 223182562500
+   },
+   "gas_buy": 8240412101443,
+   "gas_final": 15152464702519,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    15152464702519
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.98428201675415,
+   "storage_delta": null
+  },
+  {
+   "tx": "DAFPKkCUSEGCevN7co5N1BEwXRJFbnocvRewPTpDKMbN",
+   "signer": "buyer1.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 2,
+   "pack_id": 13,
+   "status": "ok",
+   "tx_height": 277270835,
+   "buy_height": 277270836,
+   "step_heights": [
+    277270837,
+    277270838,
+    277270839
+   ],
+   "reveal_height": 277270839,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29632667146821,
+   "near_burnt": 0.0028739936896821,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8241465054191,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 15043253867486,
+    "?": 223182562500
+   },
+   "gas_buy": 8241465054191,
+   "gas_final": 15043253867486,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    15043253867486
+   ],
+   "failed_receipts": 0,
+   "latency_s": 4.49108099937439,
+   "storage_delta": null
+  },
+  {
+   "tx": "45cWDQ42ZsUgctW1mFFxu2hTPGedNWfAT7SRNRmDSct3",
+   "signer": "buyer2.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 2,
+   "pack_id": 14,
+   "status": "ok",
+   "tx_height": 277270836,
+   "buy_height": 277270837,
+   "step_heights": [
+    277270838,
+    277270839,
+    277270840
+   ],
+   "reveal_height": 277270840,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29815750204982,
+   "near_burnt": 0.0028923019954982,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8289345054191,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 15178456925647,
+    "?": 223182562500
+   },
+   "gas_buy": 8289345054191,
+   "gas_final": 15178456925647,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    15178456925647
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.123086214065552,
+   "storage_delta": null
+  },
+  {
+   "tx": "2PkAhaCtiD12bdx2WsMG6aqYFGrzx2Wd91WsZgh8mb7G",
+   "signer": "buyer3.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 2,
+   "pack_id": 12,
+   "status": "ok",
+   "tx_height": 277270835,
+   "buy_height": 277270836,
+   "step_heights": [
+    277270837,
+    277270838,
+    277270839
+   ],
+   "reveal_height": 277270839,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30191214003745,
+   "near_burnt": 0.0029298483753745002,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8334945054191,
+    "reveal_step#2": 2614953904637,
+    "reveal_step#3": 2622307845062,
+    "reveal_step#4": 15417120724410,
+    "?": 223182562500
+   },
+   "gas_buy": 8334945054191,
+   "gas_final": 15417120724410,
+   "gas_steps": [
+    2614953904637,
+    2622307845062,
+    15417120724410
+   ],
+   "failed_receipts": 0,
+   "latency_s": 4.47905707359314,
+   "storage_delta": null
+  },
+  {
+   "tx": "3E46EjMiwwMpMtJdp2CMboA6m9NUk9FqwX5S1usbiofD",
+   "signer": "buyer1.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 3,
+   "pack_id": 17,
+   "status": "ok",
+   "tx_height": 277270864,
+   "buy_height": 277270865,
+   "step_heights": [
+    277270866,
+    277270867,
+    277270868
+   ],
+   "reveal_height": 277270868,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29661458234018,
+   "near_burnt": 0.0028768727984018,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8240238006939,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 15073272001935,
+    "?": 223182562500
+   },
+   "gas_buy": 8240238006939,
+   "gas_final": 15073272001935,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    15073272001935
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.09722113609314,
+   "storage_delta": null
+  },
+  {
+   "tx": "8ChbmQUAD8MKz4xN2bhR6YWrRFrzQmzyLUG8JP3JuVXw",
+   "signer": "buyer2.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 3,
+   "pack_id": 15,
+   "status": "ok",
+   "tx_height": 277270864,
+   "buy_height": 277270865,
+   "step_heights": [
+    277270866,
+    277270867,
+    277270868
+   ],
+   "reveal_height": 277270868,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30428612133103,
+   "near_burnt": 0.0029535881883102997,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8335998006939,
+    "reveal_step#2": 2614953904637,
+    "reveal_step#3": 2622307845062,
+    "reveal_step#4": 15653465901020,
+    "?": 223182562500
+   },
+   "gas_buy": 8335998006939,
+   "gas_final": 15653465901020,
+   "gas_steps": [
+    2614953904637,
+    2622307845062,
+    15653465901020
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.096312046051025,
+   "storage_delta": null
+  },
+  {
+   "tx": "2PcVMuNDTfRzPSjrvkbc4hPuU5KwTtayxP1VmNqS1SaE",
+   "signer": "buyer3.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 3,
+   "pack_id": 16,
+   "status": "ok",
+   "tx_height": 277270864,
+   "buy_height": 277270865,
+   "step_heights": [
+    277270866,
+    277270867,
+    277270868
+   ],
+   "reveal_height": 277270868,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29620243241064,
+   "near_burnt": 0.0028727512991064,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8240238006939,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 15032057008981,
+    "?": 223182562500
+   },
+   "gas_buy": 8240238006939,
+   "gas_final": 15032057008981,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    15032057008981
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.113881826400757,
+   "storage_delta": null
+  },
+  {
+   "tx": "452s5ajFjBK6RDPp1cwHcrmrbcaymX62f1wkhZoNo9N7",
+   "signer": "buyer1.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 4,
+   "pack_id": 20,
+   "status": "ok",
+   "tx_height": 277270893,
+   "buy_height": 277270894,
+   "step_heights": [
+    277270895,
+    277270896,
+    277270897
+   ],
+   "reveal_height": 277270897,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30284314188373,
+   "near_burnt": 0.0029391583938373003,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8243570959687,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 15692795003542,
+    "?": 223182562500
+   },
+   "gas_buy": 8243570959687,
+   "gas_final": 15692795003542,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    15692795003542
+   ],
+   "failed_receipts": 0,
+   "latency_s": 4.941190004348755,
+   "storage_delta": null
+  },
+  {
+   "tx": "8NUoyA97Th79kkmPUsZgFHRjFRa1P4rhpBENQryENSjK",
+   "signer": "buyer2.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 4,
+   "pack_id": 18,
+   "status": "ok",
+   "tx_height": 277270892,
+   "buy_height": 277270893,
+   "step_heights": [
+    277270894,
+    277270895,
+    277270896
+   ],
+   "reveal_height": 277270896,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30229961710698,
+   "near_burnt": 0.0029337231460698,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8337050959687,
+    "reveal_step#2": 2614953904637,
+    "reveal_step#3": 2622307845062,
+    "reveal_step#4": 15453762525867,
+    "?": 223182562500
+   },
+   "gas_buy": 8337050959687,
+   "gas_final": 15453762525867,
+   "gas_steps": [
+    2614953904637,
+    2622307845062,
+    15453762525867
+   ],
+   "failed_receipts": 0,
+   "latency_s": 4.4359290599823,
+   "storage_delta": null
+  },
+  {
+   "tx": "E7vVdjRPnNhA1h5rmrqxEqhxJu94fLyoaCZVQfAEweHU",
+   "signer": "buyer3.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 4,
+   "pack_id": 19,
+   "status": "ok",
+   "tx_height": 277270893,
+   "buy_height": 277270894,
+   "step_heights": [
+    277270895,
+    277270896,
+    277270897
+   ],
+   "reveal_height": 277270897,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30460409636531,
+   "near_burnt": 0.0029567679386531,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8291450959687,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 15821010451700,
+    "?": 223182562500
+   },
+   "gas_buy": 8291450959687,
+   "gas_final": 15821010451700,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    15821010451700
+   ],
+   "failed_receipts": 0,
+   "latency_s": 4.9531660079956055,
+   "storage_delta": null
+  },
+  {
+   "tx": "8tMgQ8wSFz8mBVG841meBfGKWoEyPnqs4A2t7bUs3S5r",
+   "signer": "buyer1.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 5,
+   "pack_id": 22,
+   "status": "ok",
+   "tx_height": 277270920,
+   "buy_height": 277270921,
+   "step_heights": [
+    277270922,
+    277270923,
+    277270924
+   ],
+   "reveal_height": 277270924,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29885889958675,
+   "near_burnt": 0.0028993159708675,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8293224646691,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 15244717086840,
+    "?": 223182562500
+   },
+   "gas_buy": 8293224646691,
+   "gas_final": 15244717086840,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    15244717086840
+   ],
+   "failed_receipts": 0,
+   "latency_s": 6.066685914993286,
+   "storage_delta": null
+  },
+  {
+   "tx": "852epoerq7w3tMyVrKDU7wJh8RvFMSHvzDX9xPceFghi",
+   "signer": "buyer2.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 5,
+   "pack_id": 21,
+   "status": "ok",
+   "tx_height": 277270919,
+   "buy_height": 277270920,
+   "step_heights": [
+    277270921,
+    277270922,
+    277270923
+   ],
+   "reveal_height": 277270923,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29532302704796,
+   "near_burnt": 0.0028639572454796005,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8338824646691,
+    "reveal_step#2": 2614953904637,
+    "reveal_step#3": 2622307845062,
+    "reveal_step#4": 14754329832961,
+    "?": 223182562500
+   },
+   "gas_buy": 8338824646691,
+   "gas_final": 14754329832961,
+   "gas_steps": [
+    2614953904637,
+    2622307845062,
+    14754329832961
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.314969778060913,
+   "storage_delta": null
+  },
+  {
+   "tx": "93s3VcWfuh4uKjDVB8K6sojTx1hDwtq7HB2Y9C3D4tGF",
+   "signer": "buyer3.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 5,
+   "pack_id": 23,
+   "status": "ok",
+   "tx_height": 277270920,
+   "buy_height": 277270921,
+   "step_heights": [
+    277270922,
+    277270923,
+    277270924
+   ],
+   "reveal_height": 277270924,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29490543106407,
+   "near_burnt": 0.0028597812856407004,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8245344646691,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 14897250234572,
+    "?": 223182562500
+   },
+   "gas_buy": 8245344646691,
+   "gas_final": 14897250234572,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    14897250234572
+   ],
+   "failed_receipts": 0,
+   "latency_s": 6.0479350090026855,
+   "storage_delta": null
+  },
+  {
+   "tx": "GMXQZFS9V8hpB3Jf2hHnxi9i7hUyWmyBtoAffr6p7TUC",
+   "signer": "buyer1.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 6,
+   "pack_id": 24,
+   "status": "ok",
+   "tx_height": 277270946,
+   "buy_height": 277270947,
+   "step_heights": [
+    277270948,
+    277270949,
+    277270950
+   ],
+   "reveal_height": 277270950,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30112339590059,
+   "near_burnt": 0.0029219609340059,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8339877599439,
+    "reveal_step#2": 2614953904637,
+    "reveal_step#3": 2622307845062,
+    "reveal_step#4": 15333313765476,
+    "?": 223182562500
+   },
+   "gas_buy": 8339877599439,
+   "gas_final": 15333313765476,
+   "gas_steps": [
+    2614953904637,
+    2622307845062,
+    15333313765476
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.5955810546875,
+   "storage_delta": null
+  },
+  {
+   "tx": "CHkaqNcmDw8wuuo72W4nCQt1acbMr9LkNgne2m3BFaXD",
+   "signer": "buyer1.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 7,
+   "pack_id": 27,
+   "status": "ok",
+   "tx_height": 277270972,
+   "buy_height": 277270973,
+   "step_heights": [
+    277270974,
+    277270975,
+    277270976
+   ],
+   "reveal_height": 277270976,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29327876961553,
+   "near_burnt": 0.0028435146711553,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8247450552187,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 14732478184222,
+    "?": 223182562500
+   },
+   "gas_buy": 8247450552187,
+   "gas_final": 14732478184222,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    14732478184222
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.727885007858276,
+   "storage_delta": null
+  },
+  {
+   "tx": "Hm3fYtyjekRCwvUu5gngZXiVXjPuwYC9k1LtiZF6xE47",
+   "signer": "buyer2.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 7,
+   "pack_id": 25,
+   "status": "ok",
+   "tx_height": 277270972,
+   "buy_height": 277270973,
+   "step_heights": [
+    277270974,
+    277270975,
+    277270976
+   ],
+   "reveal_height": 277270976,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30317281086477,
+   "near_burnt": 0.0029424550836477,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8339877599439,
+    "reveal_step#2": 2614953904637,
+    "reveal_step#3": 2622307845062,
+    "reveal_step#4": 15538255261894,
+    "?": 223182562500
+   },
+   "gas_buy": 8339877599439,
+   "gas_final": 15538255261894,
+   "gas_steps": [
+    2614953904637,
+    2622307845062,
+    15538255261894
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.712950944900513,
+   "storage_delta": null
+  },
+  {
+   "tx": "5sR6h2uQB9GEo5qEcAjTZWv8NNVT9PYtuCUz4X9FZR4D",
+   "signer": "buyer3.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 7,
+   "pack_id": 26,
+   "status": "ok",
+   "tx_height": 277270972,
+   "buy_height": 277270973,
+   "step_heights": [
+    277270974,
+    277270975,
+    277270976
+   ],
+   "reveal_height": 277270976,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29915302128434,
+   "near_burnt": 0.0029022571878434002,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8246397599439,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 15320956303851,
+    "?": 223182562500
+   },
+   "gas_buy": 8246397599439,
+   "gas_final": 15320956303851,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    15320956303851
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.713011980056763,
+   "storage_delta": null
+  },
+  {
+   "tx": "43xxwGYQb4kgnfr4TjyxLLBw1EhXsJsfYRNc6P4dZFB8",
+   "signer": "buyer1.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 8,
+   "pack_id": 28,
+   "status": "ok",
+   "tx_height": 277271025,
+   "buy_height": 277271026,
+   "step_heights": [
+    277271027,
+    277271028,
+    277271029
+   ],
+   "reveal_height": 277271029,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 30131842225227,
+   "near_burnt": 0.0029239111975227,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8341983504935,
+    "reveal_step#2": 2614953904637,
+    "reveal_step#3": 2622307845062,
+    "reveal_step#4": 15350710495148,
+    "?": 223182562500
+   },
+   "gas_buy": 8341983504935,
+   "gas_final": 15350710495148,
+   "gas_steps": [
+    2614953904637,
+    2622307845062,
+    15350710495148
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.892653226852417,
+   "storage_delta": null
+  },
+  {
+   "tx": "12dEFzWkFN72Hvn2efooE9JGJbr335yd84zET6bo6EZv",
+   "signer": "buyer2.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 8,
+   "pack_id": 29,
+   "status": "ok",
+   "tx_height": 277271025,
+   "buy_height": 277271026,
+   "step_heights": [
+    277271027,
+    277271028,
+    277271029
+   ],
+   "reveal_height": 277271029,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29414878368209,
+   "near_burnt": 0.0028522148118209,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8247450552187,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 14819479590878,
+    "?": 223182562500
+   },
+   "gas_buy": 8247450552187,
+   "gas_final": 14819479590878,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    14819479590878
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.892459869384766,
+   "storage_delta": null
+  },
+  {
+   "tx": "92oFGHFLhgHKWgPBeyuV33vdKg3oS7M8HormNtp6QRFG",
+   "signer": "buyer3.memaster-demo-j7xg7z.testnet",
+   "series": 0,
+   "mode": "parallel",
+   "round": 8,
+   "pack_id": 30,
+   "status": "ok",
+   "tx_height": 277271025,
+   "buy_height": 277271026,
+   "step_heights": [
+    277271027,
+    277271028,
+    277271029
+   ],
+   "reveal_height": 277271029,
+   "blocks_buy_to_reveal": 3,
+   "gas_total": 29706697716577,
+   "near_burnt": 0.0028813967466577,
+   "gas": {
+    "tx": 309156225445,
+    "buy_pack": 8247450552187,
+    "reveal_step#2": 2569353904637,
+    "reveal_step#3": 2576707845062,
+    "reveal_step#4": 15111298939246,
+    "?": 223182562500
+   },
+   "gas_buy": 8247450552187,
+   "gas_final": 15111298939246,
+   "gas_steps": [
+    2569353904637,
+    2576707845062,
+    15111298939246
+   ],
+   "failed_receipts": 0,
+   "latency_s": 5.889334201812744,
+   "storage_delta": null
+  }
+ ]
+}
