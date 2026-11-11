@@ -53,6 +53,9 @@ class TestAnglais(unittest.TestCase):
         t = textes(en_anglais(rendre_carte(self.carte(ticker="à vérifier", nom="財務自由 (Liberté financière)"))))
         self.assertIn("TBD", t)
         self.assertIn("財務自由", t)
+        # Le titre aussi (infobulle et lecteurs d'écran) : plus de « à vérifier ».
+        self.assertEqual(t[-2], "TBD · 財務自由 · rare")
+        self.assertIsNone(FRANCAIS.search(t[-2]), t[-2])
 
     def test_seuls_les_textes_changent(self):
         svg = rendre_carte(self.carte())

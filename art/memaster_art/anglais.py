@@ -89,7 +89,13 @@ def _titre(m: re.Match) -> str:
         return "<title>Memaster · sealed mythic card</title>"
     parties = t.rsplit(" · ", 1)
     if len(parties) == 2 and parties[1] in RARETES:
-        t = parties[0] + " · " + RARETES[parties[1]]
+        # « TICKER · Nom (précision française) » : la précision part, comme sous le ticker de la carte.
+        tete = parties[0].split(" · ", 1)
+        tete[-1] = _PRECISION_FR.sub("", tete[-1])
+        t = " · ".join(tete) + " · " + RARETES[parties[1]]
+    # Ticker inconnu en tête du titre (« à vérifier · Nom · rareté ») : même libellé que sur la carte.
+    if t.startswith("à vérifier · "):
+        t = "TBD" + t[len("à vérifier"):]
     return f"<title>{t}</title>"
 
 
