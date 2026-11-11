@@ -204,7 +204,7 @@ pub struct Contract {
     /// Total encaissé en prix de boosters (yoctoNEAR), net des packs `Stuck` remboursés.
     revenue: u128,
     /// Engagements envers les acheteurs des packs non tirés (`Pending`, `Stuck`) : prix et stockage
-    /// prépayé pas encore utilisé. Ni retirable, ni compté dans le stockage occupé.
+    /// prépayé entier (`storage_per_pack`), jusqu'au tirage ou au remboursement. Non retirable.
     pack_escrow: u128,
     /// Dépôts des annonces en cours (rendus au vendeur au retrait ou à la vente).
     listing_deposits: u128,

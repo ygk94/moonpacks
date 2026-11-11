@@ -169,8 +169,8 @@ fn unused_storage_is_refunded_at_final_step() {
     let p = buy(&mut c, alice(), 20);
     let after_buy = c.packs.get(&p).unwrap().storage_used as u64;
     assert!(after_buy > 0, "le stockage de buy_pack est mesuré");
-    // Pendant le tirage, l'engagement = prix + prépayé non utilisé.
-    assert_eq!(c.pack_escrow, price + byte() * (prepaid - after_buy) as u128);
+    // Pendant le tirage, l'engagement = prix + prépayé entier.
+    assert_eq!(c.pack_escrow, price + byte() * prepaid as u128);
     c.flush_all();
     set_seed(21, [1; 32]);
     c.reveal_step(p, 0, 1);
@@ -304,7 +304,7 @@ fn stuck_pack_is_refunded_once_and_never_drawn() {
     let p = stuck_pack(&mut c);
     let used = c.packs.get(&p).unwrap().storage_used as u64;
     let revenue = c.revenue;
-    assert_eq!(c.pack_escrow, price + byte() * (prepaid - used) as u128);
+    assert_eq!(c.pack_escrow, price + byte() * prepaid as u128);
     // Par un tiers : l'argent va à l'acheteur.
     set(bob(), 0, 5_000);
     let total = c.refund_stuck_pack(p).0;

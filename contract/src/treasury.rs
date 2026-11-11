@@ -10,8 +10,9 @@
 //! - **stockage occupé** : `env::storage_usage()` × 10¹⁹ (tout l'état, stockage payé par les
 //!   acheteurs, l'owner ou le contrat ; le protocole l'exige de toute façon) ;
 //! - **dépôts d'annonces** : `listing_deposits`, rendus aux vendeurs ;
-//! - **packs non tirés** : `pack_escrow`, prix et stockage prépayé non encore utilisé des packs
-//!   `Pending` et `Stuck` (rendus au tirage ou par `refund_stuck_pack`) ;
+//! - **packs non tirés** : `pack_escrow`, prix et stockage prépayé entier des packs `Pending` et
+//!   `Stuck` (le stockage déjà écrit est donc compté deux fois, par prudence ; libéré au tirage ou par
+//!   `refund_stuck_pack`) ;
 //! - **valeur des brûlables vivantes** : `value_reserved`, la part de valeur tirée (yoctoNEAR) des
 //!   cartes non brûlées d'une série à table de valeur ;
 //! - **réserve minimale** : `TREASURY_MIN_RESERVE` (1 NEAR).

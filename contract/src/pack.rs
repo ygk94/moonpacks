@@ -105,7 +105,8 @@ impl Contract {
         self.pack_count_by_owner.insert(buyer.clone(), rank + 1);
         self.revenue += price;
         // Engagement envers l'acheteur jusqu'au tirage : prix (rendu si le pack finit `Stuck`) et
-        // stockage prépayé ; le stockage réellement écrit en est déduit reçu par reçu.
+        // stockage prépayé entier. Le stockage déjà écrit est aussi compté dans le stockage occupé :
+        // double compte prudent (au plus `storage_per_pack` par pack en attente, quelques blocs).
         self.pack_escrow += price + storage;
         let added = self.storage_added_since(start);
         self.charge_pack_storage(pack_id, added);
@@ -237,8 +238,9 @@ impl Contract {
         let price = s.table.price.0;
         let storage_refund = cost * s.storage_per_pack.saturating_sub(storage_used as u64) as u128;
         let total = price + storage_refund;
+        let escrow = price + cost * s.storage_per_pack as u128;
         self.packs.get_mut(&pack_id).unwrap().status = PackStatus::Refunded;
-        self.pack_escrow = self.pack_escrow.saturating_sub(total);
+        self.pack_escrow = self.pack_escrow.saturating_sub(escrow);
         self.revenue = self.revenue.saturating_sub(price);
         events::emit(
             "pack_refunded",
@@ -255,19 +257,13 @@ impl Contract {
 }
 
 impl Contract {
-    /// Impute `added` octets au pack : `storage_used` augmente et l'engagement `pack_escrow` baisse
-    /// d'autant (dans la limite du prépayé restant : au-delà, c'est le contrat qui paie, comme les
-    /// graines des relances).
+    /// Impute `added` octets au pack (`storage_used`). Ne lit pas la série : une étape
+    /// intermédiaire reste à environ 2,7 Tgas (relire une série de 1 646 cartes en coûterait 3).
     fn charge_pack_storage(&mut self, pack_id: u64, added: u64) {
-        let Some(pack) = self.packs.get(&pack_id) else { return };
-        let prepaid = self.series_ref(pack.series_id).storage_per_pack;
-        let before = prepaid.saturating_sub(pack.storage_used as u64);
-        let used = (pack.storage_used as u64).saturating_add(added).min(u32::MAX as u64) as u32;
-        let after = prepaid.saturating_sub(used as u64);
-        let cost = env::storage_byte_cost().as_yoctonear();
-        self.pack_escrow = self.pack_escrow.saturating_sub(cost * (before - after) as u128);
-        // Même taille borsh : la réécriture du pack ne change pas le stockage mesuré.
-        self.packs.get_mut(&pack_id).unwrap().storage_used = used;
+        if let Some(p) = self.packs.get_mut(&pack_id) {
+            // Même taille borsh : la réécriture du pack ne change pas le stockage mesuré.
+            p.storage_used = (p.storage_used as u64).saturating_add(added).min(u32::MAX as u64) as u32;
+        }
     }
 
     fn schedule_step(&self, pack_id: u64, attempt: u32, step: u8) {
@@ -452,7 +448,7 @@ impl Contract {
         let prepaid = series_storage_per_pack;
         let used = self.packs.get(&pack_id).map(|p| p.storage_used).unwrap_or(0);
         let refund = env::storage_byte_cost().as_yoctonear() * prepaid.saturating_sub(used as u64) as u128;
-        self.pack_escrow = self.pack_escrow.saturating_sub(price + refund);
+        self.pack_escrow = self.pack_escrow.saturating_sub(price + env::storage_byte_cost().as_yoctonear() * prepaid as u128);
         ev["storage"] = json!({
             "prepaid_bytes": prepaid, "used_bytes": used, "refund": U128(refund),
         });
