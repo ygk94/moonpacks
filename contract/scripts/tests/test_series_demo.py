@@ -103,6 +103,8 @@ class BuildSeriesOptionsTest(unittest.TestCase):
         p.pop("mechanics")
         p.update(slug="t", burnables=[{"card_id": "aaa-com", "asset_id": "nep141:a.near", "amount": "5"}],
                  card_weights={"legendary": 1, "epic": 1, "rare": 1, "common": 1})
+        # Mini-catalogue sans épique ni rare : leurs poids de rareté à 0 (règle du contrat, validate_series).
+        p["rarity_weights"].update(epic=0, rare=0)
         with open(self.params, "w") as f:
             json.dump(p, f)
         self.sel = "11" * 32
