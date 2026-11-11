@@ -192,5 +192,41 @@ class Metadonnees(unittest.TestCase):
             self.assertEqual(meta["media_hash"], hash_b64(octets))
 
 
+class MythiquesDuCatalogueMarkdown(unittest.TestCase):
+    """Revue du 12/11 : `--mythiques` (catalogue markdown) publiait le recto, le JSON et la référence
+    de la mythique (nom, ticker, adresse) et un nom de fichier tiré de son N° et de son ticker."""
+
+    def test_cli_mythiques_ne_publie_que_le_dos(self):
+        from memaster_art.cli import main
+
+        cartes = lire_catalogue(CATALOGUE)[:2]
+        cible = cartes[0]
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.devnull, "w") as nul:
+                old, sys.stdout = sys.stdout, nul
+                try:
+                    main(["--catalogue", CATALOGUE, "--out", d, "--mythiques", str(cible.numero), "--limit", "2"])
+                finally:
+                    sys.stdout = old
+            noms = sorted(os.listdir(d))
+            self.assertFalse(any(n.startswith(cible.nom_fichier) for n in noms), noms)
+            self.assertIn("mythique-m1.json", noms)
+            with open(os.path.join(d, "mythique-m1.json"), encoding="utf-8") as f:
+                meta = json.load(f)
+            with open(os.path.join(d, "dos-mythique.json"), encoding="utf-8") as f:
+                self.assertEqual(meta, json.load(f), "mythique = JSON du dos commun")
+            tout = "".join(open(os.path.join(d, n), encoding="utf-8").read() for n in noms)
+            for secret in (cible.nom, cible.ticker, cible.identifiant):
+                if len(secret) >= 3:
+                    self.assertNotIn(secret, tout)
+
+    def test_generer_scelle_toute_mythique(self):
+        c = replace(lire_catalogue(CATALOGUE)[0], rarete="mythique")
+        with tempfile.TemporaryDirectory() as d:
+            stats = generer([c], d)
+            self.assertEqual((stats["mythiques"], stats["scellees"]), (1, 1))
+            self.assertEqual(sorted(os.listdir(d)), ["dos-mythique.json", "dos-mythique.svg", "mythique-m1.json"])
+
+
 if __name__ == "__main__":
     unittest.main()

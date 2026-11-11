@@ -13,11 +13,10 @@ import argparse
 import os
 import re
 import sys
-from dataclasses import replace
 
 from .catalogue import lire_catalogue
 from .catalogue_v2 import lire_catalogue_v2
-from .cli import generer
+from .cli import generer, sceller
 from .planche import planche_svg
 
 # Mythiques (règle v2) : N° 1 et 3 du catalogue. Les autres couvrent chaque rareté et
@@ -34,7 +33,7 @@ def selection(chemin: str):
         c = cartes.get(num)
         if c is None:
             continue
-        choisies.append(replace(c, rarete="mythique") if num in MYTHIQUES else c)
+        choisies.append(sceller(c) if num in MYTHIQUES else c)
     return choisies  # 11 cartes + le dos scellé = 12 visuels
 
 
