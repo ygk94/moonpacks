@@ -3,6 +3,11 @@
 Mise à jour du 11/11 (branche `feat/valeur-contrat`) : gold pack à plancher de rareté par emplacement (section 8) et
 valeur aléatoire en jetons par pack (section 9).
 
+Mise à jour du 11/11, branche `feat/gold-rare` (décisions du porteur) : **gold pack ultra rare sans garantie** (pitié en
+ppb, de 1 sur 50 000 à 1 sur 25 000, section 2), **mythique à 1 pour 1 000 000 de packs classiques** (poids de base sur
+2·10⁷), **mythique à 1 % au dernier emplacement du gold pack**, **valeur moyenne 75 % pour le normal et le rush**, et
+**mythiques anonymes** (« ? », section 11).
+
 Mise en œuvre de `docs/mecaniques.md` dans `contract/` (branche `feat/mecaniques-contrat`), avec les corrections tirées
 de la simulation de la série 3 (`sim/RAPPORT.md`, branche `feat/mecaniques-sim`). Rien n'est déployé. Les hauteurs sont
 en blocs, avec 0,6 s par bloc supposé (non vérifié dans le repo).
@@ -14,7 +19,7 @@ en blocs, avec 0,6 s par bloc supposé (non vérifié dans le repo).
   JSON** (`skip_serializing_if`) : une table d'avant garde exactement ses octets, son hash et ses tirages.
   `draw_vectors.json`, régénéré par le nouveau code, ne change pas d'un octet.
 - **Ordre JSON** (verrouillé par `hash_stream::tests::mechanics_field_order_is_locked`) :
-  `"mechanics":{"gold":{"slots":[{"floor","weights"|null,"burnable"}…]}|null,"pity":{"p0_ppm","k_ppm","n_max"}|null,"burn":{"floor_bps","prior_k"}|null,"rush":{"ratio_bps","min_packs","window_blocks","baseline_blocks","bucket_blocks","duration_blocks","cooldown_blocks","max_per_account","weights"}|null,"resurrection":{"eligible":[…]}|null,"value":{"normal":[[bps,poids]…],"gold":[…],"rush":[…],"multipliers":{…}}|null}`.
+  `"mechanics":{"gold":{"slots":[{"floor","weights"|null,"burnable"}…]}|null,"pity":{"p0_ppb","k_ppb","p_max_ppb","n_max"|null}|null,"burn":{"floor_bps","prior_k"}|null,"rush":{"ratio_bps","min_packs","window_blocks","baseline_blocks","bucket_blocks","duration_blocks","cooldown_blocks","max_per_account","weights"}|null,"resurrection":{"eligible":[…]}|null,"value":{"normal":[[bps,poids]…],"gold":[…],"rush":[…],"multipliers":{…}}|null}`.
   L'ancienne table de poids or (`gold_weights`) est retirée : le gold pack se décrit par planchers (section 8).
 - **Tout état qui influence un tirage est figé puis journalisé.** Le vérificateur recalcule chaque tirage à partir des
   seuls événements (`pack_bought`, `pack_revealed`, `card_redeemed`, `card_resurrected`), sans archive d'état :
@@ -26,18 +31,21 @@ en blocs, avec 0,6 s par bloc supposé (non vérifié dans le repo).
   reste fixe (120 Tgas ; 48,4 Tgas au pire mesuré, raretés épuisées en cascade, gold pack et valeur compris). La valeur
   ne peut pas déborder : la validation exige que `prix × V_max × multiplicateur_max` tienne sur u128.
 
-Paramètres par défaut, ceux de `contract/scripts/serie-exemple.json` (série v2, poids de base 2 / 20 / 180 / 800 / 8 998) :
+Paramètres par défaut, ceux de `contract/scripts/serie-exemple.json` (série v2, poids de base 5 / 40 000 / 360 000 /
+1 600 000 / 17 999 995 sur 2·10⁷ : les proportions d'avant, 20 / 180 / 800 / 8 998 sur 10⁴, pour les raretés visibles ;
+mythique 5 / 2·10⁷ par emplacement sur les 4 premiers, le 5ᵉ étant tiré parmi les brûlables, soit **1 mythique pour
+1 000 000 de packs** normaux) :
 
 | Mécanique | Paramètres par défaut |
 |---|---|
-| Gold pack | 5 cartes, aucune commune : emplacements 1 et 2 rare ou mieux (le 2 parmi les brûlables), 3 et 4 épique ou mieux (poids de base tronqués), 5 légendaire 80 % ou mythique 20 % (section 8) |
-| Valeur (provisoire) | normale 20 à 200 % du prix, moyenne 75 % ; rush moyenne 78,5 % ; gold 100 à 800 %, moyenne 218,5 % ; multiplicateurs commune 1, rare 2, épique 5, légendaire 20 (section 9). Calibrage définitif dans `sim/` |
-| Pitié | N = 20, p0 = 2 % (20 000 ppm), k = 0,2 % (2 000 ppm) |
+| Gold pack | 5 cartes, aucune commune : emplacements 1 et 2 rare ou mieux (le 2 parmi les brûlables), 3 et 4 épique ou mieux (poids de base tronqués), 5 légendaire 99 % ou mythique 1 % (section 8) |
+| Valeur | normale 20 à 200 % du prix, moyenne 75 % ; rush même forme, moyenne 75 % ; gold 100 à 800 %, moyenne 218,5 % (inchangé, négligeable) ; multiplicateurs commune 1, rare 2, épique 5, légendaire 20 (section 9). Tables de la simulation : `sim/resultats/serie5/tables-valeur.json` (`--tables-valeur`) |
+| Pitié | sans garantie (`n_max` = `null`) ; p0 = 1 / 50 000 (20 000 ppb), k = 20 ppb par pack, plafond 1 / 25 000 (40 000 ppb) atteint en 1 000 packs |
 | Burns | plancher 25 % (`floor_bps` = 2 500), a priori K = 20 (`prior_k`), renormalisation entre brûlables de la rareté |
 | Rush | palier relatif × 2,5 (`ratio_bps` = 25 000), **100 packs au moins** (50 avant la revue), fenêtre courte 6 000 blocs (1 h), fenêtre longue 144 000 (24 h), seaux de 1 500 (15 min, 96 seaux), rush de 3 000 blocs (30 min), pause de 36 000 (6 h), **3 packs rush au plus par compte et par rush** (`max_per_account`) |
 | Résurrection | liste hachée `resurrection.eligible` : règle `dead_epic_legendary` de `build_series.py` (épiques et légendaires « mort… » du catalogue, non adossées : 86 cartes pour la série v2) ; changement d'oracle après 144 000 blocs (24 h, `oracle_delay_blocks` de `new`) |
-| Table rush | mythique × 1,51, légendaire × 1,51, épique × 1,34, rare × 1,17 : 3 / 30 / 241 / 936 / 8 790 |
-| Couverture (hors chaîne) | avec table de valeur : valeur moyenne de chaque table (base 75 %, gold 218,5 %, rush 78,5 % ≤ 80 %) ; sans table de valeur : valeurs de rareté de `coverage_check` |
+| Table rush | mythique × 1, légendaire × 1,51, épique × 1,34, rare × 1,17 : 5 / 60 400 / 482 400 / 1 872 000 / 17 585 195 (mythique : 1 pour 1 000 000 de packs rush, comme en base) |
+| Couverture (hors chaîne) | avec table de valeur : valeur moyenne de chaque table (base 75 %, gold 218,5 %, rush 75 % ≤ 80 %) ; sans table de valeur : valeurs de rareté de `coverage_check` |
 
 Le rapport de la simulation propose × 2,5 pour le palier. Le message de coordination citait × 1,5 comme exemple. C'est un
 paramètre, et le défaut suit le rapport.
@@ -53,8 +61,8 @@ Une carte ne stocke que sa référence :
   8 o par carte. Un retrait échange l'entrée avec la dernière ;
 - les métadonnées NEP-177 (`title`, `media`, `reference`, `copies`, `issued_at`, `extra`), l'adossement et le statut
   scellé ou révélé des mythiques sont **reconstruits à la lecture** à partir de la table (`nft_token`, `nft_tokens`,
-  `nft_tokens_for_owner`, `get_card`, `get_backing`). `issued_at` vient de l'heure du tirage, stockée dans le pack ; une
-  mythique créée scellée prend `updated_at` = date de sa révélation ;
+  `nft_tokens_for_owner`, `get_card`, `get_backing`). `issued_at` vient de l'heure du tirage, stockée dans le pack. Les
+  métadonnées d'une mythique sont anonymes et ne changent jamais (section 11) ;
 - `price_paid` et `storage_prepaid` de `get_pack` se déduisent de la série ; l'`acc` de chaque graine se recalcule en
   chaînant depuis `initial_acc`.
 
@@ -77,20 +85,31 @@ Un pack déjà connu du compte coûte environ 560 o ; le premier achat ajoute le
 Le prépayé est une borne calculée à l'ouverture (`worst_case_pack_storage`) : comptes de 64 caractères, nouveaux blocs de
 liste, premier achat. Comme avant, le surplus n'est pas rendu (un remboursement dépendrait du résultat).
 
-## 2. Compteur de pitié
+## 2. Compteur de pitié (gold pack ultra rare, sans garantie)
 
 - **État** : `pity: (compte, série) → n`, packs consécutifs sans gold pack, lu et écrit par le dernier reçu.
-  Vue : `get_pity(account_id, series_id)` → `n`, `p_ppm`, `guaranteed_in`.
-- **Formule** : `p(n) = min(10⁶, p0_ppm + k_ppm × n)` ppm ; `gold_roll = u128_be(sha256(acc ‖ 0x00 ‖ 0x02)[0..16]) mod 10⁶` ;
-  gold pack (pitié) si `n + 1 ≥ N` ou `gold_roll < p(n)`. Avec N = 1, tous les packs sont or.
+  Vue : `get_pity(account_id, series_id)` → `n`, `p_ppb`, `packs_to_max` (packs avant le plafond, 0 s'il est atteint),
+  `guaranteed_in` (`null` sans `n_max`), `params`.
+- **Formule** (ppb, parties par milliard : la pente, 0,02 ppm par pack, ne tient pas en ppm entiers) :
+  `p(n) = min(p_max_ppb, p0_ppb + k_ppb × n)`, calculé en u128 ; `gold_roll = u128_be(sha256(acc ‖ 0x00 ‖ 0x02)[0..16]) mod 10⁹` ;
+  gold pack (pitié) si `gold_roll < p(n)`. **Aucune garantie** : `n_max` est optionnel (`null` par défaut) ; avec
+  `n_max = N`, le N-ième pack sans gold pack en est un (`n + 1 ≥ N`), ce qui sert aux tests.
+- **Défaut** : `p0_ppb` = 20 000 (1 / 50 000), `p_max_ppb` = 40 000 (1 / 25 000), `k_ppb` = 20, soit le plafond atteint en
+  (40 000 − 20 000) / 20 = **1 000 packs** (paramétrable : `k = (p_max − p0) / packs`).
+- **Bornes** (validées à la création) : `p0_ppb`, `k_ppb`, `p_max_ppb` ≤ 10⁹ ; `p0_ppb ≤ p_max_ppb` ; `n_max` absent ou
+  1 à 10 000 ; refus si `p_max_ppb = 0` sans `n_max` (gold pack inatteignable). `n` est un u32 saturé : aucun
+  dépassement, même sans garantie.
 - **Table du pack** (`draw::pack_mode`) : gold pack de pitié → gold pack à planchers (section 8) et table de valeur gold ;
   sinon, pack rush → table rush et table de valeur rush ; sinon base et table de valeur normale. La pitié l'emporte sur le
   rush.
-- **Mise à jour** : `n ← 0` après un gold pack **ou un pack rush** (le rapport : « un gold pack de rush remet le compteur
-  à zéro »), sinon `n ← n + 1`. Le compteur n'atteint jamais N.
-- **Haché** : `gold`, `pity`. **Journalisé** : `pack_revealed.mechanics.pity` = `before`, `gold_roll`, `p_ppm`,
+- **Mise à jour** (`draw::pity_after`) : `n ← 0` après un gold pack **seulement** ; sinon `n ← n + 1`, **pack rush
+  compris** (avant le 11/11, un pack rush remettait aussi le compteur à 0 : la montée ne servait à rien).
+- **Fréquence** (simulation série 5, `sim/resultats/serie5/`) : 1 gold pack pour ~25 250 packs pour un joueur qui ne
+  s'arrête pas (g_∞), ~48 000 sur la population de la série 4 (la plupart des joueurs ouvrent peu de packs).
+- **Haché** : `gold`, `pity`. **Journalisé** : `pack_revealed.mechanics.pity` = `before`, `gold_roll`, `p_ppb`,
   `gold`, `after`, et `mode`. Le vérificateur recalcule `gold_roll`, `p`, la décision et `after`, puis chaîne le
-  compteur de chaque compte d'un booster à l'autre.
+  compteur de chaque compte d'un booster à l'autre. Il lit encore l'ancien format (`p0_ppm`, `k_ppm`, `n_max`
+  obligatoire, `p_ppm`, remise à 0 après un pack rush) pour les séries déjà déployées sur testnet.
 - **Coût** : environ 120 o au premier tirage du compte dans la série (prépayé), une lecture et une écriture dans le dernier
   reçu (négligeable).
 - **Variante « compteur dans un NFT revendable » (non faite).** Pour l'ajouter : à la première ouverture d'un compte,
@@ -258,11 +277,11 @@ facteur 2,5.
 | 4 | Faible | Adossement remplacé pendant un burn | Adossement passé à `on_redeem_complete`, journalisé (`replaced_by`) | `redeem_logs_the_backing_actually_delivered` |
 | 5 | Faible | Vérificateur : drapeau rush accepté sans `pack_bought` | Erreur explicite | `test_missing_pack_bought_is_an_error` |
 | 6 | Faible | Gaz du pire cas non mesuré en cascade | Mesuré : 49,1 Tgas sur 120 | `worst_case_cascade_with_burns_fits` |
-| 7 | Faible | `sealed_tokens[j]` gardé après la révélation | Vidé ; `updated_at` déduit de la date du tirage | `reveal_clears_sealed_tokens_and_keeps_updated_at` |
+| 7 | Faible | `sealed_tokens[j]` gardé après la révélation | Vidé (et, depuis le 11/11, plus d'`updated_at` : métadonnées anonymes inchangées) | `reveal_clears_sealed_tokens_metadata_unchanged` |
 
 ## 8. Gold pack : plancher de rareté par emplacement (11/11)
 
-Décision du porteur : le compteur de pitié (garanti au 20ᵉ pack) est gardé, mais le gold pack change de forme. Il n'est
+Décision du porteur : le compteur de pitié est gardé (sans garantie depuis le 11/11, section 2), mais le gold pack change de forme. Il n'est
 plus une table de poids renforcés : c'est une liste d'emplacements, chacun avec un **plancher de rareté**.
 
 - **Table** : `mechanics.gold.slots`, 1 à 10 emplacements (indépendamment de `cards_per_pack` ; le prépayé compte le plus
@@ -270,7 +289,7 @@ plus une table de poids renforcés : c'est une liste d'emplacements, chacun avec
   (poids de base mis à zéro sous le plancher, `draw::gold_slot_weights`), et `burnable` (tiré parmi les brûlables).
 - **Défaut** (`serie-exemple.json`) : 5 cartes, aucune commune. Emplacements 1 et 2 rare ou mieux, 3 et 4 épique ou
   mieux (poids de base tronqués : la proportion entre raretés au-dessus du plancher est celle de la base), 5 légendaire
-  80 % ou mythique 20 % (`weights` = 20 / 80). L'emplacement 2 est `burnable` : il porte la valeur du pack.
+  99 % ou mythique 1 % (`weights` = 1 / 99 ; 20 / 80 avant le 11/11). L'emplacement 2 est `burnable` : il porte la valeur du pack.
 - **Tirage** : `rarity_roll = roll(acc, slot, 0) mod Σ poids de l'emplacement` (tag inchangé), rareté visée par cumul.
 - **Rareté épuisée** (`draw::fallback_order`, règle définie) : la visée, puis **vers le bas jusqu'au plancher**, puis
   **vers le haut** (au-dessus de la visée, jusqu'à la mythique), puis **sous le plancher** jusqu'à la commune en dernier
@@ -323,9 +342,10 @@ Décision du porteur : la valeur en jetons d'un pack va de 20 % à 200 % du prix
   (par emplacement, `null` hors brûlables), et `resurrect_seq` (les brûlables du tirage dépendent des résurrections).
   Le vérificateur recalcule V, le total, la répartition au bit près, et la brûlable garantie (rejeu des
   `card_resurrected`).
-- **Tables provisoires** (`serie-exemple.json`, à remplacer par celles de `sim/` via `--tables-valeur`) : normale
+- **Tables** (`serie-exemple.json` ; celles de la simulation, 27 paliers, via
+  `--tables-valeur ../sim/resultats/serie5/tables-valeur.json`, format de la sim lu directement) : normale
   `[[2000,15],[3000,13],[4000,10],[5000,10],[6000,10],[8000,10],[10000,10],[12000,8],[15000,5],[20000,9]]` (moyenne
-  exacte 75 %), rush moyenne 78,5 %, gold `[[10000,30],[15000,25],[20000,20],[30000,13],[50000,8],[80000,4]]`
+  exacte 75 %), rush identique (75 %, 78,5 % avant le 11/11), gold `[[10000,30],[15000,25],[20000,20],[30000,13],[50000,8],[80000,4]]`
   (218,5 %), multiplicateurs commune 1, rare 2, épique 5, légendaire 20. `build_series.py` vérifie les bornes du contrat
   et refuse une table rush de moyenne > 80 % (`coverage_check.max_rush`).
 
@@ -338,9 +358,35 @@ Décision du porteur : la valeur en jetons d'un pack va de 20 % à 200 % du prix
 - Valeurs de rareté de `coverage_check` : à reprendre de la simulation à chaque série. Le contrat ne contrôle pas la
   couverture.
 - Temps de bloc réel (0,6 s supposé) pour convertir 1 h, 24 h et 6 h en blocs.
-- `nft_metadata_update` pour les exemplaires d'une carte ressuscitée (non émis).
+- `nft_metadata_update` pour les exemplaires d'une carte ressuscitée (non émis ; plus émis non plus à la révélation d'une
+  mythique, dont les métadonnées ne changent pas).
 - Mesures sur testnet.
 - Tables de valeur et multiplicateurs définitifs (calibrage dans `sim/`) ; financement réel de la valeur transmise au
   redeemer.
 - Série v2 d'exemple : deux brûlables factices seulement (une commune, une légendaire) ; la brûlable garantie retombe
   donc presque toujours sur la même commune.
+
+## 11. Mythiques anonymes (11/11)
+
+Décision du porteur : 3 mythiques, sans aucune information publique, avant comme après la révélation.
+
+- **Métadonnées NEP-177** (`nft_token`, `nft_tokens`, `nft_tokens_for_owner`) : titre « ? », description « ? », image
+  « ? » (`MYTHIC_MEDIA`, un SVG en URI `data:`, le même pour toutes), ni `reference`, ni `copies`, ni `updated_at` ;
+  `extra` = `series_id`, `rarity: "mythic"`, `pack_id`. Plus de `card_id`, d'engagement, d'index de mythique ni de
+  `burnable`. Les 3 mythiques sont donc indiscernables entre elles dans leurs métadonnées, et celles-ci ne changent pas à
+  la révélation (plus de `nft_metadata_update`).
+- **`get_card`** d'une mythique : `card_id` et `backing` toujours `null` ; `sealed` dit seulement si l'engagement a été
+  ouvert.
+- **`art/`** : `mythique-m1.json`, `-m2`, `-m3` sont identiques octet pour octet au JSON du dos commun (titre et
+  description « ? », image `dos-mythique.svg`, sans id ni N°).
+- **Ce qui reste public, par construction** (à trancher par le porteur, rien n'est supprimé) :
+  - l'index de mythique d'un exemplaire (`pack_revealed.draws[].index`, `get_pack`, `get_card.index`, `mythic_drawn`) et
+    l'engagement correspondant (`get_mythic_commitments`, `get_rates`) : nécessaires pour vérifier le tirage ;
+  - à la révélation (`reveal_mythic`), `mythic_revealed` et `get_mythic_commitments[j].revealed` publient `card_id`,
+    sel et contenu (titre, médias, adossement), avec la liste des exemplaires scellés : c'est ce qui rend l'engagement
+    vérifiable. Combiné à l'index, cela relie chaque exemplaire à son coin. **Ne pas révéler** garde le secret, mais une
+    mythique non révélée **ne peut pas être brûlée** (son adossement est dans le contenu) ;
+  - après la révélation, `get_backing` (vue du burn) et `card_redeemed` (burn) donnent l'actif adossé ;
+  - le `media` du contenu engagé est construit par `build_series.py` avec l'id réel de la mythique (`media_template`) :
+    il n'apparaît qu'à la révélation, jamais dans les métadonnées affichées.
+
