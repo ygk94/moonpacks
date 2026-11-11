@@ -1657,3 +1657,92 @@ async fn mechanics_end_to_end() -> Result<()> {
     std::fs::remove_dir_all(&dir).ok();
     Ok(())
 }
+
+/// Pire cas du dernier reçu (revue, point 6) : 2 000 cartes, 10 cartes par booster, toutes les
+/// mécaniques, et des raretés épuisées en cascade. Légendaires, épiques et rares ont un plafond nul :
+/// chaque emplacement vise la légendaire (poids de rareté presque tout là) et retombe trois fois
+/// jusqu'à la commune, en recalculant à chaque cran les facteurs des burns sur les 2 000 cartes.
+/// Des communes adossées sont brûlées entre les achats, et 200 cartes sont ressuscitables
+/// (recherche dans la liste pour chaque brûlable). Le dernier reçu doit rester sous son gaz fixe.
+#[tokio::test]
+async fn worst_case_cascade_with_burns_fits() -> Result<()> {
+    let env = setup().await?;
+    let cards: Vec<CardDef> = (0..memaster::MAX_CARDS_PER_SERIES)
+        .map(|i| {
+            let (rarity, cap, backed) = match i {
+                0..=199 => (Rarity::Legendary, Some(0), false),
+                200..=399 => (Rarity::Epic, Some(0), true),
+                400..=599 => (Rarity::Rare, Some(0), false),
+                _ => (Rarity::Common, None, i % 2 == 0),
+            };
+            card(&format!("c{i:04}"), rarity, 1 + (i % 7) as u32, cap, backed)
+        })
+        .collect();
+    let mut t = table("Cascade", NEAR / 10, weights(0, 9_997, 1, 1, 1), cards, vec![], &env.owner);
+    t.cards_per_pack = 10;
+    t.mechanics = Some(Mechanics {
+        gold_weights: Some(weights(0, 9_996, 2, 1, 1)),
+        pity: Some(PityParams { p0_ppm: 20_000, k_ppm: 2_000, n_max: 2 }),
+        burn: Some(BurnParams { floor_bps: 2_500, prior_k: 20 }),
+        rush: Some(RushParams {
+            ratio_bps: 25_000,
+            min_packs: 100,
+            window_blocks: 6_000,
+            baseline_blocks: 144_000,
+            bucket_blocks: 1_500,
+            duration_blocks: 3_000,
+            cooldown_blocks: 36_000,
+            max_per_account: 3,
+            weights: weights(0, 9_995, 3, 1, 1),
+        }),
+        resurrection: Some(ResurrectionParams { eligible: (0..200).collect() }),
+    });
+    let mut first = t.clone();
+    first.cards.truncate(memaster::MAX_CARDS_PER_CALL);
+    let dep = NearToken::from_near(1);
+    let r = env.owner.call(env.contract.id(), "create_series_batched").args_json(json!({ "table": first })).deposit(dep).max_gas().transact().await?;
+    assert!(r.is_success(), "{:?}", r.failures());
+    let sid: u32 = r.json()?;
+    for lot in t.cards[memaster::MAX_CARDS_PER_CALL..].chunks(memaster::MAX_CARDS_PER_CALL) {
+        let r = env.owner.call(env.contract.id(), "append_series_cards").args_json(json!({ "series_id": sid, "cards": lot })).deposit(dep).max_gas().transact().await?;
+        assert!(r.is_success(), "{:?}", r.failures());
+    }
+    let r = env.owner.call(env.contract.id(), "open_series").args_json(json!({ "series_id": sid })).max_gas().transact().await?;
+    assert!(r.is_success(), "{:?}", r.failures());
+    let (mut max_last, mut falls, mut modes) = (0u64, 0usize, std::collections::BTreeSet::new());
+    let mut burned = 0;
+    for round in 0..8 {
+        let r = buy(&env, &env.alice, sid).await?;
+        assert!(r.is_success(), "{:?}", r.failures());
+        let ev = revealed(&r);
+        verify_pack_event(&ev, env.alice.id().as_str(), &t);
+        modes.insert(ev["mechanics"]["mode"].as_str().unwrap().to_string());
+        let last = r.receipt_outcomes().iter().filter(|o| o.logs.iter().any(|l| l.contains("pack_revealed"))).map(|o| o.gas_burnt.as_gas()).max().unwrap();
+        max_last = max_last.max(last);
+        for d in ev["draws"].as_array().unwrap() {
+            assert_eq!(d["final_rarity"], "common", "cascade jusqu'à la commune");
+            falls += (d["rolled_rarity"] == "legendary") as usize;
+        }
+        // Burns entre deux achats : les communes adossées de ce booster.
+        if round < 4 {
+            for d in ev["draws"].as_array().unwrap() {
+                if d["index"].as_u64().unwrap() % 2 == 0 {
+                    let r = env.alice.call(env.contract.id(), "redeem").args_json(json!({ "token_id": d["token_id"] })).deposit(NearToken::from_yoctonear(1)).gas(Gas::from_tgas(100)).transact().await?;
+                    assert!(r.is_success(), "{:?}", r.failures());
+                    burned += 1;
+                }
+            }
+        }
+    }
+    let sv = series_view(&env, sid).await?;
+    assert_eq!(sv["burn_seq"].as_u64().unwrap() as usize, burned);
+    println!(
+        "\n=== PIRE CAS EN CASCADE (2 000 cartes, 10 par booster, toutes les mécaniques, {burned} burns, tables {modes:?}) : {falls} emplacements sur 80 tombés de la légendaire à la commune, dernier reçu {:.2} Tgas au plus (gaz fixe {:.0}) ===",
+        tgas(max_last),
+        tgas(memaster::FINAL_STEP_GAS.as_gas())
+    );
+    assert!(falls > 70, "la cascade doit être le cas courant : {falls}");
+    assert!(burned > 0);
+    assert!(max_last < memaster::FINAL_STEP_GAS.as_gas(), "dernier reçu dans son gaz fixe");
+    Ok(())
+}
