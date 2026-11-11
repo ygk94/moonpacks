@@ -81,7 +81,9 @@ impl Contract {
         };
         // Les cartes déjà tirées ne stockent que leur référence : leurs métadonnées et leur
         // adossement se lisent désormais dans `revealed_mythics`, rien à réécrire carte par carte.
-        let sealed = series.sealed_tokens[j].clone();
+        // La liste des cartes scellées ne sert plus qu'à l'événement : elle est vidée ici
+        // (`updated_at` des cartes créées scellées se déduit de la date de leur tirage).
+        let sealed = std::mem::take(&mut series.sealed_tokens[j]);
         series.revealed_mythics[j] = Some(revealed);
         series.mythic_revealed_ms[j] = env::block_timestamp_ms();
         *self.series.get_mut(series_id).unwrap() = series;

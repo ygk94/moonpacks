@@ -330,8 +330,9 @@ pub struct Series {
     pub revealed_mythics: Vec<Option<RevealedMythic>>,
     /// Horodatage (ms) de la révélation de chaque mythique (0 tant qu'elle est scellée).
     pub mythic_revealed_ms: Vec<u64>,
-    /// Cartes mythiques créées scellées (bornées par le plafond). Gardées après la révélation :
-    /// leurs métadonnées portent `updated_at`.
+    /// Cartes mythiques créées scellées (bornées par le plafond), listées dans `mythic_revealed`
+    /// puis vidées à la révélation. Leurs métadonnées portent `updated_at` (date de révélation),
+    /// déduit de la date du tirage, sans relire cette liste.
     pub sealed_tokens: Vec<Vec<TokenId>>,
     /// Stockage du pire cas d'un booster, en octets, calculé à l'ouverture.
     pub storage_per_pack: u64,

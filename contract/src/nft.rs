@@ -110,7 +110,6 @@ impl Contract {
                 d.index,
                 pack_id,
                 pack.revealed_at_ms,
-                &token_id_of(pack_id, slot as u8),
             ),
         }
     }

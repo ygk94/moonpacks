@@ -762,3 +762,26 @@ impl Contract {
         self.owner_token_count.get(a).copied().unwrap_or(0) as u64
     }
 }
+
+/// Revue, point 7 : `sealed_tokens[j]` est vidé à la révélation de la mythique j (plus rien ne le
+/// lit). `updated_at` (date de révélation) reste sur les cartes créées scellées, et seulement sur
+/// elles : il se déduit de la date du tirage du pack.
+#[test]
+fn reveal_clears_sealed_tokens_and_keeps_updated_at() {
+    let mut c = setup();
+    let sealed = mint_sealed(&mut c);
+    let pid = parse_token_id(&sealed).unwrap() / 10;
+    c.packs.get_mut(&pid).unwrap().revealed_at_ms = 500;
+    let mut b = ctx(owner(), NEAR, 30);
+    b.block_timestamp(1_000_000_000_000); // 1 000 000 ms
+    testing_env!(b.build());
+    c.reveal_mythic(0, 0, "secret".into(), SEL.into(), mythic_content());
+    assert!(c.series_ref(0).sealed_tokens[0].is_empty(), "liste vidée à la révélation");
+    let meta = c.nft_token(sealed).unwrap().metadata.unwrap();
+    assert_eq!(meta.updated_at.as_deref(), Some("1000000"));
+    // Mythique tirée après la révélation : pas d'updated_at.
+    let later = mint_sealed(&mut c);
+    let lp = parse_token_id(&later).unwrap() / 10;
+    c.packs.get_mut(&lp).unwrap().revealed_at_ms = 2_000_000;
+    assert_eq!(c.nft_token(later).unwrap().metadata.unwrap().updated_at, None);
+}

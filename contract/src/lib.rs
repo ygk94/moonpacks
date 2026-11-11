@@ -87,7 +87,7 @@ pub const PACK_RECORD_BYTES: u64 = 200;
 pub const SEED_RECORD_BYTES: u64 = 45;
 /// Par carte : `PackDraw` (31) + `CardSlot` (10) + liste du propriétaire (8) + liste globale (8).
 pub const PER_CARD_BYTES: u64 = 60;
-/// Par mythique scellée : identifiant ajouté à `Series::sealed_tokens`.
+/// Par mythique scellée : identifiant ajouté à `Series::sealed_tokens` (vidé à la révélation).
 pub const SEALED_TOKEN_BYTES: u64 = 24;
 /// Entrée de la liste des packs du compte.
 pub const OWNER_PACK_LIST_BYTES: u64 = 8;
@@ -388,14 +388,15 @@ impl Contract {
     }
 
     /// Métadonnées NEP-177 d'une mythique : scellée tant que l'engagement n'est pas révélé, puis
-    /// révélée (avec `updated_at` = date de révélation pour une carte créée scellée).
+    /// révélée (avec `updated_at` = date de révélation pour une carte créée scellée, c'est-à-dire
+    /// tirée au plus tard à la date de la révélation ; une carte tirée dans la même milliseconde
+    /// prend `updated_at = issued_at`).
     pub(crate) fn mythic_metadata(
         series_id: u32,
         series: &Series,
         index: u32,
         pack_id: u64,
         issued_at_ms: u64,
-        token_id: &str,
     ) -> TokenMetadata {
         let issued_at = Some(issued_at_ms.to_string());
         let j = index as usize;
@@ -403,7 +404,7 @@ impl Contract {
         match &series.revealed_mythics[j] {
             Some(r) => {
                 let mut meta = Self::revealed_mythic_metadata(series_id, m, r, pack_id, issued_at);
-                if series.sealed_tokens[j].iter().any(|t| t == token_id) {
+                if issued_at_ms <= series.mythic_revealed_ms[j] {
                     meta.updated_at = Some(series.mythic_revealed_ms[j].to_string());
                 }
                 meta
