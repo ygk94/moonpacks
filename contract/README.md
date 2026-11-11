@@ -12,7 +12,7 @@ Phase 3 de `docs/plan.md`. **Rien n'a été déployé, ni sur testnet ni sur mai
 
 | Fichier | Rôle |
 |---|---|
-| `src/lib.rs` | État, `new`, constantes de gaz, de limites et de stockage, `set_redeemer`, `set_price_oracle`, métadonnées reconstruites des cartes, `token_id_of` / `parse_token_id` |
+| `src/lib.rs` | État, `new`, constantes de gaz, de limites et de stockage, `set_redeemer`, `propose_price_oracle` / `accept_price_oracle` / `revoke_price_oracle`, métadonnées reconstruites des cartes, `token_id_of` / `parse_token_id` |
 | `src/types.rs` | Table de série et mécaniques, cartes, engagements mythiques, packs compacts (`PackDraw`, `CardSlot`), tirages, annonces |
 | `src/mechanics.rs` | Validation des mécaniques, compteurs de burn, `set_resurrected` (oracle), vues `get_pity`, `get_rush_state`, `get_burns`, `get_resurrected` |
 | `src/series.rs` | `create_series` (brouillon), `create_series_batched` + `append_series_cards` (grosse table par lots, payables), `replace_series_table(_batched)` (brouillon seulement), `delete_draft`, `open_series` (gel, hash, stockage du pire cas), `pause_series`, `resume_series`, `close_series` |
@@ -163,7 +163,9 @@ Détail et mesures dans `docs/mecaniques-spec.md`.
 
 Pitié, rareté pilotée par les burns, gold rush et résurrection des coins morts : formules, paramètres par défaut, ce qui
 est haché, ce qui est journalisé, coût en gaz et en stockage dans **`docs/mecaniques-spec.md`**. Rôle `price_oracle`
-(owner : `set_price_oracle`), méthode `set_resurrected` (oracle, épiques et légendaires seulement). Le contrôle de
+(owner : `propose_price_oracle`, puis `accept_price_oracle` après `oracle_delay_blocks` blocs, 24 h par défaut,
+paramètre de `new` ; `revoke_price_oracle` immédiat), méthode `set_resurrected` (oracle, cartes de la liste hachée
+`mechanics.resurrection.eligible` seulement : épiques et légendaires non adossées ; sans liste, aucune résurrection). Le contrôle de
 couverture de la table rush (≤ 80 %) est fait hors chaîne par `scripts/build_series.py`.
 
 ### Marché intégré
@@ -181,7 +183,9 @@ retire l'annonce. Une carte en vente ne peut pas être brûlée : il faut d'abor
 `redeemer.redeem(owner, asset_id, amount)` (30 Tgas fixes) puis `on_redeem_complete` (20 Tgas fixes, privé). Si le reçu
 du redeemer réussit, quelle que soit sa valeur de retour, la carte est brûlée (`nft_burn`) ; si la série a la rareté
 pilotée par les burns, le compteur de la carte et `burn_seq` sont incrémentés (journalisés dans `card_redeemed`). S'il
-échoue, la carte revient à `Normal`. L'adossement est celui de la table, ou celui donné par l'oracle (résurrection). **Contrat d'interface : le redeemer doit paniquer s'il ne livre pas.**
+échoue, la carte revient à `Normal`. L'adossement est celui de la table, ou celui donné par l'oracle (résurrection). Il
+est lu par `redeem`, envoyé au redeemer et passé en argument à `on_redeem_complete`, qui journalise celui-là dans
+`card_redeemed` (`replaced_by` si l'oracle l'a remplacé entre-temps). **Contrat d'interface : le redeemer doit paniquer s'il ne livre pas.**
 L'approvisionnement des jetons et le retrait réel restent à concevoir. Aucune intégration NEAR Intents.
 
 ### Transferts et approbations
@@ -212,8 +216,8 @@ cargo near build non-reproducible-wasm          # → target/near/memaster.wasm 
 (cd mock-redeemer && cargo near build non-reproducible-wasm)
 (cd mock-oracle && cargo near build non-reproducible-wasm)
 
-cargo test --lib                                # 90 tests unitaires (python3 requis pour les tests des scripts)
-cargo test --test sandbox -- --nocapture        # 18 tests sandbox, mesures imprimées (~45 s, en parallèle)
+cargo test --lib                                # 97 tests unitaires (python3 requis pour les tests des scripts)
+cargo test --test sandbox -- --nocapture        # 19 tests sandbox, mesures imprimées (~45 s, en parallèle)
 MECH_VECTORS_OUT=../verifier/tests/vectors/sandbox_mech_vectors.json \
   cargo test --test sandbox -- mechanics_end_to_end   # régénère les événements réels du vérificateur
 
@@ -229,7 +233,7 @@ sert uniquement au test de `retry_reveal` et **ne doit jamais être déployée**
 
 ## Tests
 
-**Unitaires (90, dont 67 d'avant).** Validation des tables, hash égal au sha256 du JSON de la vue, table ouverte non remplaçable,
+**Unitaires (97, dont 67 d'avant les mécaniques).** Validation des tables, hash égal au sha256 du JSON de la vue, table ouverte non remplaçable,
 pause, dépôt ou gaz insuffisant, tirage complet et adossement (reconstruit depuis la table), étapes périmées ignorées, règles de
 `retry_reveal`, déterminisme, retombée en cas de plafond (par rareté et par carte), fréquences sur 20 000 tirages,
 engagements (bon sel, mauvais sel, adossement modifié, mythique jamais sortie), marché avec redevances, retrait de
@@ -252,7 +256,7 @@ libéré rendu, borné par le payé, rien pour un brouillon de `create_series`, 
 réutilisés, série supprimée non ouvrable ni complétable, série ouverte non supprimable, owner seulement) ; ordre des
 champs de `SeriesTable` verrouillé ; motif `"cards":[` en double ou absent refusé.
 
-**Mécaniques et stockage par carte (23, `src/tests_mech.rs`).** Pitié : N = 1 (tous les packs or), garantie à
+**Mécaniques et stockage par carte (29, `src/tests_mech.rs`).** Pitié : N = 1 (tous les packs or), garantie à
 `n = N − 1` puis remise à zéro, décision égale à `gold_roll(acc) < p`, croissance et plafond de `p`. Burns : arrondi et
 plancher de 25 %, dernière carte brûlée (plancher, jamais 0), carte épuisée par son plafond (0), renormalisation (part
 des brûlables exacte sur 2 000 cas), tirages égaux au tirage de référence, `rarity_roll` inchangé, compteurs absents
@@ -262,9 +266,13 @@ sans la mécanique. Rush : palier relatif (trafic régulier ×1, ×4 et ×16 san
 brûlables, oracle seulement, refus pour une carte déjà adossée, une commune, une rare, remplacement sans nouveau
 `resurrect_seq`. Validation des paramètres (13 refus). Stockage : énumération cohérente après transferts et burns
 (pages, propriétaires, aucun doublon), propriétaire compact au retour chez l'acheteur, métadonnées reconstruites,
-`token_id` canoniques.
+`token_id` canoniques. Revue des mécaniques (6, et `reveal_clears_sealed_tokens_and_keeps_updated_at` dans
+`src/tests.rs`) : burns lissés par l'a priori K (scénario de la revue : 10,5 % au lieu de 30,8 %), ressuscitée au ratio
+moyen (20 % au lieu de 50 %), résurrection limitée à la liste hachée, oracle en deux temps (refus avant le délai,
+oracle proposé sans pouvoir, événements, retrait immédiat), plafond de 3 packs rush par compte, adossement livré
+journalisé pendant un remplacement.
 
-**Sandbox (18)** :
+**Sandbox (19)** :
 
 | Test | Ce qu'il montre |
 |---|---|
@@ -284,7 +292,8 @@ brûlables, oracle seulement, refus pour une carte déjà adossée, une commune,
 | `reveal_with_100_sealed_cards` | Révélation d'une mythique avec 100 cartes scellées et un contenu maximal |
 | `catalogue_v2_batched_load_and_packs` | Catalogue v2 complet, avec les mécaniques par défaut de `serie-exemple.json` : refus en une transaction, chargement en 10 transactions avec les dépôts du script, hash = vérificateur Python, octets de la vue = `table.json`, vérificateur Python en mode pagination (pages de 200 et de 77) = même hash, 12 boosters à 160 Tgas revérifiés par le vérificateur Python (rejeu des plafonds) |
 | `max_size_series_fits` | 2 000 cartes aux chaînes maximales, 20 engagements, 10 redevances, 10 cartes par booster, toutes les mécaniques (pire cas) : chargement payé par l'owner, ouverture, gaz des vues légères (en-tête + 10 pages = hash), vérificateur Python par pages, achats au gaz minimal |
-| `mechanics_end_to_end` | Toutes les mécaniques : pitié N = 3, rush déclenché par un pic après remplissage de la fenêtre longue, burns de toutes les com_a (jusqu'à la dernière), résurrection d'une épique par `mock-oracle` (rare et commune refusées), 47 événements rejoués par le vérificateur Python sans archive d'état |
+| `mechanics_end_to_end` | Toutes les mécaniques : pitié N = 3, rush déclenché par un pic après remplissage de la fenêtre longue, burns de toutes les com_a (jusqu'à la dernière), oracle installé en deux temps (acceptation refusée avant le délai), résurrection d'une épique par `mock-oracle` (rare et commune, hors liste, refusées), 45 à 48 événements rejoués par le vérificateur Python sans archive d'état |
+| `worst_case_cascade_with_burns_fits` | Pire cas du dernier reçu : 2 000 cartes, 10 par booster, toutes les mécaniques, légendaires, épiques et rares épuisées (chaque emplacement retombe trois fois), burns entre les achats, 200 cartes ressuscitables : 49,1 Tgas au plus sur 120 |
 | `draft_storage_is_paid_by_owner_and_refunded_on_delete` | Création par lots refusée sans dépôt, stockage payé = augmentation mesurée, excédent rendu, `delete_draft` réservé à l'owner, stockage libéré rendu, emplacement de 184 o, série supprimée inutilisable, série ouverte non supprimable |
 
 ## Série v2 (`scripts/build_series.py`)
@@ -317,8 +326,8 @@ Mesures (sandbox, 1 646 cartes visibles + 3 engagements, table de 275 Ko) :
 | Nouveau code, en une transaction | Refusé (200 cartes au plus par appel) |
 | Nouveau code, par lots | 10 transactions, 253 Tgas en tout, 31,8 Tgas au plus par transaction (mesure du stockage comprise), `open_series` 6,6 Tgas ; stockage 149 803 o (1,50 NEAR), payé par l'owner |
 | Booster (5 cartes, 160 Tgas attachés), avant | 48 Tgas au plus en tout, `buy_pack` 6,8 Tgas, dernier reçu 35,3 Tgas ; stockage 4 040 o au plus, 15 715 o prépayés |
-| Booster v2, stockage minimal, toutes les mécaniques | 27,9 Tgas au plus en tout, `buy_pack` 7,9 Tgas, dernier reçu 14,1 Tgas ; **stockage 964 o au plus, 1 467 o prépayés** (848 o sans mécanique) |
-| Taille maximale (2 000 cartes aux chaînes maximales) | lot de 188 Ko, `append_series_cards` 88 Tgas au plus, `open_series` 10,7 Tgas, 1,66 Mo de stockage (16,6 NEAR payés par l'owner) ; booster de 10 cartes : `buy_pack` 9 Tgas, dernier reçu 61 Tgas (avant) ; avec le stockage minimal et toutes les mécaniques : `buy_pack` 10,2 Tgas, dernier reçu 19,5 Tgas au plus, stockage 1 259 o au premier achat |
+| Booster v2, stockage minimal, toutes les mécaniques | 29,5 Tgas au plus en tout, `buy_pack` 8,0 Tgas, dernier reçu 15,5 Tgas ; **stockage 964 o au plus, 1 597 o prépayés** (848 o sans mécanique) |
+| Taille maximale (2 000 cartes aux chaînes maximales) | lot de 188 Ko, `append_series_cards` 88 Tgas au plus, `open_series` 10,7 Tgas, 1,66 Mo de stockage (16,6 NEAR payés par l'owner) ; booster de 10 cartes : `buy_pack` 9 Tgas, dernier reçu 61 Tgas (avant) ; avec le stockage minimal et toutes les mécaniques : `buy_pack` 10,3 Tgas, dernier reçu 24,3 Tgas au plus, stockage 1 254 o au premier achat ; raretés épuisées en cascade (`worst_case_cascade_with_burns_fits`) : dernier reçu 49,1 Tgas au plus |
 
 ### Gaz des vues (série de taille maximale)
 
@@ -330,7 +339,7 @@ cartes aux chaînes maximales, 20 engagements et 10 redevances. Limite d'une vue
 | `get_series_header` | (n'existait pas) | 4,7 Tgas |
 | `get_series_table_hash` | 229 Tgas (recalcul) | 4,3 Tgas (hash stocké) |
 | `get_series_cards`, page de 200 | | 22,2 Tgas au plus |
-| `get_rates`, page de 200 | 184 Tgas (table entière) | 25,4 Tgas au plus ; 32,3 Tgas avec la rareté pilotée par les burns |
+| `get_rates`, page de 200 | 184 Tgas (table entière) | 25,4 Tgas au plus ; 34,2 Tgas avec la rareté pilotée par les burns |
 | `get_series_table` | 183 Tgas | inchangée, réservée aux petites séries ; le vérificateur ne l'appelle plus |
 
 ## Mesures (sandbox near-sandbox 0.4.0, 11/11/2026)
@@ -359,7 +368,7 @@ validateur et produit un bloc par reçu ; le rythme réel sur testnet et mainnet
 | Pire cas : 200 cartes aux chaînes maximales, 5 cartes par booster | 61,9 Tgas | 36,7 Tgas |
 | Pire cas, 10 cartes par booster | 83,9 Tgas | 58,7 Tgas (le `FINAL_STEP_GAS` de 120 Tgas suffit) |
 | Pire cas « MetaMask » (voir le test 270 Tgas) | 63 à 68 Tgas | 38 à 42 Tgas |
-| `redeem` réussi | 10,4 Tgas (8,1 avec le stockage minimal) | `on_redeem_complete` 3,7 Tgas avec compteurs de burn |
+| `redeem` réussi | 10,4 Tgas (8,1 avec le stockage minimal) | `on_redeem_complete` 3,8 Tgas avec compteurs de burn |
 | `nft_transfer_call` (garde / rend / panique) | 8,6 / 9,5 / 9,4 Tgas | résolution 2,0 / 3,3 / 3,3 Tgas sur 15 fixes |
 | `reveal_mythic`, 100 cartes scellées, contenu maximal | 85,6 Tgas avant, **5,0 Tgas** avec le stockage minimal | les cartes ne sont plus réécrites |
 
@@ -379,11 +388,11 @@ toutefois détenir temporairement environ 0,16 NEAR (à 160 Tgas) à 0,27 NEAR (
 | Table de 4 cartes, 5 cartes par booster | 4 235 o | 888 o | 1 227 o (0,012 NEAR) | 0,112 NEAR |
 | Pire cas, 5 cartes par booster | 7 888 o | 829 o | 1 227 o | 0,112 NEAR |
 | Pire cas, 10 cartes par booster | 14 975 o | 858 o | 1 527 o | 0,115 NEAR |
-| Série v2, toutes les mécaniques | 3 965 o | 964 o | 1 467 o | 0,115 NEAR |
+| Série v2, toutes les mécaniques | 3 965 o | 964 o | 1 597 o | 0,116 NEAR |
 
 Avant, le dépôt requis était de 0,216 à 0,396 NEAR. Le stockage prépayé est une borne du pire cas calculée à
 l'ouverture (`worst_case_pack_storage` : comptes de 64 caractères, premier achat du compte, nouveaux blocs de liste,
-entrée de pitié). Il ne dépend plus de la longueur des métadonnées.
+entrée de pitié, entrée du plafond de packs rush). Il ne dépend plus de la longueur des métadonnées.
 
 **Décision : le stockage non utilisé n'est pas remboursé.** Le stockage réel dépend des cartes tirées : un
 remboursement calculé après le tirage serait un chemin de remboursement conditionné au résultat. Seul l'excédent
@@ -423,8 +432,9 @@ au-delà de `required_deposit` est rendu, dans `buy_pack`, avant tout tirage. Le
   transmet le secret au nœud interrogé : il vaut mieux calculer les engagements hors ligne.
 - **Retombée.** Elle ne fait que descendre. Si mythique et légendaire sont épuisées, la valeur attendue baisse : c'est
   voulu, puisque attendre ne rapporte rien.
-- **Gaz du dernier reçu.** Il est fixe (120 Tgas) et a été mesuré à 19,5 Tgas au pire (2 000 cartes aux chaînes
-  maximales, 10 cartes par booster, toutes les mécaniques ; 61 Tgas avant le stockage minimal). Une table plus grosse que les limites validées n'est pas possible (2 000 cartes,
+- **Gaz du dernier reçu.** Il est fixe (120 Tgas) et a été mesuré à 49,1 Tgas au pire (2 000 cartes, 10 cartes par
+  booster, toutes les mécaniques, raretés épuisées en cascade) et à 24,3 Tgas sans cascade (chaînes maximales ; 61 Tgas
+  avant le stockage minimal). Une table plus grosse que les limites validées n'est pas possible (2 000 cartes,
   20 mythiques).
 - **Grosse série.** Par lots, le stockage de la table (1,5 NEAR pour la série v2) est payé par l'owner. Restent à la
   charge du contrat : `create_series` et `replace_series_table(_batched)` (un seul appel, 200 cartes au plus) et ce que
@@ -435,8 +445,10 @@ au-delà de `required_deposit` est rendu, dans `buy_pack`, avant tout tirage. Le
   ni pour les entrées de liste d'un acheteur du marché ou d'un destinataire de transfert (environ 120 o au premier,
   8 o ensuite, à la charge du contrat).
 - **Mécaniques.** L'oracle de prix est de confiance, comme le redeemer : le contrat ne vérifie ni le cours ni le stock
-  de jetons. La couverture de la table rush (≤ 80 %) n'est contrôlée que hors chaîne, par `build_series.py`. Le
-  compteur de pitié est lié au compte (variante NFT revendable non faite). Voir `docs/mecaniques-spec.md`, section 7.
+  de jetons. Il ne peut ressusciter que les cartes de la liste hachée, et l'owner ne le change qu'avec 24 h de délai
+  (le retrait est immédiat). Le plafond de packs rush est par compte : un acteur à nombreux comptes le contourne (gain
+  de 0,64 prix par compte et par rush, `docs/mecaniques-spec.md`, section 4). La couverture de la table rush (≤ 80 %) n'est contrôlée que hors chaîne, par `build_series.py`. Le
+  compteur de pitié est lié au compte (variante NFT revendable non faite). Voir `docs/mecaniques-spec.md`, sections 7 et 8.
 - **Revenus.** Les prix encaissés restent sur le contrat (`get_config().revenue`). Il n'existe volontairement aucune
   méthode de retrait tant que la mécanique d'approvisionnement n'est pas conçue.
 - **Redeemer.** Il est de confiance et peut être changé par l'owner. Un redeemer qui réussit sans livrer, ou qui panique

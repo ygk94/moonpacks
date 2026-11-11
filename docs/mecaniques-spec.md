@@ -11,7 +11,7 @@ en blocs, avec 0,6 s par bloc supposé (non vérifié dans le repo).
   JSON** (`skip_serializing_if`) : une table d'avant garde exactement ses octets, son hash et ses tirages.
   `draw_vectors.json`, régénéré par le nouveau code, ne change pas d'un octet.
 - **Ordre JSON** (verrouillé par `hash_stream::tests::mechanics_field_order_is_locked`) :
-  `"mechanics":{"gold_weights":…|null,"pity":{"p0_ppm","k_ppm","n_max"}|null,"burn":{"floor_bps"}|null,"rush":{"ratio_bps","min_packs","window_blocks","baseline_blocks","bucket_blocks","duration_blocks","cooldown_blocks","weights"}|null}`.
+  `"mechanics":{"gold_weights":…|null,"pity":{"p0_ppm","k_ppm","n_max"}|null,"burn":{"floor_bps","prior_k"}|null,"rush":{"ratio_bps","min_packs","window_blocks","baseline_blocks","bucket_blocks","duration_blocks","cooldown_blocks","max_per_account","weights"}|null,"resurrection":{"eligible":[…]}|null}`.
 - **Tout état qui influence un tirage est figé puis journalisé.** Le vérificateur recalcule chaque tirage à partir des
   seuls événements (`pack_bought`, `pack_revealed`, `card_redeemed`, `card_resurrected`), sans archive d'état :
   `verifier/` `SeriesReplay`.
@@ -19,7 +19,7 @@ en blocs, avec 0,6 s par bloc supposé (non vérifié dans le repo).
   tags 0 (rareté) et 1 (carte) par emplacement ne changent pas.
 - **Dernier reçu du tirage sans échec lié au résultat.** La pitié, les burns et la table de taux sont lus et écrits dans
   `finalize_pack`, sans aucun `require`. Le stockage ajouté est borné et prépayé (entrée de pitié comprise), et le gaz
-  reste fixe (120 Tgas, 19,5 Tgas au pire mesurés).
+  reste fixe (120 Tgas ; 49,1 Tgas au pire mesuré, raretés épuisées en cascade).
 
 Paramètres par défaut, ceux de `contract/scripts/serie-exemple.json` (série v2, poids de base 2 / 20 / 180 / 800 / 8 998) :
 
@@ -27,8 +27,9 @@ Paramètres par défaut, ceux de `contract/scripts/serie-exemple.json` (série v
 |---|---|
 | Table or | multiplicateurs mythique × 4, légendaire × 4, épique × 3, rare × 2, la commune compense : 8 / 80 / 540 / 1 600 / 7 772 |
 | Pitié | N = 20, p0 = 2 % (20 000 ppm), k = 0,2 % (2 000 ppm) |
-| Burns | plancher 25 % (`floor_bps` = 2 500), renormalisation entre brûlables de la rareté |
-| Rush | palier relatif × 2,5 (`ratio_bps` = 25 000), 50 packs au moins, fenêtre courte 6 000 blocs (1 h), fenêtre longue 144 000 (24 h), seaux de 1 500 (15 min, 96 seaux), rush de 3 000 blocs (30 min), pause de 36 000 (6 h) |
+| Burns | plancher 25 % (`floor_bps` = 2 500), a priori K = 20 (`prior_k`), renormalisation entre brûlables de la rareté |
+| Rush | palier relatif × 2,5 (`ratio_bps` = 25 000), **100 packs au moins** (50 avant la revue), fenêtre courte 6 000 blocs (1 h), fenêtre longue 144 000 (24 h), seaux de 1 500 (15 min, 96 seaux), rush de 3 000 blocs (30 min), pause de 36 000 (6 h), **3 packs rush au plus par compte et par rush** (`max_per_account`) |
+| Résurrection | liste hachée `resurrection.eligible` : règle `dead_epic_legendary` de `build_series.py` (épiques et légendaires « mort… » du catalogue, non adossées : 86 cartes pour la série v2) ; changement d'oracle après 144 000 blocs (24 h, `oracle_delay_blocks` de `new`) |
 | Table rush | mythique × 1,51, légendaire × 1,51, épique × 1,34, rare × 1,17 : 3 / 30 / 241 / 936 / 8 790 |
 | Couverture (hors chaîne) | base 58,7 %, or 184 %, rush 79,9 % ≤ 80 % (valeurs de rareté de la série 3) |
 
@@ -57,10 +58,10 @@ politique de stockage des approbations. `reveal_mythic` ne réécrit plus les ca
 | Stockage d'un pack (mesuré en sandbox) | Avant | Après |
 |---|---|---|
 | Série v2 (5 cartes), 12 packs, au plus | 3 965 o | 848 o sans mécanique, **964 o avec toutes les mécaniques** (premier achat d'un compte compris) |
-| Série v2, prépayé (`storage_per_pack`) | 15 715 o | 1 467 o (0,0147 NEAR) |
+| Série v2, prépayé (`storage_per_pack`) | 15 715 o | 1 597 o (0,016 NEAR) avec toutes les mécaniques |
 | Table de 4 cartes | 4 235 o / 11 655 prépayés | 888 o / 1 227 |
 | 200 cartes aux chaînes maximales, 5 / 10 cartes par pack | 7 888 / 14 975 o | 829 / 858 o |
-| 2 000 cartes, 10 cartes par pack, toutes les mécaniques | (non mesuré) | 1 259 o au premier achat, 866 à 958 o ensuite, 1 887 prépayés |
+| 2 000 cartes, 10 cartes par pack, toutes les mécaniques | (non mesuré) | 1 254 o au premier achat, 860 à 946 o ensuite, 2 017 prépayés |
 
 Un pack déjà connu du compte coûte environ 560 o ; le premier achat ajoute les compteurs du compte et l'entrée de pitié.
 Le prépayé est une borne calculée à l'ouverture (`worst_case_pack_storage`) : comptes de 64 caractères, nouveaux blocs de
@@ -97,21 +98,35 @@ liste, premier achat. Comme avant, le surplus n'est pas rendu (un remboursement 
   burns n'interviennent que dans le choix de la carte **à l'intérieur de la rareté**, et dans la retombée si une rareté
   est épuisée. C'est déjà la structure de `available_weight`, qui est par rareté : le test `burns_shift_weight…`
   compare `rarity_roll` avec et sans burns.
-- **Renormalisation entre brûlables** (variante retenue par la simulation). Pour une brûlable `i` (adossée par la table,
-  ou ressuscitée) de poids `w`, avec `e` cartes émises et `b` brûlées, son poids brut vaut 0 si elle est épuisée par son
-  plafond, `w` si `e = 0`, et sinon `brut = max(⌊w × (e − b) / e⌋, ⌊w × floor_bps / 10⁴⌋, 1)`.
-  On pose ensuite, par rareté, `E = Σ brut` et `B = Σ poids disponibles` des brûlables. Le poids dans la rareté vaut
+- **Renormalisation entre brûlables** (variante retenue par la simulation). Pour une brûlable `i` adossée par la table,
+  de poids `w`, avec `e` cartes émises et `b` brûlées, son poids brut vaut 0 si elle est épuisée par son plafond, `w`
+  si `e = 0`, et sinon **`brut = max(⌊w × (e − b + K) / (e + K)⌋, ⌊w × floor_bps / 10⁴⌋, 1)`**, avec `K = prior_k`
+  (lissage par a priori : tout se passe comme si chaque carte avait `K` exemplaires de plus, émis et jamais brûlés).
+  **Carte ressuscitée** : on calcule d'abord `E₀ = Σ brut` et `B₀ = Σ poids disponibles` des brûlables **de la table**
+  de la rareté ; son poids brut vaut `min(brut propre, max(⌊w × E₀ / B₀⌋, ⌊w × floor_bps / 10⁴⌋))` (son brut propre
+  si `B₀ = 0`). Elle entre donc avec le **ratio moyen** des brûlables de sa rareté et garde exactement sa part de base
+  parmi elles (`w / (B₀ + w)`), au lieu d'un poids plein ; ses propres burns la font encore baisser.
+  On pose ensuite, par rareté, `E = Σ brut` et `B = Σ poids disponibles` de toutes les brûlables. Le poids dans la rareté vaut
   `brut × B` pour une brûlable, `w × E` pour une carte de collection (`w` si `E = 0`). La part des brûlables dans la rareté
   reste donc exactement `B / (B + Σ w des cartes de collection)` : le poids qu'une brûlable perd revient aux autres
   brûlables de la même rareté. La probabilité de tirer une brûlable et la couverture ne bougent pas. Tout est en entiers
   (u128, au plus 2⁸⁶), sans arrondi sur les parts. `card_roll` est donc stocké sur 128 bits.
+- **Choix de K.** La simulation de la série 3 n'est pas sur cette branche (`sim/` n'a que les séries 1 et 2) : K est
+  posé, pas dérivé. Il est de l'ordre des émissions attendues par carte brûlable de la série v2 : une épique sort
+  0,09 / 235 ≈ 0,00038 fois par pack, une légendaire 0,01 / 21 ≈ 0,00048, soit 5 à 7 exemplaires en un mois à
+  20 packs/h et 28 à 34 à 100 packs/h. K = 20 est au milieu. Effet : une carte émise une fois et brûlée garde 95 % de son
+  poids (20/21) ; le plancher de 25 % n'est atteint qu'à `e = b = 3K` = 60 exemplaires brûlés. Dans le scénario de la
+  revue (10 épiques brûlables de même poids, les 9 bon marché émises une fois et brûlées), la 10ᵉ passe de 10 % à
+  **10,5 %** des épiques brûlables, au lieu de 30,8 % sans lissage (`early_burns_are_smoothed_by_prior`). À recaler
+  avec la simulation quand elle sera fusionnée.
 - **Plancher** : 25 % du poids de base, tant que la carte n'est pas épuisée par son plafond. Un coin brûlé jusqu'à la
   dernière carte garde ce plancher : il ne s'éteint jamais (test `raw_burn_weight_rounding_and_floor`, sandbox).
   Une rareté qui n'a qu'une brûlable ne change pas : la renormalisation lui rend tout son poids.
 - **État** : `BurnState { burned[i], seq }` par série, mis à jour dans `on_redeem_complete` (burn réussi d'une carte
   visible). Les burns de mythiques ne comptent pas. `Series.draw_cards[i].backed` passe à vrai à la résurrection.
-- **Haché** : `burn.floor_bps`. **Journalisé** : `card_redeemed` = `series_id`, `kind`, `index`, `burn_seq` (numéro
-  d'ordre du burn dans la série) ; `card_resurrected` = `card_index`, `resurrect_seq` ; `pack_revealed.mechanics` =
+- **Haché** : `burn.floor_bps`, `burn.prior_k`, `resurrection.eligible`. **Journalisé** : `card_redeemed` = `series_id`, `kind`, `index`, `burn_seq` (numéro
+  d'ordre du burn dans la série), `asset_id` et `amount` **livrés** (adossement lu par `redeem` et passé en argument à
+  `on_redeem_complete`), `replaced_by` (adossement courant s'il a été remplacé pendant le burn, sinon `null`) ; `card_resurrected` = `card_index`, `resurrect_seq` ; `pack_revealed.mechanics` =
   `burn_seq`, `resurrect_seq` (état lu au tirage). Le vérificateur applique les burns et les résurrections de numéro
   ≤ ceux du tirage, et signale un numéro manquant.
 - **Vues** : `get_series.burned`, `get_series.burn_seq`, `get_burns` (paginée), `get_rates` : `effective_weight` par carte
@@ -128,39 +143,72 @@ Corrections de la simulation : un palier fixe s'emballe (69 % des packs en or à
 - **Fenêtre glissante à coût borné** : `m_l = baseline_blocks / bucket_blocks` seaux (≤ 96, anneau dans la série),
   `m_w = window_blocks / bucket_blocks`. Le seau de la hauteur `h` est `b = ⌊h / B⌋`. Un achat incrémente son seau ;
   `C_w` et `C_l` comptent les achats des `m_w` et des `m_l` derniers seaux, celui-ci compris.
-- **Pack rush** : un déclenchement a eu lieu à `t` et `t < h ≤ t + duration_blocks`. **L'état est figé à l'achat**
-  (`buy_pack`, bit `FLAG_RUSH` du pack). Retarder la révélation ne change rien.
+- **Pack rush** : un déclenchement a eu lieu à `t`, `t < h ≤ t + duration_blocks`, **et** l'acheteur a acheté moins de
+  `max_per_account` packs rush pendant ce rush (état `(compte, série) → (t, n)`, remis à zéro à chaque déclenchement,
+  `draw::rush_account`). Au-delà du plafond, le pack est normal. **L'état est figé à l'achat** (`buy_pack`, bit
+  `FLAG_RUSH` du pack). Retarder la révélation ne change rien.
 - **Déclenchement** à l'achat `h` si toutes ces conditions tiennent :
   - aucun rush ni pause en cours : `h > t + duration + cooldown`, ou aucun déclenchement encore ;
   - la fenêtre longue est remplie : `h ≥ premier achat de la série + baseline_blocks` ;
-  - `C_w ≥ min_packs` et `C_w × m_l × 10⁴ ≥ ratio_bps × C_l × m_w`, c'est-à-dire un rythme court au moins `ratio` fois
-    le rythme moyen sur 24 h.
+  - `C_w ≥ min_packs` (palier absolu) **et** `C_w × m_l × 10⁴ ≥ ratio_bps × C_l × m_w` (palier relatif), c'est-à-dire
+    au moins `min_packs` packs dans l'heure et un rythme court au moins `ratio` fois le rythme moyen sur 24 h.
 
   L'achat qui déclenche n'est pas lui-même rush. Les achats faits pendant le rush comptent dans les fenêtres.
 - **Validation à la création** : `ratio_bps ≥ 10⁴`, `ratio_bps × m_w < 10⁴ × m_l` (sinon le palier serait
-  inatteignable), fenêtres multiples des seaux, `m_w < m_l ≤ 96`, durée ≥ 1, `min_packs ≥ 1`, table rush valide et
-  **distincte de la table or**.
+  inatteignable), fenêtres multiples des seaux, `m_w < m_l ≤ 96`, durée ≥ 1, `min_packs ≥ 1`, `max_per_account ≥ 1`,
+  table rush valide et **distincte de la table or**.
+- **Rush déclenché par un seul acteur (revue, point 2).** Mesuré avec `core.rush_on_buy` et `core.rush_account` (mêmes
+  règles que le contrat) : 30 h de trafic de fond régulier, puis un acteur achète 50 packs dans un même bloc et 200 de
+  plus, un par bloc. Gain = espérance gagnée sur un pack de base, `0,799 − 0,587 = 0,212` prix par pack rush.
+
+  | Trafic de fond | Avant (min 50, sans plafond) | Après (min 100, 3 par compte) |
+  |---|---|---|
+  | 0 / h | rafale minimale 50 ; 200 packs rush sur 200, gain 42,4 prix | rafale minimale 100 ; 3 packs rush, gain 0,64 prix |
+  | 20 / h | rafale minimale 35 ; 200 packs rush, gain 42,4 prix | rafale minimale 81 ; 3 packs rush, gain 0,64 prix |
+  | 100 / h | rafale minimale 169 ; 59 packs rush (déclenché par ses achats suivants), gain 12,5 prix | rafale minimale 169 ; 3 packs rush, gain 0,64 prix |
+
+  **Gain maximal d'un acteur** : `max_per_account × 0,212 = 0,64` prix du pack par compte et par rush, au plus un rush
+  toutes les `duration + cooldown` = 39 000 blocs (6 h 30). Déclencher coûte au moins `min_packs` packs de base (perte
+  attendue 41,3 % du prix chacun, soit 41 prix pour 100 packs) : un seul compte y perd. Avec `A` comptes (Sybil), le
+  gain vaut `0,64 × A` : il faut environ 65 comptes pour couvrir la rafale, sans compter le stockage du premier achat de
+  chaque compte. Un pack rush reste à espérance négative (79,9 % du prix), avant comme après.
+- **Délai aléatoire avant le rush (option c) : non fait.** Un délai de quelques blocs tiré de l'aléa d'un reçu
+  n'arrête pas l'acteur, qui achète simplement après le délai (le rush dure 3 000 blocs). L'aléa de reçu
+  (`random_seed`) n'est pas recalculable par le vérificateur : il faudrait le croire sur parole, ce qui casse le rejeu à
+  partir des seuls événements.
 - **Couverture ≤ 80 %, contrôlée hors chaîne.** Le contrat ne connaît pas la valeur des cartes (un adossement est une
   quantité de jetons, pas un prix). `scripts/build_series.py` calcule la couverture de chaque table à partir de
   `coverage_check.rarity_value` (valeur moyenne d'un emplacement par rareté, en multiples du prix). Il **refuse** une table
   rush au-delà de `max_rush` (0,80) et écrit les couvertures dans `manifest.json`. Les valeurs de l'exemple (0 / 0,18 / 4 /
   10 / 55) redonnent les 58,6 / 184 / 80 % de la série 3. Elles sont à recaler sur la simulation à chaque série.
-- **Haché** : tout `rush` (table comprise). **Journalisé** : `pack_bought.rush` = `active`, `window_count`,
-  `baseline_count`, `triggered`, `last_trigger`, `rush_until` ; `pack_revealed.mechanics.rush`. Le vérificateur rejoue
-  l'anneau à partir des `pack_bought` (hauteurs) et compare chaque valeur. Vue : `get_rush_state(series_id, at_height)`.
+- **Haché** : tout `rush` (table et plafond compris). **Journalisé** : `pack_bought.rush` = `active` (période de rush),
+  `window_count`, `baseline_count`, `triggered`, `last_trigger`, `rush_until`, `rush` (pack rush), `capped` (plafond
+  atteint), `account_rush_packs` (packs rush du compte dans ce rush) ; `pack_revealed.mechanics.rush`. Le vérificateur
+  rejoue l'anneau et les plafonds par compte à partir des `pack_bought` (hauteurs, acheteurs) et compare chaque valeur ;
+  un `pack_bought` manquant pour un booster d'une série à rush est une erreur. Vue :
+  `get_rush_state(series_id, at_height, account_id)` (`account.rush_packs`, `account.remaining`).
 - **Coût** : anneau de 96 × 12 o dans la série, payé par l'owner à la création ; `buy_pack` lit 96 seaux et en écrit un
-  (+1 Tgas mesuré sur la série v2 : 6,9 → 7,9 Tgas).
+  (+1 Tgas mesuré sur la série v2 : 6,9 → 7,9 Tgas) ; entrée du plafond par compte (130 o prépayés, `RUSH_ENTRY_BYTES`).
 
 ## 5. Résurrection des coins morts
 
-- **Rôle `price_oracle`** abstrait, comme le redeemer : `set_price_oracle(Option<AccountId>)` (owner),
-  `set_resurrected(series_id, card_index, backing)` (oracle seulement, payable : stockage mesuré, excédent rendu).
-- **Portée** : cartes visibles **épiques et légendaires** seulement (rare et commune refusées, recommandation de la
-  simulation : 94 % du coût viendrait des communes). La carte ne doit pas être déjà adossée par la table. Un nouvel appel
-  remplace l'adossement.
+- **Rôle `price_oracle`** abstrait, comme le redeemer. **Changement en deux temps** (revue, point 3) :
+  `propose_price_oracle(Option<AccountId>)` (owner, événement `price_oracle_proposed` avec `effective_from`), puis
+  `accept_price_oracle()` (owner, au plus tôt `oracle_delay_blocks` blocs après la proposition, événement
+  `price_oracle_accepted`). Le délai est un paramètre de `new` (`oracle_delay_blocks`, 144 000 blocs = 24 h par défaut) ;
+  une nouvelle proposition remplace la précédente et relance le délai. `revoke_price_oracle()` (owner) retire l'oracle
+  tout de suite (événement `price_oracle_revoked`) : retirer ne peut que supprimer des résurrections. Vue `get_config` :
+  `price_oracle_id`, `price_oracle_pending`, `oracle_delay_blocks`.
+  `set_resurrected(series_id, card_index, backing)` : oracle seulement, payable (stockage mesuré, excédent rendu).
+- **Portée** : **les cartes de `mechanics.resurrection.eligible`**, liste engagée dans la table hachée (index
+  strictement croissants, 200 au plus). Chaque index doit désigner une carte visible **épique ou légendaire non
+  adossée** par la table (vérifié à l'ouverture ; rare et commune refusées, recommandation de la simulation : 94 % du
+  coût viendrait des communes). Sans ce champ, aucune résurrection : c'est le cas des séries sans mécanique, qui
+  pouvaient être ressuscitées avant la revue. Un nouvel appel remplace l'adossement d'une carte de la liste.
 - **Effet** : la carte devient brûlable pour les nouvelles cartes **et** pour les exemplaires existants, puisque
   l'adossement est lu à la demande (`get_backing`, `redeem`, `extra.burnable` des métadonnées). Elle rejoint aussi les
-  brûlables de sa rareté pour la renormalisation des burns (`resurrect_seq`).
+  brûlables de sa rareté pour la renormalisation des burns (`resurrect_seq`), avec le ratio moyen des brûlables de la
+  table (section 3), pas avec un poids plein.
 - **Événement** `card_resurrected` : `series_id`, `card_index`, `card_id`, `backing`, `previous`, `oracle_id`,
   `resurrect_seq`, `block_height`. Aucun `nft_metadata_update` : il faudrait lister tous les exemplaires de la carte.
 - **Mock** : `contract/mock-oracle/` (`push_resurrection`, réservé à son opérateur) appelle `set_resurrected`. Aucun prix
@@ -177,18 +225,34 @@ Corrections de la simulation : un palier fixe s'emballe (69 % des packs en or à
 
 | Cas | Avant | Après |
 |---|---|---|
-| Série v2 complète, toutes les mécaniques, 12 packs à 160 Tgas | dernier reçu 35,3 Tgas, total 48 | dernier reçu **14,1 Tgas**, `buy_pack` 7,9, total 27,9 |
-| 2 000 cartes aux chaînes maximales, 10 cartes par pack, toutes les mécaniques | dernier reçu 58,8 Tgas (sans mécanique) | dernier reçu **19,5 Tgas** au pire (table or), `buy_pack` 10,2, total 35,7 |
-| `on_redeem_complete` avec burns | (pas de compteur) | 3,7 Tgas sur 20 fixes |
+| Série v2 complète, toutes les mécaniques, 12 packs à 160 Tgas | dernier reçu 35,3 Tgas, total 48 | dernier reçu **15,5 Tgas** (14,1 avant la revue), `buy_pack` 8,0, total 29,5 |
+| 2 000 cartes aux chaînes maximales, 10 cartes par pack, toutes les mécaniques | dernier reçu 58,8 Tgas (sans mécanique) | dernier reçu **24,3 Tgas** au pire (19,5 avant la revue : la ressuscitée demande une passe de plus), `buy_pack` 10,3, total 40,5 |
+| 2 000 cartes, 10 par pack, toutes les mécaniques, légendaires, épiques et rares épuisées : chaque emplacement retombe trois fois jusqu'à la commune ; 24 burns, 200 cartes ressuscitables (`worst_case_cascade_with_burns_fits`) | (non mesuré) | dernier reçu **49,1 Tgas** au pire |
+| `on_redeem_complete` avec burns | (pas de compteur) | 3,8 Tgas sur 20 fixes |
 | `redeem` complet | 10,4 Tgas | 8,1 Tgas |
 | `reveal_mythic`, 100 scellées | 85,6 Tgas | 5,0 Tgas |
-| `get_rates`, page de 200, 2 000 cartes avec burns | 25,4 Tgas | 32,3 Tgas |
+| `get_rates`, page de 200, 2 000 cartes avec burns | 25,4 Tgas | 34,2 Tgas |
 
-Le budget du dernier reçu reste de 120 Tgas fixes et `min_gas` de 160 Tgas. La marge passe d'un facteur 2 à un facteur 6.
+Le budget du dernier reçu reste de 120 Tgas fixes et `min_gas` de 160 Tgas. Au pire mesuré (cascade), la marge est d'un
+facteur 2,5.
 
-## 7. Ce qui reste ouvert
+## 7. Revue de sécurité des mécaniques (11/11/2026) : corrections
+
+| # | Sévérité | Point | Correction | Tests |
+|---|---|---|---|---|
+| 1 | Élevé | Burns en début de série : une carte émise une fois et brûlée tombait au plancher | A priori `K` (`burn.prior_k`, haché, 20 par défaut), plancher gardé, même calcul en Python | `early_burns_are_smoothed_by_prior`, `raw_burn_weight_rounding_and_floor`, `ReviewFixes` (Python) |
+| 2 | Moyen | Rush déclenché puis exploité par un seul acteur | `rush.max_per_account` (haché, 3), `min_packs` 50 → 100 ; délai aléatoire non fait (section 4) | `rush_packs_are_capped_per_account`, `test_single_actor_rush_is_capped`, vecteurs `rush_account` |
+| 3 | Moyen | L'owner change l'oracle à tout moment ; cartes ressuscitables non engagées ; poids plein d'une ressuscitée | `propose` / `accept` après 24 h, `revoke` immédiat ; `resurrection.eligible` haché ; ratio moyen | `oracle_change_is_two_step_with_delay`, `resurrection_limited_to_hashed_list`, `resurrected_card_enters_with_mean_ratio`, tests Python |
+| 4 | Faible | Adossement remplacé pendant un burn | Adossement passé à `on_redeem_complete`, journalisé (`replaced_by`) | `redeem_logs_the_backing_actually_delivered` |
+| 5 | Faible | Vérificateur : drapeau rush accepté sans `pack_bought` | Erreur explicite | `test_missing_pack_bought_is_an_error` |
+| 6 | Faible | Gaz du pire cas non mesuré en cascade | Mesuré : 49,1 Tgas sur 120 | `worst_case_cascade_with_burns_fits` |
+| 7 | Faible | `sealed_tokens[j]` gardé après la révélation | Vidé ; `updated_at` déduit de la date du tirage | `reveal_clears_sealed_tokens_and_keeps_updated_at` |
+
+## 8. Ce qui reste ouvert
 
 - Variante du compteur dans un NFT revendable (section 2).
+- `prior_k` et `min_packs` à recaler sur la simulation de la série 3 quand elle sera fusionnée. Le plafond par compte
+  ne résiste pas à un acteur aux nombreux comptes (section 4).
 - Un vrai oracle (section 5) et l'approvisionnement des jetons.
 - Valeurs de rareté de `coverage_check` : à reprendre de la simulation à chaque série. Le contrat ne contrôle pas la
   couverture.

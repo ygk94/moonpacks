@@ -19,13 +19,15 @@ journalisé, et le vérificateur le **rejoue à partir des événements seuls**,
 |---|---|---|
 | Pitié | `pack_revealed.mechanics.pity` | `gold_roll = roll(acc, 0, 2) mod 10⁶`, `p = min(10⁶, p0 + k·n)`, décision (`n + 1 ≥ N` ou `gold_roll < p`), `after`, et le compteur de chaque compte chaîné d'un booster au suivant |
 | Table de taux | `pack_revealed.mechanics.mode` | `gold` si la pitié l'accorde, sinon `rush` si le pack est rush, sinon `base` ; `rarity_roll` avec les poids de cette table |
-| Gold rush | `pack_bought.rush` (hauteurs) | anneau de seaux rejoué (`core.rush_on_buy`) : `active`, `window_count`, `baseline_count`, `triggered`, et égalité avec `pack_revealed.mechanics.rush` |
-| Burns | `card_redeemed.burn_seq`, `card_resurrected.resurrect_seq`, `pack_revealed.mechanics.burn_seq` / `resurrect_seq` | compteurs de burn et brûlables au moment du tirage, poids renormalisés entre brûlables de la rareté, choix de la carte ; un numéro de séquence manquant est signalé |
+| Gold rush | `pack_bought.rush` (hauteurs, acheteurs) | anneau de seaux rejoué (`core.rush_on_buy`) : `active`, `window_count`, `baseline_count`, `triggered` ; plafond de packs rush par compte et par rush (`core.rush_account`) : `rush`, `capped`, `account_rush_packs` ; égalité avec `pack_revealed.mechanics.rush`. Un `pack_bought` manquant pour un booster est une **erreur** (le drapeau rush n'est pas cru sur parole) |
+| Burns | `card_redeemed.burn_seq`, `card_resurrected.resurrect_seq`, `pack_revealed.mechanics.burn_seq` / `resurrect_seq` | compteurs de burn et brûlables au moment du tirage, poids bruts lissés par l'a priori `K` (`burn.prior_k`), ratio moyen pour une carte ressuscitée, poids renormalisés entre brûlables de la rareté, choix de la carte ; un numéro de séquence manquant est signalé |
+| Résurrection | `card_resurrected.card_index` | la carte figure dans `mechanics.resurrection.eligible` (table hachée), sinon erreur |
 
 `pack --event FICHIER --table table.json` sur une série à mécaniques rejoue tous les événements utiles du fichier
 (`pack_bought`, `pack_revealed`, `card_redeemed`, `card_resurrected`), dans l'ordre du fichier. `stats` compare les
 raretés visées au mélange des tables effectivement utilisées, booster par booster ; le test par carte est omis quand la
-rareté est pilotée par les burns. Sans `pack_bought`, le rush n'est pas recoupé (seul le drapeau journalisé sert).
+rareté est pilotée par les burns. Sans les `pack_bought`, le rejeu d'une série à rush échoue : il faut les achats pour
+vérifier le drapeau rush.
 Sans `card_redeemed`, le choix de la carte d'une série à burns n'est pas recalculé (vérification partielle).
 
 ## Ce qui est vérifié
@@ -135,7 +137,7 @@ Codes de sortie : `0` vérifié, `1` non conforme (ou écart statistique signifi
 
 ```bash
 cd verifier
-python3 -m unittest discover -s tests -t . -v      # 41 tests (1 sauté sans scripts/out/), < 1 s, hors ligne
+python3 -m unittest discover -s tests -t . -v      # 46 tests (1 sauté sans scripts/out/), < 1 s, hors ligne
 ```
 
 `tests/test_pages.py` (6 tests) simule le RPC à partir d'une table : en-tête, pages de 200, 37 et 1 cartes, page
@@ -145,10 +147,11 @@ obtenu par pages est celui de la table complète (`table_hash.txt`, calcul d'ava
 `contract/scripts/out/serie-v2/` s'il existe. La concordance avec le vrai contrat est testée en sandbox
 (`catalogue_v2_batched_load_and_packs`, `max_size_series_fits` dans `contract/tests/sandbox.rs`).
 
-`tests/test_mechanics.py` (14 tests) : concordance avec `mech_vectors.json`, renormalisation des burns (part des
+`tests/test_mechanics.py` (19 tests) : concordance avec `mech_vectors.json`, renormalisation des burns (part des
 brûlables exacte), rejeu des événements réels de `sandbox_mech_vectors.json` (pitié, rush, burns jusqu'à la dernière
 carte, résurrection), et événements falsifiés détectés (compteur de pitié, décision or, drapeau rush, burn manquant,
-burns ignorés), CLI compris.
+burns ignorés, `pack_bought` manquant, résurrection hors liste), CLI compris. Correctifs de la revue des mécaniques
+(`ReviewFixes`) : lissage par l'a priori K, ratio moyen d'une ressuscitée, rush d'un seul acteur plafonné à 3 packs.
 
 Les vecteurs de `tests/vectors/` sont générés depuis le contrat par le crate Rust `vectorgen/`, qui dépend de
 `../contract` sans le modifier :
@@ -159,8 +162,8 @@ Les vecteurs de `tests/vectors/` sont générés depuis le contrat par le crate 
   emojis. Les vecteurs couvrent `serde_json::to_string(table)`, le hash, `initial_acc`, `mix`, `roll` et les tirages
   complets avec les compteurs. S'y ajoutent 60 engagements mythiques ;
 - `mech_vectors.json` (test `mech_vectors`) : 120 tables à mécaniques passées au code compilé de `memaster::draw`
-  (`pity_is_gold`, `pack_mode`, `mode_weights`, `draw_slot_mech` avec burns et résurrections), et 30 séquences de 250
-  achats pour `rush_on_buy` ;
+  (`pity_is_gold`, `pack_mode`, `mode_weights`, `draw_slot_mech` avec burns, a priori K, listes ressuscitables et
+  résurrections), et 30 séquences de 250 achats de trois comptes pour `rush_on_buy` et `rush_account` ;
 - `sandbox_mech_vectors.json` : événements réels de `contract/tests/sandbox.rs` `mechanics_end_to_end`
   (`MECH_VECTORS_OUT=… cargo test --test sandbox -- mechanics_end_to_end`) ;
 - `sandbox_vectors.json` (test `sandbox_vectors`) : le wasm du contrat est déployé dans near-sandbox. Trois séries y
@@ -183,8 +186,8 @@ construire avec `cargo near build non-reproducible-wasm` dans `contract/`. Sans 
 near-workspaces télécharge le binaire near-sandbox. `SKIP_PY_RPC=1` saute l'appel au CLI Python.
 
 Résultat au 11/11/2026 : les 200 cas purs et les 96 boosters réels concordent tous, sans exception. Après
-l'introduction des mécaniques et du stockage minimal par carte, `draw_vectors.json` régénéré est identique au bit près
-(aucune différence git) ; `sandbox_vectors.json` (anciens `token_id`) n'a pas été régénéré et passe toujours. Le premier
+l'introduction des mécaniques et du stockage minimal par carte, puis après les correctifs de la revue des mécaniques,
+`draw_vectors.json` régénéré est identique au bit près (aucune différence git) ; `sandbox_vectors.json` (anciens `token_id`) n'a pas été régénéré et passe toujours. Le premier
 booster d'une série n'est plus servi par `EXPERIMENTAL_tx_status` du sandbox (`NOT_OBSERVED`) après quelques
 centaines de blocs. D'où le conseil d'un nœud d'archive pour les transactions anciennes.
 
