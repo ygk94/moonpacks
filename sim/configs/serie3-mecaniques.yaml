@@ -1,0 +1,74 @@
+# Série 3 : paramètres des coûts et des mécaniques. Lu par `python -m memaster_sim.serie3 run`.
+# Les configs de pack (serie3-PPPc-CCcouv.yaml) sont générées ; ce fichier-ci s'édite à la main.
+
+near_usd: 2.5                 # cours du NEAR (à remplacer par le cours du jour)
+point_reference: {prix_usd: 0.20, couverture: 0.65}
+
+couts:
+  gaz_tgas: 48                # buy_pack complet (achat, 3 reçus de tirage, 5 mints), mesuré au plus
+  near_par_tgas: 0.0001       # gaz brûlé à 1e8 yocto/gaz (docs/faisabilite.md, partie 3)
+  octets_par_pack: [4040, 1000]   # aujourd'hui, visé
+  near_par_octet: 0.00001     # storage_amount_per_byte
+  frais_achat: [0.005, 0.0075, 0.01]   # achat groupé des jetons, part de la couverture
+  delta: 0.05                 # part du prix versée à la réserve
+  couts_fixes_near: [5, 10]   # déploiement, stockage du contrat et de la série
+
+reserve:
+  horizons: [10000, 100000]
+  trajectoires: {10000: 10000, 100000: 2000}
+  risques: [0.05, 0.01]
+  deltas: [0.02, 0.05, 0.10]
+
+pitie:
+  # proba de gold pack = p0 + k·n, garanti à n = N − 1
+  grille: [[10, 0.02, 0.01], [15, 0.02, 0.004], [20, 0.02, 0.002], [30, 0.01, 0.002]]
+  proposition: {N: 20, p0: 0.02, k: 0.002, table: or}
+  tables:
+    argent: {rare: 1.5, epique: 1.5, legendaire: 2, mythique: 2}
+    doux: {rare: 1.5, epique: 2, legendaire: 2.5, mythique: 2.5}
+    or: {rare: 2, epique: 3, legendaire: 4, mythique: 4}
+    fort: {rare: 2, epique: 3.5, legendaire: 8, mythique: 8}
+  population: {joueurs: 100000, mediane: 4, sigma: 1.4, maximum: 5000}
+
+rush:
+  base:
+    jours: 30
+    pas_s: 30
+    temps_bloc_s: 0.6         # NEAR mainnet depuis 2025 (non vérifié dans le repo)
+    lambda_base_h: 200
+    amplitude_cycle: 0.5
+    pics_par_jour: 0.5
+    pic_mult: 6
+    pic_duree_s: 1800
+    boost_rush: 1.0
+    fenetre_s: 3600
+    palier: 600
+    duree_blocs: 3000
+    cooldown_s: 0
+    palier_relatif: 0
+  trafics: [0.5, 1, 2, 4]     # multiplicateurs de lambda_base_h
+  regles:
+    fixe: {palier: 600, cooldown_s: 0, palier_relatif: 0}
+    fixe_cooldown_6h: {palier: 600, cooldown_s: 21600, palier_relatif: 0}
+    relatif_2x5_cooldown_6h: {palier: 50, cooldown_s: 21600, palier_relatif: 2.5}
+  proposition: relatif_2x5_cooldown_6h
+  couverture_cible_table_rush: 0.80   # sous la borne anti-arbitrage (1 − ε = 85 %)
+  trajectoires: 20
+
+rarete_burn:
+  horizon: 100000
+  lot: 500
+  delai_packs: 5000
+  taux_burn: [0.2, 0.5, 0.8]
+  variantes:
+    formule_brute: {renormaliser: rarete, kappa: fixe, plancher: 0}
+    formule_recalibree: {renormaliser: rarete, kappa: recalibre, plancher: 0}
+    entre_brulables: {renormaliser: brulables, kappa: fixe, plancher: 0}
+    entre_brulables_plancher: {renormaliser: brulables, kappa: fixe, plancher: 0.25}
+
+resurrection:
+  p_an: [0.005, 0.01, 0.02, 0.05]
+  mois: [12, 24]
+  packs_par_mois: 50000
+  surcout_achat: 0.10
+  rho: 0.01                   # fonds de résurrection, part du prix

@@ -1,0 +1,264 @@
+# Série 3 (packs à bas prix), générée par `python -m memaster_sim.serie3 configs`. Ne pas éditer à la main.
+# Base : serie2-150brul-05near (150 brûlables, facteur 2, jeu C), prix converti à 2,5 $ le NEAR.
+# Mythique = 55.2 × prix, V_cap = 60 × prix, reventes à l'échelle du prix. Plafonds par carte inchangés (NEAR).
+# β = couverture en jetons ; δ = part du prix versée à la réserve (prise sur la marge).
+# Les paramètres des mécaniques sont dans serie3-mecaniques.yaml.
+nom: 'Série 3 : 0,15 $ (0,060 NEAR), couverture 65 %'
+prix: 0.06
+n_cartes: 5
+near_usd: 2.5
+beta: 0.65
+delta: 0.05
+epsilon: 0.15
+v_cap: 3.5999999999999996
+v_min_brulable: 0.02
+calibrer_avec_plafonds: true
+raretes:
+  commune:
+    poids: 1
+    part_brulable: 0.0
+    effectif: 1160
+    brulables: 0
+    revente: 0.00035999999999999997
+    plafond: 25
+  rare:
+    poids: 1.2
+    part_brulable: 0.047826
+    effectif: 230
+    brulables: 11
+    revente: 0.00096
+    plafond: 30
+  epique:
+    poids: 3
+    part_brulable: 0.497872
+    effectif: 235
+    brulables: 117
+    revente: 0.003
+    plafond: 100
+  legendaire:
+    poids: 9
+    part_brulable: 0.904762
+    effectif: 21
+    brulables: 19
+    revente: 0.012
+    plafond: 280
+  mythique:
+    poids: 100000
+    part_brulable: 1.0
+    effectif: 3
+    brulables: 3
+    revente: 0.0
+    plafond: 3.312
+    multiplicateur:
+      valeurs:
+      - 1
+      probas:
+      - 1
+emplacements:
+  tables:
+    standard:
+      commune: 0.923746
+      rare: 0.053782
+      epique: 0.021981
+      legendaire: 0.000491
+      mythique: 0.0
+    favorable:
+      commune: 0.6450290000000001
+      rare: 0.21513
+      epique: 0.131884
+      legendaire: 0.007857
+      mythique: 0.0001
+  ordre:
+  - standard
+  - standard
+  - standard
+  - standard
+  - favorable
+multiplicateur:
+  valeurs:
+  - 0.8
+  - 1
+  - 2
+  probas:
+  - 0.5
+  - 0.35
+  - 0.15
+couts:
+  s_achat: 0.0075
+  f_burn: 0.002
+  f_burn_fixe: 0.001
+  s_vente: 0.03
+  phi: 0.05
+ruine:
+  horizon: 10000
+  trajectoires: 10000
+  z: 3
+catalogue:
+  source: docs/data/catalogue-v2.json
+  graine_brulables: 2026
+  facteur_palier: 2.0
+  brulables:
+    rare:
+    - 1000pepper-1000pepper
+    - babycashcat-baby
+    - bearxrpl-bear
+    - bored-bored
+    - chomolon-joff-joff
+    - doge-kaki-kaki
+    - gasspas-gass
+    - nobody-sausage-nobody
+    - nyc-nyc
+    - pip-pip
+    - tendies-tendies
+    epique:
+    - a-meme-coin-amc
+    - andy-eth-andy
+    - anonymous-cat-zcat
+    - apu-apustaja-apu
+    - arbdoge-ai-aidoge
+    - artificial-inu-ai
+    - asteroid-shiba-asteroid
+    - aura-aura
+    - baby-doge-coin-babydoge
+    - baby-shark-universe-bsu
+    - banana-for-scale-bananas31
+    - based-pepe-pepe
+    - believe-believe
+    - bellscoin-bells
+    - bertram-the-pomeranian-bert
+    - billy-bitcoin-billy
+    - binance-life-u5e01-5b89-4eba-751f
+    - bitcoin-bull-btcbull
+    - broccoli-broccoli
+    - buildon-b
+    - bulla-bulla
+    - catbal-catbal
+    - catecoin-cate
+    - coco-coco
+    - comedian-ban
+    - constitutiondao-people
+    - coq-inu-coq
+    - crazybunny-crazybunny
+    - crow-with-knife-caw
+    - degen-degen
+    - dogeking-dogeking
+    - dogi-dogi
+    - doginme-doginme
+    - dogs-dogs
+    - dora-dora
+    - egl1-egl1
+    - fartboy-fartboy
+    - fwog-fwog
+    - gekko-gekko
+    - giggle-academy-giggle
+    - gme-ethereum-gme
+    - gme-solana-gme
+    - grok-grok
+    - happy-happy
+    - hoppy-hoppy
+    - housecoin-house
+    - jeff-jeff
+    - just-a-chill-guy-chillguy
+    - katana-inu-kata
+    - kekius-maximus-kekius
+    - kendu-kendu
+    - landwolf-wolf
+    - loaded-lions-lion
+    - lobster-u9f99-867e
+    - lock-in-lockin
+    - maneki-maneki
+    - marscoin-marscoin
+    - marsmi-marsmi
+    - mcdull-meme-mcdull
+    - meme-horse-mhorse
+    - milady-cult-coin-cult
+    - milady-meme-coin-ladys
+    - mog-coin-mog
+    - monacoin-mona
+    - monkeys-monkeys
+    - moonbirds-birb
+    - mooncoin-moon
+    - mori-coin-mori
+    - my-paqman-coin-mpc
+    - myro-myro
+    - nacho-the-kat-nacho
+    - niu-lai-u725b-6765
+    - non-playable-coin-npc
+    - onyx-arches-oxa
+    - osaka-protocol-osak
+    - pain-pain
+    - peipei-peipei
+    - penguin-a-ne-pas-confondre-avec-pudgy-penguins-penguin
+    - pepe-unchained-pepu
+    - pepecoin-pep
+    - pepefork-pork
+    - pikaboss-pika
+    - pippin-pippin
+    - pondcoin-pndc
+    - ponke-ponke
+    - purple-pepe-purpe
+    - purr-purr
+    - refund-rfd
+    - rekt-rekt
+    - resistance-dog-redo
+    - rich-quack-quack
+    - ryujin-ryu
+    - shiba-inu-treat-treat
+    - shrub-shrub
+    - sigma-sigma
+    - simon-s-cat-cat
+    - ski-mask-dog-ski
+    - slerf-slerf
+    - snap-nap
+    - snek-snek
+    - stonks-stnk
+    - sudeng-hippo
+    - sundog-sundog
+    - test-tst
+    - the-doge-nft-own-the-doge-dog
+    - toshi-toshi
+    - trollface-troll
+    - tron-bull-bull
+    - tutorial-tut
+    - uncommon-goods-uncommongoods
+    - useless-coin-useless
+    - vine-coin-vine
+    - welsh-corgi-coin-welsh
+    - whitewhale-whitewhale
+    - wojak-coin-wojak
+    - would-would
+    - xrp-army-army
+    legendaire:
+    - bonk-bonk
+    - book-of-meme-bome
+    - brett-brett
+    - cat-in-a-dogs-world-mew
+    - dog-go-to-the-moon-dog
+    - dogelon-mars-elon
+    - dogwifhat-wif
+    - fartcoin-fartcoin
+    - floki-floki
+    - goatseus-maximus-goat
+    - memecoin-meme
+    - neiro-neiro
+    - ordinals-ordi
+    - peanut-the-squirrel-pnut
+    - popcat-popcat
+    - pudgy-penguins-pengu
+    - sats-sats-1000sats
+    - spx6900-spx
+    - turbo-turbo
+    mythique:
+    - mythique-m1
+    - mythique-m2
+    - mythique-m3
+prix_usd: 0.15
+serie3:
+  couts:
+    gaz_tgas: 48.0
+    near_par_tgas: 0.0001
+    gaz_paye_par: equipe
+    octets_par_pack: 4040
+    near_par_octet: 1.0e-05
+    stockage_paye_par: acheteur
+    frais_achat: 0.0075

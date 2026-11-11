@@ -1,0 +1,806 @@
+{
+ "grille": [
+  {
+   "p_an": 0.005,
+   "mois": 12,
+   "complet": {
+    "params": {
+     "p_an": 0.005,
+     "mois": 12,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 600000,
+    "proba_resurrection_horizon": 0.0050000000000000044,
+    "coins_morts": {
+     "commune": 1059,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 2244.8343103448274,
+     "rare": 1122.4121739130435,
+     "epique": 561.2119148936171,
+     "legendaire": 280.6,
+     "mythique": 20.0
+    },
+    "resurrections_moyennes": 5.6983,
+    "cout_moyen_near": 822.6333980151676,
+    "cout_p95_near": 1544.1146121736892,
+    "cout_p99_near": 1899.3010555094415,
+    "cout_moyen_par_pack_part_prix": 0.01713819579198266,
+    "cout_p99_par_pack_part_prix": 0.03956877198978003,
+    "cout_quantile_near": 1899.3010555094415,
+    "cout_moyen_part_prix_par_rarete": {
+     "commune": 0.016153127352294527,
+     "epique": 0.0009521272692502085,
+     "legendaire": 3.2941170437923034e-05
+    },
+    "resurrections_p99": 12.0
+   },
+   "sans_communes": {
+    "params": {
+     "p_an": 0.005,
+     "mois": 12,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 600000,
+    "proba_resurrection_horizon": 0.0050000000000000044,
+    "coins_morts": {
+     "commune": 0,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 2244.8343103448274,
+     "rare": 1122.4121739130435,
+     "epique": 561.2119148936171,
+     "legendaire": 280.6,
+     "mythique": 20.0
+    },
+    "resurrections_moyennes": 0.425,
+    "cout_moyen_near": 47.347907316858816,
+    "cout_p95_near": 213.4661188104411,
+    "cout_p99_near": 350.4497528955238,
+    "cout_moyen_par_pack_part_prix": 0.000986414735767892,
+    "cout_p99_par_pack_part_prix": 0.0073010365186567455,
+    "cout_quantile_near": 350.4497528955238,
+    "cout_moyen_part_prix_par_rarete": {
+     "epique": 0.0009558159156481973,
+     "legendaire": 3.0598820119694765e-05
+    },
+    "resurrections_p99": 2.0
+   }
+  },
+  {
+   "p_an": 0.005,
+   "mois": 24,
+   "complet": {
+    "params": {
+     "p_an": 0.005,
+     "mois": 24,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 1200000,
+    "proba_resurrection_horizon": 0.009974999999999956,
+    "coins_morts": {
+     "commune": 1059,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 4489.668620689655,
+     "rare": 2244.824347826087,
+     "epique": 1122.4238297872341,
+     "legendaire": 561.2,
+     "mythique": 40.0
+    },
+    "resurrections_moyennes": 11.38825,
+    "cout_moyen_near": 3283.548263282634,
+    "cout_p95_near": 5254.513927903354,
+    "cout_p99_near": 6220.082869587379,
+    "cout_moyen_par_pack_part_prix": 0.034203627742527436,
+    "cout_p99_par_pack_part_prix": 0.0647925298915352,
+    "cout_quantile_near": 6220.082869587379,
+    "cout_moyen_part_prix_par_rarete": {
+     "commune": 0.032222035931485926,
+     "epique": 0.0019097517558387075,
+     "legendaire": 7.184005520280194e-05
+    },
+    "resurrections_p99": 20.0
+   },
+   "sans_communes": {
+    "params": {
+     "p_an": 0.005,
+     "mois": 24,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 1200000,
+    "proba_resurrection_horizon": 0.009974999999999956,
+    "coins_morts": {
+     "commune": 0,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 4489.668620689655,
+     "rare": 2244.824347826087,
+     "epique": 1122.4238297872341,
+     "legendaire": 561.2,
+     "mythique": 40.0
+    },
+    "resurrections_moyennes": 0.8533,
+    "cout_moyen_near": 190.31176839060922,
+    "cout_p95_near": 668.4342238259078,
+    "cout_p99_near": 970.547192248619,
+    "cout_moyen_par_pack_part_prix": 0.001982414254068846,
+    "cout_p99_par_pack_part_prix": 0.010109866585923114,
+    "cout_quantile_near": 970.547192248619,
+    "cout_moyen_part_prix_par_rarete": {
+     "epique": 0.0019101126904735582,
+     "legendaire": 7.230156359528799e-05
+    },
+    "resurrections_p99": 4.0
+   }
+  },
+  {
+   "p_an": 0.01,
+   "mois": 12,
+   "complet": {
+    "params": {
+     "p_an": 0.01,
+     "mois": 12,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 600000,
+    "proba_resurrection_horizon": 0.010000000000000009,
+    "coins_morts": {
+     "commune": 1059,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 2244.8343103448274,
+     "rare": 1122.4121739130435,
+     "epique": 561.2119148936171,
+     "legendaire": 280.6,
+     "mythique": 20.0
+    },
+    "resurrections_moyennes": 11.4168,
+    "cout_moyen_near": 1645.8343828098768,
+    "cout_p95_near": 2631.3142427445523,
+    "cout_p99_near": 3116.9283236864085,
+    "cout_moyen_par_pack_part_prix": 0.0342882163085391,
+    "cout_p99_par_pack_part_prix": 0.06493600674346685,
+    "cout_quantile_near": 3116.9283236864085,
+    "cout_moyen_part_prix_par_rarete": {
+     "commune": 0.032301150449367814,
+     "epique": 0.0019149169480462565,
+     "legendaire": 7.214891112503021e-05
+    },
+    "resurrections_p99": 20.0
+   },
+   "sans_communes": {
+    "params": {
+     "p_an": 0.01,
+     "mois": 12,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 600000,
+    "proba_resurrection_horizon": 0.010000000000000009,
+    "coins_morts": {
+     "commune": 0,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 2244.8343103448274,
+     "rare": 1122.4121739130435,
+     "epique": 561.2119148936171,
+     "legendaire": 280.6,
+     "mythique": 20.0
+    },
+    "resurrections_moyennes": 0.85545,
+    "cout_moyen_near": 95.41507625022919,
+    "cout_p95_near": 335.1662255004789,
+    "cout_p99_near": 485.5766887479545,
+    "cout_moyen_par_pack_part_prix": 0.0019878140885464415,
+    "cout_p99_par_pack_part_prix": 0.010116181015582386,
+    "cout_quantile_near": 485.5766887479545,
+    "cout_moyen_part_prix_par_rarete": {
+     "epique": 0.0019151420864923522,
+     "legendaire": 7.267200205408941e-05
+    },
+    "resurrections_p99": 4.0
+   }
+  },
+  {
+   "p_an": 0.01,
+   "mois": 24,
+   "complet": {
+    "params": {
+     "p_an": 0.01,
+     "mois": 24,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 1200000,
+    "proba_resurrection_horizon": 0.01990000000000003,
+    "coins_morts": {
+     "commune": 1059,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 4489.668620689655,
+     "rare": 2244.824347826087,
+     "epique": 1122.4238297872341,
+     "legendaire": 561.2,
+     "mythique": 40.0
+    },
+    "resurrections_moyennes": 22.7328,
+    "cout_moyen_near": 6560.738348111589,
+    "cout_p95_near": 9283.755135683461,
+    "cout_p99_near": 10528.361554959509,
+    "cout_moyen_par_pack_part_prix": 0.06834102445949572,
+    "cout_p99_par_pack_part_prix": 0.10967043286416155,
+    "cout_quantile_near": 10528.361554959509,
+    "cout_moyen_part_prix_par_rarete": {
+     "commune": 0.06439226664216495,
+     "epique": 0.0038172733136916824,
+     "legendaire": 0.0001314845036390853
+    },
+    "resurrections_p99": 35.0
+   },
+   "sans_communes": {
+    "params": {
+     "p_an": 0.01,
+     "mois": 24,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 1200000,
+    "proba_resurrection_horizon": 0.01990000000000003,
+    "coins_morts": {
+     "commune": 0,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 4489.668620689655,
+     "rare": 2244.824347826087,
+     "epique": 1122.4238297872341,
+     "legendaire": 561.2,
+     "mythique": 40.0
+    },
+    "resurrections_moyennes": 1.7018,
+    "cout_moyen_near": 378.69946652012015,
+    "cout_p95_near": 996.8063445543503,
+    "cout_p99_near": 1362.9449077965417,
+    "cout_moyen_par_pack_part_prix": 0.003944786109584585,
+    "cout_p99_par_pack_part_prix": 0.01419734278954731,
+    "cout_quantile_near": 1362.9449077965417,
+    "cout_moyen_part_prix_par_rarete": {
+     "epique": 0.0038038658154993755,
+     "legendaire": 0.00014092029408520955
+    },
+    "resurrections_p99": 5.0
+   }
+  },
+  {
+   "p_an": 0.02,
+   "mois": 12,
+   "complet": {
+    "params": {
+     "p_an": 0.02,
+     "mois": 12,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 600000,
+    "proba_resurrection_horizon": 0.020000000000000018,
+    "coins_morts": {
+     "commune": 1059,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 2244.8343103448274,
+     "rare": 1122.4121739130435,
+     "epique": 561.2119148936171,
+     "legendaire": 280.6,
+     "mythique": 20.0
+    },
+    "resurrections_moyennes": 22.8496,
+    "cout_moyen_near": 3297.616424714551,
+    "cout_p95_near": 4665.38908389785,
+    "cout_p99_near": 5282.919586570617,
+    "cout_moyen_par_pack_part_prix": 0.06870034218155315,
+    "cout_p99_par_pack_part_prix": 0.11006082472022119,
+    "cout_quantile_near": 5282.919586570617,
+    "cout_moyen_part_prix_par_rarete": {
+     "commune": 0.0647317189929414,
+     "epique": 0.0038362382969897454,
+     "legendaire": 0.00013238489162199874
+    },
+    "resurrections_p99": 35.0
+   },
+   "sans_communes": {
+    "params": {
+     "p_an": 0.02,
+     "mois": 12,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 600000,
+    "proba_resurrection_horizon": 0.020000000000000018,
+    "coins_morts": {
+     "commune": 0,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 2244.8343103448274,
+     "rare": 1122.4121739130435,
+     "epique": 561.2119148936171,
+     "legendaire": 280.6,
+     "mythique": 20.0
+    },
+    "resurrections_moyennes": 1.71005,
+    "cout_moyen_near": 190.2547571291982,
+    "cout_p95_near": 499.85682758676035,
+    "cout_p99_near": 684.3162919638901,
+    "cout_moyen_par_pack_part_prix": 0.003963640773524962,
+    "cout_p99_par_pack_part_prix": 0.014256589415914376,
+    "cout_quantile_near": 684.3162919638901,
+    "cout_moyen_part_prix_par_rarete": {
+     "epique": 0.0038220452819955966,
+     "legendaire": 0.00014159549152936542
+    },
+    "resurrections_p99": 5.0
+   }
+  },
+  {
+   "p_an": 0.02,
+   "mois": 24,
+   "complet": {
+    "params": {
+     "p_an": 0.02,
+     "mois": 24,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 1200000,
+    "proba_resurrection_horizon": 0.03960000000000008,
+    "coins_morts": {
+     "commune": 1059,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 4489.668620689655,
+     "rare": 2244.824347826087,
+     "epique": 1122.4238297872341,
+     "legendaire": 561.2,
+     "mythique": 40.0
+    },
+    "resurrections_moyennes": 45.3495,
+    "cout_moyen_near": 13091.571922963714,
+    "cout_p95_near": 16848.356702322937,
+    "cout_p99_near": 18420.12764538449,
+    "cout_moyen_par_pack_part_prix": 0.13637054086420536,
+    "cout_p99_par_pack_part_prix": 0.19187632963942178,
+    "cout_quantile_near": 18420.12764538449,
+    "cout_moyen_part_prix_par_rarete": {
+     "commune": 0.12848577323818702,
+     "epique": 0.007619585105035294,
+     "legendaire": 0.00026518252098303626
+    },
+    "resurrections_p99": 61.0
+   },
+   "sans_communes": {
+    "params": {
+     "p_an": 0.02,
+     "mois": 24,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 1200000,
+    "proba_resurrection_horizon": 0.03960000000000008,
+    "coins_morts": {
+     "commune": 0,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 4489.668620689655,
+     "rare": 2244.824347826087,
+     "epique": 1122.4238297872341,
+     "legendaire": 561.2,
+     "mythique": 40.0
+    },
+    "resurrections_moyennes": 3.39305,
+    "cout_moyen_near": 758.2692285195996,
+    "cout_p95_near": 1606.7751795509978,
+    "cout_p99_near": 2090.702268873743,
+    "cout_moyen_par_pack_part_prix": 0.007898637797079161,
+    "cout_p99_par_pack_part_prix": 0.021778148634101487,
+    "cout_quantile_near": 2090.702268873743,
+    "cout_moyen_part_prix_par_rarete": {
+     "epique": 0.00761503916283712,
+     "legendaire": 0.00028359863424204173
+    },
+    "resurrections_p99": 8.0
+   }
+  },
+  {
+   "p_an": 0.05,
+   "mois": 12,
+   "complet": {
+    "params": {
+     "p_an": 0.05,
+     "mois": 12,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 600000,
+    "proba_resurrection_horizon": 0.050000000000000044,
+    "coins_morts": {
+     "commune": 1059,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 2244.8343103448274,
+     "rare": 1122.4121739130435,
+     "epique": 561.2119148936171,
+     "legendaire": 280.6,
+     "mythique": 20.0
+    },
+    "resurrections_moyennes": 57.1936,
+    "cout_moyen_near": 8251.374747856536,
+    "cout_p95_near": 10340.890117007972,
+    "cout_p99_near": 11255.713296050824,
+    "cout_moyen_par_pack_part_prix": 0.17190364058034452,
+    "cout_p99_par_pack_part_prix": 0.23449402700105884,
+    "cout_quantile_near": 11255.713296050824,
+    "cout_moyen_part_prix_par_rarete": {
+     "commune": 0.16197493710121255,
+     "epique": 0.009593366095542021,
+     "legendaire": 0.0003353373835899504
+    },
+    "resurrections_p99": 75.0
+   },
+   "sans_communes": {
+    "params": {
+     "p_an": 0.05,
+     "mois": 12,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 600000,
+    "proba_resurrection_horizon": 0.050000000000000044,
+    "coins_morts": {
+     "commune": 0,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 2244.8343103448274,
+     "rare": 1122.4121739130435,
+     "epique": 561.2119148936171,
+     "legendaire": 280.6,
+     "mythique": 20.0
+    },
+    "resurrections_moyennes": 4.2896,
+    "cout_moyen_near": 479.50027901940337,
+    "cout_p95_near": 953.1769971295671,
+    "cout_p99_near": 1209.7836143554482,
+    "cout_moyen_par_pack_part_prix": 0.00998958914623757,
+    "cout_p99_par_pack_part_prix": 0.02520382529907184,
+    "cout_quantile_near": 1209.7836143554482,
+    "cout_moyen_part_prix_par_rarete": {
+     "epique": 0.009628817608436726,
+     "legendaire": 0.0003607715378008444
+    },
+    "resurrections_p99": 10.0
+   }
+  },
+  {
+   "p_an": 0.05,
+   "mois": 24,
+   "complet": {
+    "params": {
+     "p_an": 0.05,
+     "mois": 24,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 1200000,
+    "proba_resurrection_horizon": 0.09750000000000003,
+    "coins_morts": {
+     "commune": 1059,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 4489.668620689655,
+     "rare": 2244.824347826087,
+     "epique": 1122.4238297872341,
+     "legendaire": 561.2,
+     "mythique": 40.0
+    },
+    "resurrections_moyennes": 111.5565,
+    "cout_moyen_near": 32195.6410120716,
+    "cout_p95_near": 37850.63474224425,
+    "cout_p99_near": 40254.10637227627,
+    "cout_moyen_par_pack_part_prix": 0.3353712605424125,
+    "cout_p99_par_pack_part_prix": 0.4193136080445445,
+    "cout_quantile_near": 40254.10637227627,
+    "cout_moyen_part_prix_par_rarete": {
+     "commune": 0.31599887872286475,
+     "epique": 0.01867697895659953,
+     "legendaire": 0.0006954028629482218
+    },
+    "resurrections_p99": 135.0
+   },
+   "sans_communes": {
+    "params": {
+     "p_an": 0.05,
+     "mois": 24,
+     "packs_par_mois": 50000,
+     "part_perdue": 0.0,
+     "surcout_achat": 0.1,
+     "enveloppe_near": null,
+     "rho": 0.0
+    },
+    "ventes_totales": 1200000,
+    "proba_resurrection_horizon": 0.09750000000000003,
+    "coins_morts": {
+     "commune": 0,
+     "rare": 0,
+     "epique": 84,
+     "legendaire": 2,
+     "mythique": 0
+    },
+    "valeur_par_rarete": {
+     "commune": 0.11908000393982637,
+     "rare": 0.14289600472779165,
+     "epique": 0.3572400118194792,
+     "legendaire": 1.0717200354584373
+    },
+    "exemplaires_par_coin_fin": {
+     "commune": 4489.668620689655,
+     "rare": 2244.824347826087,
+     "epique": 1122.4238297872341,
+     "legendaire": 561.2,
+     "mythique": 40.0
+    },
+    "resurrections_moyennes": 8.36105,
+    "cout_moyen_near": 1863.2561527009007,
+    "cout_p95_near": 3131.319356690471,
+    "cout_p99_near": 3752.42257945938,
+    "cout_moyen_par_pack_part_prix": 0.01940891825730105,
+    "cout_p99_par_pack_part_prix": 0.039087735202701875,
+    "cout_quantile_near": 3752.42257945938,
+    "cout_moyen_part_prix_par_rarete": {
+     "epique": 0.018752227731538142,
+     "legendaire": 0.0006566905257629024
+    },
+    "resurrections_p99": 15.0
+   }
+  }
+ ],
+ "morts": {
+  "commune": 1059,
+  "rare": 0,
+  "epique": 84,
+  "legendaire": 2,
+  "mythique": 0
+ },
+ "regle_enveloppe": [
+  {
+   "p_an": 0.005,
+   "enveloppe_near": 40.0,
+   "valeur_commune_fin": 0.017818687025438252,
+   "valeur_epique_fin": 0.07127432425874702,
+   "couverte_commune_fin": 0.1496362649974584,
+   "couverte_epique_fin": 0.19951383355894475
+  },
+  {
+   "p_an": 0.01,
+   "enveloppe_near": 24.0,
+   "valeur_commune_fin": 0.01069121221526295,
+   "valeur_epique_fin": 0.04276459455524821,
+   "couverte_commune_fin": 0.08978175899847504,
+   "couverte_epique_fin": 0.11970830013536685
+  },
+  {
+   "p_an": 0.02,
+   "enveloppe_near": 13.714285714285714,
+   "valeur_commune_fin": 0.0061092641230074,
+   "valeur_epique_fin": 0.024436911174427547,
+   "couverte_commune_fin": 0.051303862284842884,
+   "couverte_epique_fin": 0.06840474293449533
+  },
+  {
+   "p_an": 0.05,
+   "enveloppe_near": 6.4,
+   "valeur_commune_fin": 0.0028509899240701203,
+   "valeur_epique_fin": 0.011403891881399524,
+   "couverte_commune_fin": 0.023941802399593346,
+   "couverte_epique_fin": 0.03192221336943116
+  }
+ ],
+ "rho_sans_communes_p2": 0.014256589415914376
+}

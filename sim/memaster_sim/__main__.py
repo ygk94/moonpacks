@@ -30,9 +30,9 @@ def main(argv=None) -> int:
 
     if args.commande in ("run", "sensibilite") and not args.config:
         ap.error("config manquante")
-    # la série 2 a sa propre commande (python -m memaster_sim.serie2 run), qui gère les points non réalisables
+    # les séries 2 et 3 ont leur propre commande (python -m memaster_sim.serie2 run, .serie3 run)
     configs = [Path(args.config)] if args.config else sorted(
-        c for c in (RACINE / "configs").glob("*.yaml") if not c.name.startswith("serie2-"))
+        c for c in (RACINE / "configs").glob("*.yaml") if not c.name.startswith(("serie2-", "serie3-")))
 
     for chemin in configs:
         cfg = M.charger_config(chemin)
