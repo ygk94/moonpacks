@@ -63,7 +63,7 @@ Pas de routeur ni de bibliothèque d'état : un routeur par hash suffit (`#/shop
 | Dossier | Contenu |
 |---|---|
 | `src/near/` | RPC (vues, statut de transaction), lectures typées du contrat, événements NEP-297, wallet, traduction des erreurs du contrat |
-| `src/lib/` | Formats, cours publics (CoinGecko pour NEAR, DexScreener puis CoinGecko pour les coins), catalogue, estimation de la quantité de jetons |
+| `src/lib/` | Formats, cours publics (CoinGecko pour NEAR, DexScreener puis CoinGecko pour les coins ; cache de 5 min en mémoire et dans `localStorage`, ids CoinGecko regroupés par appel, recul après un 429 avec la dernière valeur connue), catalogue, estimation de la quantité de jetons, logique d'un pack (relance, remboursement, stockage rendu), répartition d'un achat sur le marché |
 | `src/components/` | Carte (effets par rareté), visuel de pack, en-tête et bandeau, fenêtre modale, détail de carte (burn, mise en vente) |
 | `src/pages/` | Boutique, Ouverture, Collection, Marché, Transparence, Mentions légales |
 
