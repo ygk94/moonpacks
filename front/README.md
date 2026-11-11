@@ -20,7 +20,7 @@ puis lance Vite :
 
 Ces fichiers sont ignorés par git. Autres commandes : `npm run build` (vérification des types et build de prod dans
 `dist/`, suivi du contrôle anti-fuite des mythiques), `npm run typecheck`, `npm test` (vitest, puis le même
-contrôle) et `npm run check:mythics`.
+contrôle), `npm run check:mythics` et `npm run smoke` (voir « Testé »).
 
 ## Indexeur (facultatif)
 
@@ -119,9 +119,14 @@ La liste complète des décisions, des tests et du travail restants est dans `do
 
 ## Testé
 
-- `npm test` : 35 tests. Formats, événements, traduction des erreurs, ordre de révélation, vérification sans
-  état et rejeu complet sur les vrais packs du testnet (falsifications rejetées), logique de l'indexeur,
-  contrôle anti-fuite des mythiques.
+- `npm test` : 66 tests. Formats et montants (BigInt), événements, traduction de chaque message de panique du
+  contrat (lus dans `contract/src/`), ordre de révélation, rendu « ? » des mythiques, suivi du burn, vérification
+  sans état et rejeu complet sur les vrais packs du testnet (falsifications rejetées), vecteurs de
+  `verifier/tests/vectors/` (draw.rs et contrat en sandbox : tirages, plafonds, gold pack, burns, résurrections,
+  valeur, gold rush), logique de l'indexeur, contrôle anti-fuite des mythiques.
+- `npm run smoke` (avec `npm run dev`, et `npm run indexer` pour la vérification complète) : parcours en lecture
+  seule dans Chromium sans tête (Playwright, `npx playwright install chromium-headless-shell` une fois), captures
+  dans `smoke-captures/`. Aucun wallet ni transaction.
 - Build et vérification des types.
 - Contre le contrat v2 sur testnet, dans un navigateur : boutique (prix, dépôt, gold rush), rejeu complet de packs
   réels jusqu'au récapitulatif, page des taux (taux, hash de table, hash du code), vérification des packs 0, 12 et
