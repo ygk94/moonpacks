@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { estimateTokens, type TokenEstimate } from "../lib/backing";
+import { waitBurnOutcome } from "../lib/burn";
 import { loadCatalog, STATE_LABEL, type CatalogEntry } from "../lib/catalog";
 import { formatNearExact, formatQty, formatUsd, parseNear, RARITY_LABEL, yoctoToNumber } from "../lib/format";
 import { coinUsd, nearUsd } from "../lib/prices";
@@ -59,7 +60,9 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
   }, [card]);
 
   if (card === undefined) return <p className="muted">Loading card…</p>;
-  if (card === null) return <p className="muted">This card no longer exists (it may have been burned).</p>;
+  if (card === null)
+    // Après un burn réussi, la carte n'existe plus : on garde le message du burn plutôt qu'un écran vide.
+    return burn.kind === "done" ? <p className="success">{burn.text}</p> : <p className="muted">This card no longer exists (it may have been burned).</p>;
 
   const mine = card.owner_id === accountId;
   const mythic = card.kind === "mythic";
@@ -80,11 +83,13 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
       } else if (findEvent(events, "redeem_failed")) {
         setBurn({ kind: "failed", text: "The token delivery failed, so your card was restored. You can try again later." });
       } else {
-        // Événements absents de la réponse du wallet : on relit l'état de la carte.
-        const after = await getCard(card.token_id);
-        if (!after) setBurn({ kind: "done", text: "Card burned. The tokens were sent to your account." });
-        else if (after.state === "redeeming") setBurn({ kind: "pending" });
-        else setBurn({ kind: "failed", text: "The burn did not complete; your card is unchanged." });
+        // Événements absents de la réponse du wallet : on relit la carte jusqu'à l'issue du burn
+        // (sinon l'écran restait sur « Burn in progress… » sans jamais se mettre à jour).
+        const outcome = await waitBurnOutcome(() => getCard(card.token_id));
+        if (outcome === "burned") setBurn({ kind: "done", text: "Card burned. The tokens were sent to your account." });
+        else if (outcome === "restored")
+          setBurn({ kind: "failed", text: "The token delivery failed, so your card was restored. You can try again later." });
+        else setBurn({ kind: "failed", text: "The burn is still in progress. Check your collection again in a minute." });
       }
       onChanged?.();
       reload();
