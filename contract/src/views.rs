@@ -261,7 +261,8 @@ impl Contract {
                     // Rareté pilotée par les burns : somme des poids renormalisés (modulo de card_roll).
                     "effective_card_weight": bv.as_ref().map(|bv| U128(draw::available_weight_mech(&s.draw_cards, &t.mythics, &s.minted, &s.mythic_minted, Some(bv), *r))),
                     "rush_rarity_ppm": t.mechanics.as_ref().and_then(|m| m.rush.as_ref()).map(|x| rarity_ppm(&x.weights, *r)),
-                    "gold_rarity_ppm": t.mechanics.as_ref().and_then(|m| m.gold_weights.as_ref()).map(|g| rarity_ppm(g, *r)),
+                    // Gold pack : probabilité visée de la rareté, emplacement par emplacement (plancher compris).
+                    "gold_slot_ppm": t.mechanics.as_ref().and_then(|m| m.gold.as_ref()).map(|g| g.slots.iter().map(|gs| rarity_ppm(&draw::gold_slot_weights(&t.rarity_weights, gs), *r)).collect::<Vec<_>>()),
                     "cards": cards,
                 })
             })
@@ -314,6 +315,12 @@ impl Contract {
             "draws": draws,
             "rush": p.flags & FLAG_RUSH != 0,
             "mode": p.mode(),
+            // Valeur tirée (série à table de valeur) : points de base du prix et part de chaque emplacement.
+            "value": p.value.map(|v| json!({
+                "bps": v.bps,
+                "total": U128(draw::value_total(s.table.price.0, v.bps)),
+                "amounts": (0..p.draws.len()).map(|i| self.slot_value(p, i).map(U128)).collect::<Vec<_>>(),
+            })),
         }))
     }
 
@@ -364,7 +371,7 @@ impl Contract {
             rarity: d.final_rarity,
             state: pack.cards[slot].state,
             sealed,
-            backing: self.backing_of(pack.series_id, d.kind, d.index),
+            backing: self.slot_backing(pack, slot),
             listing: self.listings.get(&token_id).cloned(),
         })
     }

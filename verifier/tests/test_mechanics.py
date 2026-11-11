@@ -49,22 +49,48 @@ class MechVectors(unittest.TestCase):
                 g, r, pp = core.pity_is_gold(m["pity"], c["pity_n"], acc)
                 self.assertEqual((g, r, pp), (c["pity_gold"], c["gold_roll"], c["p_ppm"]))
                 golds += g
-            mode = core.pack_mode(c["pity_gold"] and m["gold_weights"] is not None, c["rush"])
+            mode = core.pack_mode(c["pity_gold"] and m["gold"] is not None, c["rush"])
             self.assertEqual(mode, c["mode"])
         self.assertGreater(golds, 20)
 
     def test_draws_with_burns_and_resurrections(self):
-        burns = 0
+        """Tirage complet (gold pack à planchers, brûlable garantie, burns, résurrections) et valeur
+        du pack, au bit près contre `draw::draw_pack_mech` et `draw::pack_value`."""
+        burns = golds = valued = ups = below = 0
         for c in MECH["cases"]:
             t, m = c["table"], c["table"]["mechanics"]
             burn = core.Burn(c["burned"], c["backed"], m["burn"]["floor_bps"], m["burn"]["prior_k"], core.resurrectable(t)) if m["burn"] else None
             burns += burn is not None and any(c["burned"])
             mm, mmm = list(c["minted"]), list(c["mythic_minted"])
-            got = core.draw_pack(t, mm, mmm, bytes.fromhex(c["acc"]), core.mode_weights(t, c["mode"]), burn)
+            acc = bytes.fromhex(c["acc"])
+            got, slots = core.draw_pack_mech(t, mm, mmm, acc, c["mode"], burn, c["backed"])
             self.assertEqual([d.as_event() for d in got], c["draws"], f"cas {c['case']}")
+            self.assertEqual([[r, b] for r, b in slots], c["slots"], f"cas {c['case']}")
             self.assertEqual(mm, c["minted_after"])
             self.assertEqual(mmm, c["mythic_minted_after"])
+            self.assertEqual(core.pack_value(t, acc, c["mode"], slots), c["value"], f"cas {c['case']}")
+            valued += c["value"] is not None
+            if c["mode"] == "gold":
+                golds += 1
+                for d, gs in zip(got, m["gold"]["slots"]):
+                    ri, fi, li = (core.RARITIES.index(x) for x in (d.rolled_rarity, d.final_rarity, gs["floor"]))
+                    ups += fi < ri
+                    below += fi > li
         self.assertGreater(burns, 50)
+        self.assertGreater(golds, 20)
+        self.assertGreater(valued, 50)
+        self.assertGreater(ups, 0, "retombée vers le haut jamais exercée")
+        self.assertGreater(below, 0, "retombée sous le plancher jamais exercée")
+
+    def test_value_split_vectors(self):
+        """Arrondi vers le bas, reste au plus fort multiplicateur (premier en cas d'égalité)."""
+        for c in MECH["splits"]:
+            total = core.value_total(int(c["price"]), c["bps"])
+            self.assertEqual(str(total), c["total"])
+            got = core.split_value(total, [tuple(x) for x in c["slots"]], c["multipliers"])
+            self.assertEqual([None if a is None else str(a) for a in got], c["amounts"])
+            if any(b for _, b in c["slots"]) and any(c["multipliers"][r] for r, b in c["slots"] if b):
+                self.assertEqual(sum(a for a in got if a is not None), total)
 
     def test_rush_sequences(self):
         triggered = 0

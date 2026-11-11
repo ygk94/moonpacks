@@ -119,6 +119,17 @@ pub const DEFAULT_ORACLE_DELAY_BLOCKS: u64 = 144_000;
 /// Borne de l'a priori des burns (`BurnParams::prior_k`).
 pub const MAX_BURN_PRIOR_K: u32 = 1_000_000;
 pub const PPM: u64 = 1_000_000;
+/// Paliers au plus par table de valeur.
+pub const MAX_VALUE_TIERS: usize = 32;
+/// Bornes de la table de valeur normale (20 % à 200 % du prix).
+pub const MIN_NORMAL_VALUE_BPS: u32 = 2_000;
+pub const MAX_NORMAL_VALUE_BPS: u32 = 20_000;
+/// Borne des tables gold et rush (100 fois le prix).
+pub const MAX_VALUE_BPS: u32 = 1_000_000;
+/// Borne des multiplicateurs de répartition par rareté.
+pub const MAX_VALUE_MULT: u32 = 1_000_000;
+/// Valeur tirée d'un pack (`PackValue`, option comprise).
+pub const PACK_VALUE_BYTES: u64 = 8;
 
 #[derive(BorshStorageKey)]
 #[near]

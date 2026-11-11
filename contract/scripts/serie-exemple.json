@@ -49,12 +49,35 @@
   ],
   "royalties": [],
   "mechanics": {
-    "_doc": "Paramètres par défaut de docs/mecaniques-spec.md (simulation série 3, sim/RAPPORT.md). Hauteurs en blocs, 0,6 s par bloc supposé (non vérifié). Valeurs de rareté illustratives : à recaler sur la simulation.",
-    "gold_multipliers": {
-      "mythic": 4,
-      "legendary": 4,
-      "epic": 3,
-      "rare": 2
+    "_doc": "Paramètres par défaut de docs/mecaniques-spec.md. Hauteurs en blocs, 0,6 s par bloc supposé (non vérifié).",
+    "gold": {
+      "_doc": "Gold pack (pitié, garanti au 20e pack) : 5 cartes, aucune commune. Plancher de rareté par emplacement : 1 et 2 rare ou mieux (poids de base tronqués), 3 et 4 épique ou mieux, 5 légendaire 80 % ou mythique 20 %. Rareté épuisée : vers le bas jusqu'au plancher, puis vers le haut, puis sous le plancher. L'emplacement 2 est tiré parmi les brûlables (la valeur du pack y est adossée).",
+      "slots": [
+        {
+          "floor": "rare",
+          "burnable": false
+        },
+        {
+          "floor": "rare",
+          "burnable": true
+        },
+        {
+          "floor": "épique",
+          "burnable": false
+        },
+        {
+          "floor": "épique",
+          "burnable": false
+        },
+        {
+          "floor": "légendaire",
+          "weights": {
+            "légendaire": 80,
+            "mythique": 20
+          },
+          "burnable": false
+        }
+      ]
     },
     "pity": {
       "p0_ppm": 20000,
@@ -86,8 +109,127 @@
       "_doc": "Cartes que l'oracle de prix pourra ressusciter, engagées dans la table hachée : épiques et légendaires « mort… » du catalogue, non adossées (200 au plus).",
       "rule": "dead_epic_legendary"
     },
+    "value": {
+      "_doc": "Tables de valeur PROVISOIRES (calibrage définitif dans sim/, autre session) : paliers [valeur en points de base du prix, poids]. Normale de 20 % à 200 %, moyenne 75 % ; rush moyenne 78,5 % (≤ 80 %) ; gold moyenne 218,5 %. La valeur tirée est répartie entre les brûlables du pack au prorata des multiplicateurs ; remplaçables par --tables-valeur.",
+      "normale": [
+        [
+          2000,
+          15
+        ],
+        [
+          3000,
+          13
+        ],
+        [
+          4000,
+          10
+        ],
+        [
+          5000,
+          10
+        ],
+        [
+          6000,
+          10
+        ],
+        [
+          8000,
+          10
+        ],
+        [
+          10000,
+          10
+        ],
+        [
+          12000,
+          8
+        ],
+        [
+          15000,
+          5
+        ],
+        [
+          20000,
+          9
+        ]
+      ],
+      "gold": [
+        [
+          10000,
+          30
+        ],
+        [
+          15000,
+          25
+        ],
+        [
+          20000,
+          20
+        ],
+        [
+          30000,
+          13
+        ],
+        [
+          50000,
+          8
+        ],
+        [
+          80000,
+          4
+        ]
+      ],
+      "rush": [
+        [
+          2000,
+          13
+        ],
+        [
+          3000,
+          12
+        ],
+        [
+          4000,
+          10
+        ],
+        [
+          5000,
+          10
+        ],
+        [
+          6000,
+          10
+        ],
+        [
+          8000,
+          10
+        ],
+        [
+          10000,
+          10
+        ],
+        [
+          12000,
+          9
+        ],
+        [
+          15000,
+          7
+        ],
+        [
+          20000,
+          9
+        ]
+      ],
+      "multiplicateurs": {
+        "commune": 1,
+        "rare": 2,
+        "épique": 5,
+        "légendaire": 20
+      }
+    },
     "coverage_check": {
-      "_doc": "Valeur moyenne d'un emplacement par rareté, en multiples du prix du pack, déduite de la série 3 (base 58,6 %, or 184 %, rush 80 %).",
+      "_doc": "Avec une table de valeur, la couverture est la valeur moyenne de chaque table (max_rush s'applique à la table rush) ; rarity_value ne sert qu'aux séries sans table de valeur.",
       "rarity_value": {
         "common": 0,
         "rare": 0.18,

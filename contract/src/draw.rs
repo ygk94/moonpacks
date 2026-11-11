@@ -15,18 +15,23 @@
 //! - rareté pilotée par les burns : le tirage de rareté ne change pas ; dans la rareté, les
 //!   brûlables prennent un poids brut `max(⌊w × (e − b + K) / (e + K)⌋, ⌊w × plancher⌋, 1)` renormalisé pour
 //!   que leur part totale reste celle de leurs poids de base (`in_rarity_weight`) ;
-//! - gold rush : palier relatif sur fenêtre glissante par seaux (`rush_on_buy`), figé à l'achat.
+//! - gold rush : palier relatif sur fenêtre glissante par seaux (`rush_on_buy`), figé à l'achat ;
+//! - gold pack : plancher de rareté par emplacement (`draw_slot_rule`, `fallback_order`) ;
+//! - valeur du pack : `value_roll = roll(acc, 0, 3)` choisit un palier de la table du pack
+//!   (`value_tier`), réparti entre les brûlables (`split_value`) ; le dernier emplacement d'un pack
+//!   normal est tiré parmi les brûlables (`draw_slot_rule` avec `burnable_only`).
 
 use crate::types::{
-    CardKind, DrawCard, MythicCommitment, PackMode, PityParams, Rarity, RarityWeights, RushParams, RushState,
-    SeriesTable,
+    CardKind, DrawCard, GoldSlot, MythicCommitment, PackMode, PityParams, Rarity, RarityWeights, RushParams,
+    RushState, SeriesTable, ValueParams, ValueTier,
 };
 use near_sdk::env;
 
-/// Tags de `roll` : rareté et carte (par emplacement), gold pack (emplacement 0).
+/// Tags de `roll` : rareté et carte (par emplacement), gold pack et valeur (emplacement 0).
 pub const TAG_RARITY: u8 = 0;
 pub const TAG_CARD: u8 = 1;
 pub const TAG_GOLD: u8 = 2;
+pub const TAG_VALUE: u8 = 3;
 pub const PPM: u64 = 1_000_000;
 
 pub fn roll(acc: &[u8; 32], slot: u8, tag: u8) -> u128 {
@@ -394,14 +399,259 @@ pub fn pack_mode(pity_gold: bool, rush: bool) -> PackMode {
     }
 }
 
-/// Poids de rareté d'un pack selon sa table (retombe sur la base si la table manque).
+/// Poids de rareté d'un pack normal selon sa table (base ou rush ; retombe sur la base si la
+/// table manque). Un gold pack tire chaque emplacement avec `gold_slot_weights`.
 pub fn mode_weights(t: &SeriesTable, mode: PackMode) -> &RarityWeights {
     let m = t.mechanics.as_ref();
     match mode {
-        PackMode::Base => &t.rarity_weights,
-        PackMode::Gold => m.and_then(|m| m.gold_weights.as_ref()).unwrap_or(&t.rarity_weights),
+        PackMode::Base | PackMode::Gold => &t.rarity_weights,
         PackMode::Rush => m.and_then(|m| m.rush.as_ref()).map(|r| &r.weights).unwrap_or(&t.rarity_weights),
     }
+}
+
+// ------------------------------------------------------------------ gold pack et brûlable garantie
+
+/// Poids d'un emplacement de gold pack : les siens, ou les poids de base mis à zéro sous le plancher.
+pub fn gold_slot_weights(base: &RarityWeights, s: &GoldSlot) -> RarityWeights {
+    if let Some(w) = &s.weights {
+        return w.clone();
+    }
+    let keep = |r: Rarity, x: u32| if r.index() <= s.floor.index() { x } else { 0 };
+    RarityWeights {
+        mythic: keep(Rarity::Mythic, base.mythic),
+        legendary: keep(Rarity::Legendary, base.legendary),
+        epic: keep(Rarity::Epic, base.epic),
+        rare: keep(Rarity::Rare, base.rare),
+        common: keep(Rarity::Common, base.common),
+    }
+}
+
+/// Ordre de retombée d'un emplacement à plancher : la rareté visée, puis vers le bas jusqu'au
+/// plancher, puis vers le haut (au-dessus de la visée, jusqu'à la mythique), puis sous le plancher
+/// (jusqu'à la commune) en dernier recours. Avec le plancher commune : vers le bas, puis vers le haut.
+pub fn fallback_order(rolled: Rarity, floor: Rarity) -> Vec<Rarity> {
+    let f = floor.index();
+    let r = rolled.index().min(f);
+    let mut v = Vec::with_capacity(5);
+    v.extend((r..=f).map(|i| Rarity::ALL[i]));
+    v.extend((0..r).rev().map(|i| Rarity::ALL[i]));
+    v.extend((f + 1..5).map(|i| Rarity::ALL[i]));
+    v
+}
+
+/// Poids tirables des seules brûlables (adossées par la table ou ressuscitées) d'une rareté. Une
+/// mythique n'est jamais comptée : son adossement est dans son contenu, secret jusqu'à la révélation.
+pub fn burnable_weight(cards: &[DrawCard], minted: &[u32], bv: Option<&BurnView>, rarity: Rarity) -> u128 {
+    if rarity == Rarity::Mythic {
+        return 0;
+    }
+    let f = bv.map(|bv| burn_factors(cards, minted, bv, rarity));
+    cards
+        .iter()
+        .zip(minted)
+        .enumerate()
+        .filter(|(_, (c, _))| c.rarity == rarity && c.backed)
+        .map(|(i, (c, n))| match (bv, f) {
+            (Some(bv), Some(f)) => in_rarity_weight(c, i, *n, bv, f),
+            _ => available(c.weight, *n, c.cap) as u128,
+        })
+        .sum()
+}
+
+/// Tirage d'un emplacement à règle : rareté visée avec `weights`, retombée selon
+/// `fallback_order(visée, floor)` sur la première rareté qui a une carte tirable (une brûlable si
+/// `burnable_only`), puis choix de la carte comme `draw_slot_mech` (mêmes tags, mêmes poids dans la
+/// rareté, restreints aux brûlables si `burnable_only`). Ne panique jamais ; si rien n'est tirable
+/// (impossible pour une table validée), commune, `card_roll = 0`, première commune illimitée.
+#[allow(clippy::too_many_arguments)]
+pub fn draw_slot_rule(
+    weights: &RarityWeights,
+    floor: Rarity,
+    burnable_only: bool,
+    cards: &[DrawCard],
+    mythics: &[MythicCommitment],
+    minted: &[u32],
+    mythic_minted: &[u32],
+    bv: Option<&BurnView>,
+    acc: &[u8; 32],
+    slot: u8,
+) -> SlotDraw {
+    let total = weights.total().max(1) as u128;
+    let rarity_roll = roll(acc, slot, TAG_RARITY) % total;
+    let mut cum: u128 = 0;
+    let mut rolled = Rarity::Common;
+    for r in Rarity::ALL {
+        cum += weights.get(r) as u128;
+        if rarity_roll < cum {
+            rolled = r;
+            break;
+        }
+    }
+    let avail = |r| {
+        if burnable_only {
+            burnable_weight(cards, minted, bv, r)
+        } else {
+            available_weight_mech(cards, mythics, minted, mythic_minted, bv, r)
+        }
+    };
+    let mut final_rarity = Rarity::Common;
+    let mut sum = 0;
+    for r in fallback_order(rolled, floor) {
+        let s = avail(r);
+        if s > 0 {
+            final_rarity = r;
+            sum = s;
+            break;
+        }
+    }
+    let raw_card = roll(acc, slot, TAG_CARD);
+    let card_roll = if sum == 0 { 0 } else { raw_card % sum };
+    let (kind, index) = if final_rarity == Rarity::Mythic && sum > 0 {
+        let mut c: u128 = 0;
+        let mut pick = 0u32;
+        for (j, (m, n)) in mythics.iter().zip(mythic_minted).enumerate() {
+            c += available(m.weight, *n, Some(m.cap)) as u128;
+            if card_roll < c {
+                pick = j as u32;
+                break;
+            }
+        }
+        (CardKind::Mythic, pick)
+    } else {
+        let mut c: u128 = 0;
+        let mut pick = first_unlimited_common(cards);
+        let f = bv.map(|bv| burn_factors(cards, minted, bv, final_rarity));
+        for (i, (card, n)) in cards.iter().zip(minted).enumerate() {
+            if card.rarity != final_rarity || (burnable_only && !card.backed) {
+                continue;
+            }
+            c += match (bv, f) {
+                (Some(bv), Some(f)) => in_rarity_weight(card, i, *n, bv, f),
+                _ => available(card.weight, *n, card.cap) as u128,
+            };
+            if card_roll < c {
+                pick = i as u32;
+                break;
+            }
+        }
+        (CardKind::Visible, pick)
+    };
+    SlotDraw { rarity_roll, rolled_rarity: rolled, final_rarity, card_roll, kind, index }
+}
+
+/// Tous les emplacements d'un pack, comme le dernier reçu : gold pack (un emplacement par entrée de
+/// `mechanics.gold`, avec son plancher), sinon `cards_per_pack` emplacements avec la table de taux du
+/// pack, le dernier tiré parmi les brûlables si la série a une table de valeur. `minted` et
+/// `mythic_minted` sont incrémentés entre deux emplacements. Renvoie les tirages et, par emplacement,
+/// (rareté finale, brûlable au tirage) pour la répartition de la valeur.
+#[allow(clippy::too_many_arguments)]
+pub fn draw_pack_mech(
+    t: &SeriesTable,
+    mode: PackMode,
+    cards: &[DrawCard],
+    minted: &mut [u32],
+    mythic_minted: &mut [u32],
+    bv: Option<&BurnView>,
+    acc: &[u8; 32],
+) -> (Vec<SlotDraw>, Vec<(Rarity, bool)>) {
+    let m = t.mechanics.as_ref();
+    let gold = m.and_then(|m| m.gold.as_ref()).filter(|_| mode == PackMode::Gold);
+    let value = m.is_some_and(|m| m.value.is_some());
+    let weights = mode_weights(t, mode);
+    let n = gold.map(|g| g.slots.len() as u8).unwrap_or(t.cards_per_pack);
+    let mut draws = Vec::with_capacity(n as usize);
+    let mut slots = Vec::with_capacity(n as usize);
+    for slot in 0..n {
+        let d = if let Some(g) = gold {
+            let gs = &g.slots[slot as usize];
+            let w = gold_slot_weights(&t.rarity_weights, gs);
+            draw_slot_rule(&w, gs.floor, gs.burnable, cards, &t.mythics, minted, mythic_minted, bv, acc, slot)
+        } else if value && slot + 1 == n {
+            draw_slot_rule(weights, Rarity::Common, true, cards, &t.mythics, minted, mythic_minted, bv, acc, slot)
+        } else {
+            draw_slot_mech(weights, cards, &t.mythics, minted, mythic_minted, bv, acc, slot)
+        };
+        slots.push((d.final_rarity, d.kind == CardKind::Visible && cards[d.index as usize].backed));
+        match d.kind {
+            CardKind::Visible => minted[d.index as usize] += 1,
+            CardKind::Mythic => mythic_minted[d.index as usize] += 1,
+        }
+        draws.push(d);
+    }
+    (draws, slots)
+}
+
+// ------------------------------------------------------------------ valeur du pack
+
+/// Valeur tirée d'un pack (série à table de valeur).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PackValueDraw {
+    pub roll: u64,
+    pub tier: u32,
+    pub bps: u32,
+    pub total: u128,
+    pub amounts: Vec<Option<u128>>,
+}
+
+/// Palier, total et répartition d'un pack (`None` sans table de valeur).
+pub fn pack_value(t: &SeriesTable, mode: PackMode, acc: &[u8; 32], slots: &[(Rarity, bool)]) -> Option<PackValueDraw> {
+    let v = t.mechanics.as_ref()?.value.as_ref()?;
+    let (roll, tier, bps) = value_tier(value_table(v, mode), acc);
+    let total = value_total(t.price.0, bps);
+    Some(PackValueDraw { roll, tier, bps, total, amounts: split_value(total, slots, &v.multipliers) })
+}
+
+/// Table de valeur d'un pack selon sa table de taux.
+pub fn value_table(v: &ValueParams, mode: PackMode) -> &[ValueTier] {
+    match mode {
+        PackMode::Base => &v.normal,
+        PackMode::Gold => &v.gold,
+        PackMode::Rush => &v.rush,
+    }
+}
+
+/// `value_roll = u128_be(sha256(acc || 0x00 || 0x03)[0..16]) mod Σpoids`, palier choisi par cumul
+/// dans l'ordre de la table. Renvoie (value_roll, index du palier, valeur en points de base).
+pub fn value_tier(tiers: &[ValueTier], acc: &[u8; 32]) -> (u64, u32, u32) {
+    let total: u128 = tiers.iter().map(|(_, w)| *w as u128).sum::<u128>().max(1);
+    let r = roll(acc, 0, TAG_VALUE) % total;
+    let mut cum = 0u128;
+    for (i, (bps, w)) in tiers.iter().enumerate() {
+        cum += *w as u128;
+        if r < cum {
+            return (r as u64, i as u32, *bps);
+        }
+    }
+    (r as u64, 0, tiers.first().map(|t| t.0).unwrap_or(0))
+}
+
+/// `⌊prix × bps / 10⁴⌋`, calculé sans dépasser u128 (`prix = 10⁴ q + r`).
+pub fn value_total(price: u128, bps: u32) -> u128 {
+    (price / 10_000) * bps as u128 + (price % 10_000) * bps as u128 / 10_000
+}
+
+/// Répartition de `total` (yoctoNEAR) entre les emplacements brûlables (`slots[i] = (rareté, brûlable)`)
+/// au prorata du multiplicateur de leur rareté : `⌊total × m_i / Σm⌋`, le reste à l'emplacement au plus
+/// fort multiplicateur (le premier en cas d'égalité). `None` pour un emplacement non brûlable.
+/// Sans brûlable (ou multiplicateurs nuls), rien n'est réparti.
+pub fn split_value(total: u128, slots: &[(Rarity, bool)], mult: &RarityWeights) -> Vec<Option<u128>> {
+    let sum: u128 = slots.iter().filter(|(_, b)| *b).map(|(r, _)| mult.get(*r) as u128).sum();
+    if sum == 0 {
+        return vec![None; slots.len()];
+    }
+    let mut out: Vec<Option<u128>> =
+        slots.iter().map(|(r, b)| b.then(|| total * mult.get(*r) as u128 / sum)).collect();
+    let given: u128 = out.iter().flatten().sum();
+    let mut best: Option<usize> = None;
+    for (i, (r, b)) in slots.iter().enumerate() {
+        if *b && best.is_none_or(|j| mult.get(*r) > mult.get(slots[j].0)) {
+            best = Some(i);
+        }
+    }
+    if let Some(j) = best {
+        out[j] = out[j].map(|x| x + (total - given));
+    }
+    out
 }
 
 /// Résultat de `rush_on_buy` pour un achat.

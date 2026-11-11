@@ -1,7 +1,8 @@
 # Contrat Memaster (NEAR, Rust)
 
 Contrat unique pour les cartes NFT, les boosters, le tirage, les mythiques secrètes, le marché intégré, le burn et les
-mécaniques de série (pitié, rareté pilotée par les burns, gold rush, résurrection : `docs/mecaniques-spec.md`).
+mécaniques de série (pitié et gold pack à planchers, rareté pilotée par les burns, gold rush, résurrection, valeur
+aléatoire par pack : `docs/mecaniques-spec.md`).
 Phase 3 de `docs/plan.md`. **Rien n'a été déployé, ni sur testnet ni sur mainnet.**
 
 - near-sdk **5.30.1** et near-contract-standards **5.30.1** (dernières versions sur crates.io le 11/11/2026)
@@ -13,15 +14,15 @@ Phase 3 de `docs/plan.md`. **Rien n'a été déployé, ni sur testnet ni sur mai
 | Fichier | Rôle |
 |---|---|
 | `src/lib.rs` | État, `new`, constantes de gaz, de limites et de stockage, `set_redeemer`, `propose_price_oracle` / `accept_price_oracle` / `revoke_price_oracle`, métadonnées reconstruites des cartes, `token_id_of` / `parse_token_id` |
-| `src/types.rs` | Table de série et mécaniques, cartes, engagements mythiques, packs compacts (`PackDraw`, `CardSlot`), tirages, annonces |
-| `src/mechanics.rs` | Validation des mécaniques, compteurs de burn, `set_resurrected` (oracle), vues `get_pity`, `get_rush_state`, `get_burns`, `get_resurrected` |
+| `src/types.rs` | Table de série et mécaniques (dont `GoldParams`, `ValueParams`), cartes, engagements mythiques, packs compacts (`PackDraw`, `CardSlot`, `PackValue`), tirages, annonces |
+| `src/mechanics.rs` | Validation des mécaniques (gold pack, tables de valeur, brûlable garantie), compteurs de burn, `set_resurrected` (oracle), vues `get_pity`, `get_rush_state`, `get_burns`, `get_resurrected` |
 | `src/series.rs` | `create_series` (brouillon), `create_series_batched` + `append_series_cards` (grosse table par lots, payables), `replace_series_table(_batched)` (brouillon seulement), `delete_draft`, `open_series` (gel, hash, stockage du pire cas), `pause_series`, `resume_series`, `close_series` |
 | `src/hash_stream.rs` | SHA-256 incrémental du JSON de la table, tenu à jour pendant le chargement ; coupe de l'en-tête autour de `"cards":[` (motif unique exigé) |
 | `src/pack.rs` | `buy_pack`, `reveal_step` (privé), `retry_reveal`, tirage final et mint |
-| `src/draw.rs` | Tirage pur et déterministe (sert aussi de référence au vérificateur), pitié, poids renormalisés des burns, fenêtre du rush |
+| `src/draw.rs` | Tirage pur et déterministe (sert aussi de référence au vérificateur), pitié, poids renormalisés des burns, fenêtre du rush, gold pack à planchers et retombée (`draw_slot_rule`, `fallback_order`), pack complet (`draw_pack_mech`), valeur (`value_tier`, `split_value`, `pack_value`) |
 | `src/mythic.rs` | `reveal_mythic`, `compute_mythic_commitment` |
 | `src/market.rs` | `list`, `delist`, `buy` |
-| `src/redeem.rs` | `redeem`, `on_redeem_complete` (privé), interface `Redeemer` |
+| `src/redeem.rs` | `redeem`, `on_redeem_complete` (privé), interface `Redeemer` (montant = part de la valeur du pack dans une série à table de valeur) |
 | `src/nft.rs` | NEP-171 (cœur), 177, 178, 181 (énumération), 199 (`nft_payout`, `nft_transfer_payout`), réécrits sur le stockage minimal par carte |
 | `src/views.rs` | Lectures : `get_series`, `get_series_header` (en-tête léger), `get_series_cards` (paginée), `get_series_table_hash` (hash stocké), `get_rates` (paginée), `get_series_table` (petites séries), `get_mythic_commitments`, `get_pack`, `get_packs_for_owner`, `get_card`, `get_backing`, `get_listing(s)`, `get_config` |
 | `src/events.rs` | Événements NEP-297 (`standard: "memaster"`, `version: "1.0.0"`) et `nft_metadata_update` (NEP-171 1.2.0) |
@@ -30,7 +31,7 @@ Phase 3 de `docs/plan.md`. **Rien n'a été déployé, ni sur testnet ni sur mai
 | `tests/sandbox.rs` | Tests d'intégration et mesures |
 | `src/tests_batch.rs` | Tests unitaires du chargement par lots |
 | `src/tests_mech.rs` | Tests unitaires des mécaniques et du stockage par carte |
-| `scripts/build_series.py` | Arguments des appels de série à partir du catalogue v2 (voir « Série v2 ») |
+| `scripts/build_series.py` | Arguments des appels de série à partir du catalogue v2, vrais noms des mythiques lus dans `docs/data/secrets/mythiques.json`, tables de valeur (`--tables-valeur`) (voir « Série v2 ») |
 
 ### Séries et table figée
 
@@ -98,16 +99,22 @@ Phase 3 de `docs/plan.md`. **Rien n'a été déployé, ni sur testnet ni sur mai
    **k > 1 n'apporte rien contre le producteur du dernier bloc** : il connaît la graine de son bloc avant d'y inclure
    le dernier reçu et peut le retenir. Plusieurs reçus empêchent seulement qu'un acteur fixe le résultat dès
    l'achat (le producteur du bloc d'achat, ou l'acheteur qui choisirait son moment).
-3. Le dernier reçu choisit d'abord la **table de taux du pack** si la série a des mécaniques : table or si la pitié
+3. Le dernier reçu choisit d'abord la **table de taux du pack** si la série a des mécaniques : gold pack si la pitié
    l'accorde (`gold_roll = u128_be(sha256(acc || 0 || 2)[0..16]) mod 10⁶`), sinon table rush si le pack a été acheté
-   pendant un rush (figé par `buy_pack`), sinon la base. Il tire ensuite chaque emplacement :
+   pendant un rush (figé par `buy_pack`), sinon la base. Un gold pack tire un emplacement par entrée de
+   `mechanics.gold.slots`, chacun avec son plancher de rareté (retombée : vers le bas jusqu'au plancher, puis vers le
+   haut, puis sous le plancher). Il tire ensuite chaque emplacement :
    `rarity_roll = u128_be(sha256(acc || slot || 0)[0..16]) mod Σpoids` choisit la rareté par cumul (mythique → commune).
    Si cette rareté n'a plus de carte disponible (plafond atteint), le tirage **retombe sur la rareté inférieure**.
    Ensuite `card_roll = u128_be(sha256(acc || slot || 1)[0..16]) mod Σpoids_disponibles` choisit la carte (avec la
    rareté pilotée par les burns : poids renormalisés entre brûlables de la rareté).
+   Avec une table de valeur, le dernier emplacement d'un pack normal est tiré parmi les brûlables (retombée vers le
+   bas, puis vers le haut), puis `value_roll = roll(acc, 0, 3)` choisit la valeur V du pack (en points de base du
+   prix) dans la table normale, gold ou rush ; `⌊prix × V / 10⁴⌋` est réparti entre les brûlables du pack au prorata
+   des multiplicateurs par rareté, le reste à la carte au plus fort multiplicateur (`docs/mecaniques-spec.md`, section 9).
    Le reçu crée les cartes par mint direct (jamais de `*_transfer_call`) et journalise `pack_revealed` : graines,
    hauteurs, acc intermédiaires et final, tirages complets et, pour une série à mécaniques, le bloc `mechanics`
-   (`mode`, `rush`, `pity`, `burn_seq`, `resurrect_seq`). Ce reçu ne contient aucun `require` qui dépende du résultat.
+   (`mode`, `rush`, `pity`, `burn_seq`, `resurrect_seq`, `value`). Ce reçu ne contient aucun `require` qui dépende du résultat.
 4. Une étape périmée (mauvaise tentative, mauvais ordre, pack déjà révélé) est ignorée sans panique.
 5. `retry_reveal(pack_id)` est ouvert à tous, seulement si le pack est `Pending` sans aucune carte écrite et après
    `retry_delay_blocks` blocs sans progrès (100 par défaut). La tentative est incrémentée, ce qui rend les anciennes
@@ -156,17 +163,20 @@ Une carte ne stocke que sa référence : `token_id = pack_id × 10 + emplacement
 NEP-181 sont rangées par blocs (8 o par carte), avec retrait par échange. Les métadonnées NEP-177, l'adossement et
 l'état scellé des mythiques sont **reconstruits à la lecture** depuis la table : `nft_token`, `nft_tokens`,
 `nft_tokens_for_owner`, `get_card` et `get_backing` gardent leur forme. `reveal_mythic` ne réécrit plus les cartes.
-Série v2 : **3 965 o → 848 o par pack** au plus sans mécanique, 964 o avec toutes (premier achat d'un compte compris).
+Série v2 : **3 965 o → 848 o par pack** au plus sans mécanique, 964 o avec toutes (premier achat d'un compte compris),
+971 o avec le gold pack à planchers et la table de valeur (7 o par pack pour la valeur : `bps` et masque des brûlables).
 Détail et mesures dans `docs/mecaniques-spec.md`.
 
 ### Mécaniques
 
-Pitié, rareté pilotée par les burns, gold rush et résurrection des coins morts : formules, paramètres par défaut, ce qui
+Pitié et gold pack à plancher de rareté par emplacement, rareté pilotée par les burns, gold rush, résurrection des coins
+morts et valeur aléatoire en jetons par pack (brûlable garantie au dernier emplacement) : formules, paramètres par défaut, ce qui
 est haché, ce qui est journalisé, coût en gaz et en stockage dans **`docs/mecaniques-spec.md`**. Rôle `price_oracle`
 (owner : `propose_price_oracle`, puis `accept_price_oracle` après `oracle_delay_blocks` blocs, 24 h par défaut,
 paramètre de `new` ; `revoke_price_oracle` immédiat), méthode `set_resurrected` (oracle, cartes de la liste hachée
 `mechanics.resurrection.eligible` seulement : épiques et légendaires non adossées ; sans liste, aucune résurrection). Le contrôle de
-couverture de la table rush (≤ 80 %) est fait hors chaîne par `scripts/build_series.py`.
+couverture de la table rush (≤ 80 %) est fait hors chaîne par `scripts/build_series.py` (moyenne de la table de valeur
+rush).
 
 ### Marché intégré
 
@@ -183,7 +193,10 @@ retire l'annonce. Une carte en vente ne peut pas être brûlée : il faut d'abor
 `redeemer.redeem(owner, asset_id, amount)` (30 Tgas fixes) puis `on_redeem_complete` (20 Tgas fixes, privé). Si le reçu
 du redeemer réussit, quelle que soit sa valeur de retour, la carte est brûlée (`nft_burn`) ; si la série a la rareté
 pilotée par les burns, le compteur de la carte et `burn_seq` sont incrémentés (journalisés dans `card_redeemed`). S'il
-échoue, la carte revient à `Normal`. L'adossement est celui de la table, ou celui donné par l'oracle (résurrection). Il
+échoue, la carte revient à `Normal`. L'adossement est celui de la table, ou celui donné par l'oracle (résurrection).
+**Série à table de valeur** : `asset_id` reste celui de la carte, mais `amount` est la part de la valeur tirée pour le
+pack (yoctoNEAR de valeur, recalculée depuis `Pack::value`), pas le montant de la table. Cas spéciaux à adossement fixe :
+une mythique (son contenu révélé) et un exemplaire devenu brûlable après son tirage (montant de l'oracle). Il
 est lu par `redeem`, envoyé au redeemer et passé en argument à `on_redeem_complete`, qui journalise celui-là dans
 `card_redeemed` (`replaced_by` si l'oracle l'a remplacé entre-temps). **Contrat d'interface : le redeemer doit paniquer s'il ne livre pas.**
 L'approvisionnement des jetons et le retrait réel restent à concevoir. Aucune intégration NEAR Intents.
@@ -216,13 +229,14 @@ cargo near build non-reproducible-wasm          # → target/near/memaster.wasm 
 (cd mock-redeemer && cargo near build non-reproducible-wasm)
 (cd mock-oracle && cargo near build non-reproducible-wasm)
 
-cargo test --lib                                # 97 tests unitaires (python3 requis pour les tests des scripts)
-cargo test --test sandbox -- --nocapture        # 19 tests sandbox, mesures imprimées (~45 s, en parallèle)
+cargo test --lib                                # 112 tests unitaires (python3 requis pour les tests des scripts)
+cargo test --test sandbox -- --nocapture        # 20 tests sandbox, mesures imprimées (~70 s, en parallèle)
 MECH_VECTORS_OUT=../verifier/tests/vectors/sandbox_mech_vectors.json \
   cargo test --test sandbox -- mechanics_end_to_end   # régénère les événements réels du vérificateur
 
 # Série v2 : arguments des appels (aucun secret dans scripts/out/, préimages dans scripts/secrets/)
 python3 scripts/build_series.py scripts/serie-exemple.json     # --new-secrets pour tirer de nouveaux sels
+python3 scripts/build_series.py scripts/serie-exemple.json --tables-valeur tables.json  # tables de valeur de sim/
 cargo test                                      # tout
 ```
 
@@ -233,7 +247,7 @@ sert uniquement au test de `retry_reveal` et **ne doit jamais être déployée**
 
 ## Tests
 
-**Unitaires (97, dont 67 d'avant les mécaniques).** Validation des tables, hash égal au sha256 du JSON de la vue, table ouverte non remplaçable,
+**Unitaires (112, dont 67 d'avant les mécaniques et 15 pour la valeur et le gold pack).** Validation des tables, hash égal au sha256 du JSON de la vue, table ouverte non remplaçable,
 pause, dépôt ou gaz insuffisant, tirage complet et adossement (reconstruit depuis la table), étapes périmées ignorées, règles de
 `retry_reveal`, déterminisme, retombée en cas de plafond (par rareté et par carte), fréquences sur 20 000 tirages,
 engagements (bon sel, mauvais sel, adossement modifié, mythique jamais sortie), marché avec redevances, retrait de
@@ -272,7 +286,18 @@ moyen (20 % au lieu de 50 %), résurrection limitée à la liste hachée, oracle
 oracle proposé sans pouvoir, événements, retrait immédiat), plafond de 3 packs rush par compte, adossement livré
 journalisé pendant un remplacement.
 
-**Sandbox (19)** :
+**Valeur et gold pack (15, `src/tests_mech.rs`).** Un seul palier (V fixe, prix non multiple de 10⁴ : total exact,
+aucun yocto perdu, parts seulement pour les brûlables, dernier emplacement toujours brûlable, vue `get_pack` = journal),
+arrondi des yocto (reste au premier plus fort multiplicateur, 1 yocto à partager, aucune brûlable, prix extrême sans
+dépassement), pack sans brûlable tirée naturellement (le dernier emplacement remonte à la rare brûlable), retombée vers le
+bas avant le haut, ordre de retombée, gold pack (5 cartes, aucune commune, planchers, 80 / 20 au dernier, emplacement 2
+brûlable, table de valeur gold), légendaires épuisées (montée à la mythique, puis sous le plancher), mythique au plafond
+(retombe sur la légendaire), table de valeur selon le mode (normale, gold, rush), `redeem` qui transmet la part tirée,
+exemplaire ressuscité après son tirage (montant de l'oracle) et après (part de la valeur), 14 refus de validation
+(bornes de la table normale, paliers, poids nuls, multiplicateurs, dépassement, planchers, nombre d'emplacements),
+brûlable garantie exigée, stockage prépayé (gold pack plus long et valeur), série sans valeur inchangée.
+
+**Sandbox (20)** :
 
 | Test | Ce qu'il montre |
 |---|---|
@@ -290,16 +315,24 @@ journalisé pendant un remplacement.
 | `init_is_private` | Un tiers ne peut pas appeler `new` |
 | `nft_transfer_call_receivers` | Receveur qui garde, qui rend (`true`) ou qui panique : propriétaire final, approbations restaurées seulement en cas de retour, gaz de la résolution |
 | `reveal_with_100_sealed_cards` | Révélation d'une mythique avec 100 cartes scellées et un contenu maximal |
-| `catalogue_v2_batched_load_and_packs` | Catalogue v2 complet, avec les mécaniques par défaut de `serie-exemple.json` : refus en une transaction, chargement en 10 transactions avec les dépôts du script, hash = vérificateur Python, octets de la vue = `table.json`, vérificateur Python en mode pagination (pages de 200 et de 77) = même hash, 12 boosters à 160 Tgas revérifiés par le vérificateur Python (rejeu des plafonds) |
-| `max_size_series_fits` | 2 000 cartes aux chaînes maximales, 20 engagements, 10 redevances, 10 cartes par booster, toutes les mécaniques (pire cas) : chargement payé par l'owner, ouverture, gaz des vues légères (en-tête + 10 pages = hash), vérificateur Python par pages, achats au gaz minimal |
+| `catalogue_v2_batched_load_and_packs` | Catalogue v2 complet, avec les mécaniques par défaut de `serie-exemple.json` : refus en une transaction, chargement en 10 transactions avec les dépôts du script, hash = vérificateur Python, octets de la vue = `table.json`, vérificateur Python en mode pagination (pages de 200 et de 77) = même hash, 22 boosters à 160 Tgas (dont au moins un gold pack, garanti par la pitié) revérifiés par le vérificateur Python (rejeu des plafonds, de la valeur et des planchers) |
+| `max_size_series_fits` | 2 000 cartes aux chaînes maximales, 20 engagements, 10 redevances, 10 cartes par booster, toutes les mécaniques (gold pack de 10 emplacements, table de valeur ; pire cas) : chargement payé par l'owner, ouverture, gaz des vues légères (en-tête + 10 pages = hash), vérificateur Python par pages, achats au gaz minimal |
 | `mechanics_end_to_end` | Toutes les mécaniques : pitié N = 3, rush déclenché par un pic après remplissage de la fenêtre longue, burns de toutes les com_a (jusqu'à la dernière), oracle installé en deux temps (acceptation refusée avant le délai), résurrection d'une épique par `mock-oracle` (rare et commune, hors liste, refusées), 45 à 48 événements rejoués par le vérificateur Python sans archive d'état |
-| `worst_case_cascade_with_burns_fits` | Pire cas du dernier reçu : 2 000 cartes, 10 par booster, toutes les mécaniques, légendaires, épiques et rares épuisées (chaque emplacement retombe trois fois), burns entre les achats, 200 cartes ressuscitables : 49,1 Tgas au plus sur 120 |
+| `worst_case_cascade_with_burns_fits` | Pire cas du dernier reçu : 2 000 cartes, 10 par booster, toutes les mécaniques (gold pack de 10 emplacements à plancher légendaire, table de valeur), légendaires, épiques et rares épuisées (chaque emplacement retombe trois fois, brûlable garantie comprise), burns entre les achats, 200 cartes ressuscitables : 48,4 Tgas au plus sur 120 |
+| `value_and_gold_pack_end_to_end` | Gold pack de 5 cartes à planchers un pack sur deux (pitié N = 2), brûlable garantie, valeur tirée et répartie (prix non multiple de 10⁴), burn d'une brûlable d'un pack normal et d'un gold pack : le redeemer factice reçoit exactement la part journalisée ; rejeu par le vérificateur Python (valeur, répartition, planchers) |
 | `draft_storage_is_paid_by_owner_and_refunded_on_delete` | Création par lots refusée sans dépôt, stockage payé = augmentation mesurée, excédent rendu, `delete_draft` réservé à l'owner, stockage libéré rendu, emplacement de 184 o, série supprimée inutilisable, série ouverte non supprimable |
 
 ## Série v2 (`scripts/build_series.py`)
 
 Le script (bibliothèque standard) lit `docs/data/catalogue-v2.json` et un fichier de paramètres
-(`scripts/serie-exemple.json` : prix, cartes par booster, poids, plafonds, brûlables factices). Il écrit dans
+(`scripts/serie-exemple.json` : prix, cartes par booster, poids, plafonds, brûlables factices, mécaniques, gold pack à
+planchers, **tables de valeur provisoires** : normale de 20 à 200 %, moyenne 75 %). `--tables-valeur fichier.json`
+remplace les tables de valeur, au format `{"normale": [[bps, poids], …], "gold": […], "rush": […],
+"multiplicateurs": {"commune": x, …}}` (clés anglaises acceptées ; multiplicateurs décimaux multipliés par 1 000) ; le
+script applique les bornes du contrat et refuse une table rush de moyenne supérieure à 80 %. **Vrais noms des
+mythiques** : lus dans `docs/data/secrets/mythiques.json` (ignoré par git, `--mythiques` pour un autre chemin), au format
+`{"<id catalogue>": {"id": …, "nom": …}}` ou liste d'objets avec `catalogue_id`. Si le fichier manque, le script se
+replie sur le champ `secret` du catalogue s'il existe encore (avertissement), et s'arrête sinon avec un message clair. Il écrit dans
 `scripts/out/<slug>/` : `create_series_batched.json`, `append_series_cards.01…08.json`, `open_series.json`, la
 table complète `table.json` (octets exacts de `get_series_table`), `table_hash.txt` (calculé par `verifier/`) et
 `manifest.json`. **`manifest.json["deposits"]`** donne le dépôt à joindre à chaque appel (yoctoNEAR) : une borne
@@ -326,8 +359,9 @@ Mesures (sandbox, 1 646 cartes visibles + 3 engagements, table de 275 Ko) :
 | Nouveau code, en une transaction | Refusé (200 cartes au plus par appel) |
 | Nouveau code, par lots | 10 transactions, 253 Tgas en tout, 31,8 Tgas au plus par transaction (mesure du stockage comprise), `open_series` 6,6 Tgas ; stockage 149 803 o (1,50 NEAR), payé par l'owner |
 | Booster (5 cartes, 160 Tgas attachés), avant | 48 Tgas au plus en tout, `buy_pack` 6,8 Tgas, dernier reçu 35,3 Tgas ; stockage 4 040 o au plus, 15 715 o prépayés |
-| Booster v2, stockage minimal, toutes les mécaniques | 29,5 Tgas au plus en tout, `buy_pack` 8,0 Tgas, dernier reçu 15,5 Tgas ; **stockage 964 o au plus, 1 597 o prépayés** (848 o sans mécanique) |
-| Taille maximale (2 000 cartes aux chaînes maximales) | lot de 188 Ko, `append_series_cards` 88 Tgas au plus, `open_series` 10,7 Tgas, 1,66 Mo de stockage (16,6 NEAR payés par l'owner) ; booster de 10 cartes : `buy_pack` 9 Tgas, dernier reçu 61 Tgas (avant) ; avec le stockage minimal et toutes les mécaniques : `buy_pack` 10,3 Tgas, dernier reçu 24,3 Tgas au plus, stockage 1 254 o au premier achat ; raretés épuisées en cascade (`worst_case_cascade_with_burns_fits`) : dernier reçu 49,1 Tgas au plus |
+| Booster v2, stockage minimal, toutes les mécaniques | 29,5 Tgas au plus en tout, `buy_pack` 8,0 Tgas, dernier reçu 15,5 Tgas ; stockage 964 o au plus, 1 597 o prépayés (848 o sans mécanique) |
+| Booster v2, gold pack à planchers et table de valeur (22 boosters dont un gold) | 29,6 Tgas au plus en tout, `buy_pack` 8,1 Tgas, dernier reçu **15,4 Tgas** ; **stockage 971 o au plus, 1 605 o prépayés** |
+| Taille maximale (2 000 cartes aux chaînes maximales) | lot de 188 Ko, `append_series_cards` 88 Tgas au plus, `open_series` 10,7 Tgas, 1,66 Mo de stockage (16,6 NEAR payés par l'owner) ; booster de 10 cartes : `buy_pack` 9 Tgas, dernier reçu 61 Tgas (avant) ; avec le stockage minimal et toutes les mécaniques : `buy_pack` 10,3 Tgas, dernier reçu 24,3 Tgas au plus, stockage 1 254 o au premier achat ; raretés épuisées en cascade (`worst_case_cascade_with_burns_fits`) : dernier reçu 49,1 Tgas au plus ; avec gold pack de 10 emplacements et table de valeur : dernier reçu 23,3 Tgas au plus (normal et gold), stockage 1 266 o au premier achat, 2 025 o prépayés, cascade 48,4 Tgas |
 
 ### Gaz des vues (série de taille maximale)
 
@@ -432,9 +466,9 @@ au-delà de `required_deposit` est rendu, dans `buy_pack`, avant tout tirage. Le
   transmet le secret au nœud interrogé : il vaut mieux calculer les engagements hors ligne.
 - **Retombée.** Elle ne fait que descendre. Si mythique et légendaire sont épuisées, la valeur attendue baisse : c'est
   voulu, puisque attendre ne rapporte rien.
-- **Gaz du dernier reçu.** Il est fixe (120 Tgas) et a été mesuré à 49,1 Tgas au pire (2 000 cartes, 10 cartes par
-  booster, toutes les mécaniques, raretés épuisées en cascade) et à 24,3 Tgas sans cascade (chaînes maximales ; 61 Tgas
-  avant le stockage minimal). Une table plus grosse que les limites validées n'est pas possible (2 000 cartes,
+- **Gaz du dernier reçu.** Il est fixe (120 Tgas) et a été mesuré à 48,4 Tgas au pire (2 000 cartes, 10 cartes par
+  booster, toutes les mécaniques dont le gold pack à planchers et la table de valeur, raretés épuisées en cascade ; 49,1
+  avant) et à 23,3 Tgas sans cascade (chaînes maximales ; 61 Tgas avant le stockage minimal). Une table plus grosse que les limites validées n'est pas possible (2 000 cartes,
   20 mythiques).
 - **Grosse série.** Par lots, le stockage de la table (1,5 NEAR pour la série v2) est payé par l'owner. Restent à la
   charge du contrat : `create_series` et `replace_series_table(_batched)` (un seul appel, 200 cartes au plus) et ce que
@@ -448,7 +482,10 @@ au-delà de `required_deposit` est rendu, dans `buy_pack`, avant tout tirage. Le
   de jetons. Il ne peut ressusciter que les cartes de la liste hachée, et l'owner ne le change qu'avec 24 h de délai
   (le retrait est immédiat). Le plafond de packs rush est par compte : un acteur à nombreux comptes le contourne (gain
   de 0,64 prix par compte et par rush, `docs/mecaniques-spec.md`, section 4). La couverture de la table rush (≤ 80 %) n'est contrôlée que hors chaîne, par `build_series.py`. Le
-  compteur de pitié est lié au compte (variante NFT revendable non faite). Voir `docs/mecaniques-spec.md`, sections 7 et 8.
+  compteur de pitié est lié au compte (variante NFT revendable non faite). Voir `docs/mecaniques-spec.md`, sections 7 et 10.
+- **Valeur.** Le contrat tire et répartit une valeur en yoctoNEAR et la transmet au redeemer ; il ne finance rien et
+  ne vérifie pas que le redeemer puisse livrer. Les tables de `serie-exemple.json` sont provisoires (calibrage dans
+  `sim/`).
 - **Revenus.** Les prix encaissés restent sur le contrat (`get_config().revenue`). Il n'existe volontairement aucune
   méthode de retrait tant que la mécanique d'approvisionnement n'est pas conçue.
 - **Redeemer.** Il est de confiance et peut être changé par l'owner. Un redeemer qui réussit sans livrer, ou qui panique

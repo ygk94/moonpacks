@@ -303,6 +303,56 @@ fn rand_rush(rng: &mut Rng) -> RushParams {
     }
 }
 
+fn rand_gold(rng: &mut Rng) -> GoldParams {
+    let all = [Rarity::Mythic, Rarity::Legendary, Rarity::Epic, Rarity::Rare, Rarity::Common];
+    let n = 1 + rng.below(10) as usize;
+    let slots = (0..n)
+        .map(|_| {
+            let floor = all[rng.below(5) as usize];
+            let weights = rng.chance(1, 2).then(|| {
+                let mut w = rand_weights(rng);
+                // Poids nuls sous le plancher (règle validée par le contrat).
+                for r in all {
+                    if r.index() > floor.index() {
+                        match r {
+                            Rarity::Legendary => w.legendary = 0,
+                            Rarity::Epic => w.epic = 0,
+                            Rarity::Rare => w.rare = 0,
+                            Rarity::Common => w.common = 0,
+                            Rarity::Mythic => w.mythic = 0,
+                        }
+                    }
+                }
+                if w.total() == 0 {
+                    w.mythic = 1;
+                }
+                w
+            });
+            GoldSlot { floor, weights, burnable: rng.chance(1, 3) }
+        })
+        .collect();
+    GoldParams { slots }
+}
+
+fn rand_tiers(rng: &mut Rng, lo: u64, hi: u64) -> Vec<ValueTier> {
+    (0..1 + rng.below(6)).map(|_| ((lo + rng.below(hi - lo + 1)) as u32, 1 + rng.below(1_000) as u32)).collect()
+}
+
+fn rand_value(rng: &mut Rng) -> ValueParams {
+    ValueParams {
+        normal: rand_tiers(rng, 2_000, 20_000),
+        gold: rand_tiers(rng, 1, 100_000),
+        rush: rand_tiers(rng, 1, 30_000),
+        multipliers: RarityWeights {
+            mythic: 0,
+            legendary: 1 + rng.below(100) as u32,
+            epic: 1 + rng.below(50) as u32,
+            rare: 1 + rng.below(10) as u32,
+            common: 1 + rng.below(3) as u32,
+        },
+    }
+}
+
 /// Vecteurs des mécaniques (code pur de `draw.rs`) : table de taux du pack (pitié, rush), tirages
 /// avec burns renormalisés et résurrections, sérialisation des tables à mécaniques, et séquences
 /// d'achats du gold rush.
@@ -313,7 +363,7 @@ fn mech_vectors() {
     for case in 0..120 {
         let mut table = rand_table(&mut rng);
         let mech = Mechanics {
-            gold_weights: rng.chance(4, 5).then(|| rand_weights(&mut rng)),
+            gold: rng.chance(4, 5).then(|| rand_gold(&mut rng)),
             pity: rng.chance(4, 5).then(|| PityParams {
                 p0_ppm: rng.below(300_000) as u32,
                 k_ppm: rng.below(100_000) as u32,
@@ -325,6 +375,7 @@ fn mech_vectors() {
             }),
             rush: rng.chance(1, 2).then(|| rand_rush(&mut rng)),
             resurrection: None,
+            value: rng.chance(2, 3).then(|| rand_value(&mut rng)),
         };
         // Cartes ressuscitables : épiques et légendaires non adossées, la moitié environ.
         let eligible: Vec<u32> = table
@@ -339,6 +390,10 @@ fn mech_vectors() {
         if !eligible.is_empty() && rng.chance(3, 4) {
             mech.resurrection = Some(ResurrectionParams { eligible });
         }
+        if mech.value.is_some() {
+            // Prix borné, comme l'exige la validation d'une table de valeur (aucun dépassement).
+            table.price = U128(table.price.0 % 1_000_000_000_000_000_000_000_000_000_000);
+        }
         table.mechanics = Some(mech.clone());
         let table_json = serde_json::to_string(&table).unwrap();
         let table_hash = sha(&[table_json.as_bytes()]);
@@ -349,8 +404,7 @@ fn mech_vectors() {
             Some(p) => draw::pity_is_gold(p, pity_n, &acc),
             None => (false, draw::gold_roll(&acc), 0),
         };
-        let mode = draw::pack_mode(pity_gold && mech.gold_weights.is_some(), rush);
-        let weights = draw::mode_weights(&table, mode).clone();
+        let mode = draw::pack_mode(pity_gold && mech.gold.is_some(), rush);
         // Compteurs : émises, brûlées (≤ émises), brûlables (table ou ressuscitées).
         let mut minted: Vec<u32> = table
             .cards
@@ -378,15 +432,17 @@ fn mech_vectors() {
             prior_k: b.prior_k,
             resurrectable: &resurrectable,
         });
-        let mut draws = Vec::new();
-        for slot in 0..table.cards_per_pack {
-            let d = draw::draw_slot_mech(&weights, &cards, &table.mythics, &minted, &mythic_minted, bv.as_ref(), &acc, slot);
-            draws.push(draw_json(&d, slot));
-            match d.kind {
-                CardKind::Visible => minted[d.index as usize] += 1,
-                CardKind::Mythic => mythic_minted[d.index as usize] += 1,
-            }
-        }
+        // Le même code que le dernier reçu du contrat (`finalize_pack`) : gold pack à planchers,
+        // brûlable garantie, puis valeur du pack.
+        let (slot_draws, slots) =
+            draw::draw_pack_mech(&table, mode, &cards, &mut minted, &mut mythic_minted, bv.as_ref(), &acc);
+        let draws: Vec<Value> = slot_draws.iter().enumerate().map(|(i, d)| draw_json(d, i as u8)).collect();
+        let value = draw::pack_value(&table, mode, &acc, &slots).map(|v| {
+            json!({
+                "roll": v.roll, "tier": v.tier, "bps": v.bps, "total": v.total.to_string(),
+                "amounts": v.amounts.iter().map(|a| a.map(|x| x.to_string())).collect::<Vec<_>>(),
+            })
+        });
         cases.push(json!({
             "case": case,
             "table": table,
@@ -404,8 +460,37 @@ fn mech_vectors() {
             "burned": burned,
             "backed": backed,
             "draws": draws,
+            "slots": slots.iter().map(|(r, b)| json!([r, b])).collect::<Vec<_>>(),
+            "value": value,
             "minted_after": minted,
             "mythic_minted_after": mythic_minted,
+        }));
+    }
+    // Répartition de la valeur : arrondis, égalités, reste au plus fort multiplicateur.
+    let mut splits = Vec::new();
+    for _ in 0..200 {
+        let n = 1 + rng.below(10) as usize;
+        let lower = [Rarity::Mythic, Rarity::Legendary, Rarity::Epic, Rarity::Rare, Rarity::Common];
+        let slots: Vec<(Rarity, bool)> =
+            (0..n).map(|_| (lower[rng.below(5) as usize], rng.chance(2, 3))).collect();
+        let mult = RarityWeights {
+            mythic: 0,
+            legendary: 1 + rng.below(100) as u32,
+            epic: 1 + rng.below(40) as u32,
+            rare: 1 + rng.below(10) as u32,
+            common: 1 + rng.below(3) as u32,
+        };
+        let price = match rng.below(3) {
+            0 => rng.below(100) as u128,
+            1 => NEAR / 10,
+            _ => (rng.next() as u128) << 20 | rng.next() as u128,
+        };
+        let bps = rng.below(1_000_001) as u32;
+        let total = draw::value_total(price, bps);
+        splits.push(json!({
+            "price": price.to_string(), "bps": bps, "total": total.to_string(), "multipliers": mult,
+            "slots": slots.iter().map(|(r, b)| json!([r, b])).collect::<Vec<_>>(),
+            "amounts": draw::split_value(total, &slots, &mult).iter().map(|a| a.map(|x| x.to_string())).collect::<Vec<_>>(),
         }));
     }
     // Gold rush : séquences d'achats (calme, pics, longues pauses).
@@ -441,8 +526,9 @@ fn mech_vectors() {
     write_json(
         "mech_vectors.json",
         &json!({
-            "source": "memaster::draw (contract/src/draw.rs) : pity_is_gold, pack_mode, mode_weights, draw_slot_mech, rush_on_buy, rush_account",
+            "source": "memaster::draw (contract/src/draw.rs) : pity_is_gold, pack_mode, draw_pack_mech (gold pack à planchers, brûlable garantie, burns), pack_value, split_value, rush_on_buy, rush_account",
             "cases": cases,
+            "splits": splits,
             "rushes": rushes,
         }),
     );

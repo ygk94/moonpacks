@@ -187,9 +187,17 @@ mod tests {
     #[test]
     fn mechanics_field_order_is_locked() {
         let mut t = header();
-        let g = RarityWeights { mythic: 2, legendary: 4, epic: 6, rare: 8, common: 10 };
         t.mechanics = Some(Mechanics {
-            gold_weights: Some(g.clone()),
+            gold: Some(GoldParams {
+                slots: vec![
+                    GoldSlot { floor: Rarity::Rare, weights: None, burnable: true },
+                    GoldSlot {
+                        floor: Rarity::Legendary,
+                        weights: Some(RarityWeights { mythic: 20, legendary: 80, epic: 0, rare: 0, common: 0 }),
+                        burnable: false,
+                    },
+                ],
+            }),
             pity: Some(PityParams { p0_ppm: 20_000, k_ppm: 10_000, n_max: 30 }),
             burn: Some(BurnParams { floor_bps: 2_500, prior_k: 20 }),
             rush: Some(RushParams {
@@ -204,16 +212,25 @@ mod tests {
                 weights: RarityWeights { mythic: 3, legendary: 30, epic: 241, rare: 936, common: 8_790 },
             }),
             resurrection: Some(ResurrectionParams { eligible: vec![0, 3] }),
+            value: Some(ValueParams {
+                normal: vec![(2_000, 5), (20_000, 1)],
+                gold: vec![(30_000, 1)],
+                rush: vec![(9_000, 2)],
+                multipliers: RarityWeights { mythic: 0, legendary: 50, epic: 20, rare: 3, common: 1 },
+            }),
         });
         let json = String::from_utf8(near_sdk::serde_json::to_vec(&t).unwrap()).unwrap();
         assert!(json.ends_with(concat!(
             r#""royalties":[{"account_id":"r.near","bps":10}],"#,
-            r#""mechanics":{"gold_weights":{"mythic":2,"legendary":4,"epic":6,"rare":8,"common":10},"#,
+            r#""mechanics":{"gold":{"slots":[{"floor":"rare","weights":null,"burnable":true},"#,
+            r#"{"floor":"legendary","weights":{"mythic":20,"legendary":80,"epic":0,"rare":0,"common":0},"burnable":false}]},"#,
             r#""pity":{"p0_ppm":20000,"k_ppm":10000,"n_max":30},"burn":{"floor_bps":2500,"prior_k":20},"#,
             r#""rush":{"ratio_bps":25000,"min_packs":50,"window_blocks":6000,"baseline_blocks":144000,"#,
             r#""bucket_blocks":1500,"duration_blocks":3000,"cooldown_blocks":36000,"max_per_account":3,"#,
             r#""weights":{"mythic":3,"legendary":30,"epic":241,"rare":936,"common":8790}},"#,
-            r#""resurrection":{"eligible":[0,3]}}}"#,
+            r#""resurrection":{"eligible":[0,3]},"#,
+            r#""value":{"normal":[[2000,5],[20000,1]],"gold":[[30000,1]],"rush":[[9000,2]],"#,
+            r#""multipliers":{"mythic":0,"legendary":50,"epic":20,"rare":3,"common":1}}}}"#,
         )), "{json}");
         let (before, after) = header_json_parts(&t);
         assert_eq!([before, after].concat(), json.into_bytes());

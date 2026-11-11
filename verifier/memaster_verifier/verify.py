@@ -269,15 +269,15 @@ def final_block_height(ev: dict) -> int | None:
 def verify_mechanics(rep: Report, ev: dict, table: dict, acc: bytes, mech: dict | None):
     """Contrôle le bloc `mechanics` d'un `pack_revealed` : gold_roll, probabilité, décision, table de
     taux, compteur de pitié. `mech` (rejeu) donne l'état attendu : `pity_before`, `rush`, `burn`
-    (`core.Burn`), `burn_seq`, `resurrect_seq` ; une clé absente n'est pas vérifiée.
-    Renvoie (poids de rareté, état des burns ou None, burns connus ?)."""
+    (`core.Burn`), `burn_seq`, `resurrect_seq`, `backed` ; une clé absente n'est pas vérifiée.
+    Renvoie (table de taux, état des burns ou None, brûlables au tirage ou None, état connu ?)."""
     m = table.get("mechanics")
     em = ev.get("mechanics")
     if m is None:
         rep.check(em is None, "série sans mécanique : aucun bloc mechanics", "bloc mechanics pour une série sans mécanique")
-        return table["rarity_weights"], None, True
+        return "base", None, None, True
     if not rep.check(isinstance(em, dict), "bloc mechanics journalisé", "bloc mechanics absent de l'événement"):
-        return table["rarity_weights"], None, False
+        return "base", None, None, False
     mech = mech or {}
     rush = bool(em.get("rush"))
     if "rush" in mech:
@@ -302,19 +302,57 @@ def verify_mechanics(rep: Report, ev: dict, table: dict, acc: bytes, mech: dict 
         n = em["pity"]["before"]
         after = n + 1 if mode == "base" else 0
         rep.check(em["pity"].get("after") == after, f"compteur de pitié après : {after}", f"compteur après {em['pity'].get('after')} ≠ {after}")
-    weights = core.mode_weights(table, mode)
+    for k in ("burn_seq", "resurrect_seq"):
+        if k in mech:
+            rep.check(em.get(k) == mech[k], f"{k} = {em.get(k)}", f"{k} journalisé {em.get(k)} ≠ rejoué {mech[k]}")
     burn = None
     known = True
     if m.get("burn"):
-        if "burn" in mech and mech["burn"] is not None:
-            for k in ("burn_seq", "resurrect_seq"):
-                if k in mech:
-                    rep.check(em.get(k) == mech[k], f"{k} = {em.get(k)}", f"{k} journalisé {em.get(k)} ≠ rejoué {mech[k]}")
+        if mech.get("burn") is not None:
             burn = mech["burn"]
         else:
             known = False
             rep.note("rareté pilotée par les burns : compteurs de burn inconnus (rejeu des card_redeemed et card_resurrected nécessaire), choix de la carte non recalculé")
-    return weights, burn, known
+    # Brûlables au moment du tirage : rejouées, ou celles de la table s'il n'y a eu aucune résurrection.
+    backed = mech.get("backed")
+    if backed is None and burn is not None:
+        backed = burn.backed
+    if backed is None and (em.get("resurrect_seq") in (None, 0)):
+        backed = [c.get("backing") is not None for c in table["cards"]]
+    if backed is None and (m.get("value") or m.get("gold")):
+        known = False
+        rep.note("résurrections inconnues (rejeu des card_resurrected nécessaire) : brûlable garantie et répartition de la valeur non recalculées")
+    return mode, burn, backed, known
+
+
+def verify_value(rep: Report, ev: dict, table: dict, acc: bytes, mode: str, backed) -> None:
+    """`pack_revealed.mechanics.value` : palier tiré (tag 3), total et répartition entre les brûlables
+    journalisées (les cartes de l'événement, brûlables au moment du tirage)."""
+    v = (table.get("mechanics") or {}).get("value")
+    em = ev.get("mechanics") or {}
+    if not v:
+        rep.check(em.get("value") is None, "série sans table de valeur : aucune valeur", "valeur journalisée pour une série sans table de valeur")
+        return
+    got = em.get("value")
+    if not rep.check(isinstance(got, dict), "valeur du pack journalisée", "valeur du pack absente de l'événement"):
+        return
+    r, tier, bps = core.value_tier(core.value_table(v, mode), acc)
+    total = core.value_total(int(table["price"]), bps)
+    rep.check(
+        (got.get("roll"), got.get("tier"), got.get("bps"), got.get("total")) == (r, tier, bps, str(total)),
+        f"valeur : roll(acc, 0, 3) mod Σpoids = {r}, palier {tier} de la table {mode}, {bps} pb, total {total} yocto",
+        f"valeur journalisée {got} ≠ roll {r}, palier {tier}, {bps} pb, total {total}",
+    )
+    if backed is None:
+        return
+    slots = [(d["final_rarity"], d["kind"] == "visible" and bool(backed[d["index"]])) for d in ev["draws"]]
+    amounts = [None if a is None else str(a) for a in core.split_value(total, slots, v["multipliers"])]
+    rep.check(
+        got.get("amounts") == amounts,
+        f"répartition entre {sum(1 for _, b in slots if b)} brûlables (multiplicateurs, reste au plus fort) : {amounts}",
+        f"répartition journalisée {got.get('amounts')} ≠ {amounts}",
+    )
+    rep.check(any(b for _, b in slots), "au moins une brûlable dans le pack", "aucune brûlable dans le pack")
 
 
 def verify_pack(
@@ -339,12 +377,13 @@ def verify_pack(
     acc = verify_acc(rep, ev, th)
     if acc is None:
         return rep
-    weights, burn, burn_known = verify_mechanics(rep, ev, table, acc, mech)
-    if not burn_known:
+    mode, burn, backed, known = verify_mechanics(rep, ev, table, acc, mech)
+    if not known:
         minted = None
     draws = ev["draws"]
-    n = table["cards_per_pack"]
-    rep.check(len(draws) == n, f"{n} tirages", f"{len(draws)} tirages au lieu de {n}")
+    rules = core.slot_rules(table, mode)
+    n = len(rules)
+    rep.check(len(draws) == n, f"{n} tirages" + (" (gold pack)" if mode == "gold" else ""), f"{len(draws)} tirages au lieu de {n}")
     rep.check(
         [d["slot"] for d in draws] == list(range(len(draws))),
         "emplacements 0..n-1 dans l'ordre",
@@ -356,29 +395,41 @@ def verify_pack(
         if len(m) != len(table["cards"]) or len(mm) != len(table["mythics"]):
             rep.errors.append("instantané minted de longueur incompatible avec la table")
             return rep
-        expected = core.draw_pack(table, m, mm, acc, weights, burn)
+        expected, _ = core.draw_pack_mech(table, m, mm, acc, mode, burn, backed)
         for d, e in zip(draws, expected):
             got = {k: d[k] for k in e.as_event()}
             label = _draw_label(table, e)
+            rule = rules[e.slot]
+            if rule[2]:
+                label += " [parmi les brûlables]"
+            elif rule[3]:
+                label += f" [plancher {rule[1]}]"
             rep.check(got == e.as_event(), f"emplacement {e.slot} : {label}", f"emplacement {e.slot} : attendu {e.as_event()}, journalisé {got}")
         if state_source:
             rep.note(f"état des plafonds : {state_source}")
     else:
-        total = max(sum(weights[r] for r in core.RARITIES), 1)
         for d in draws:
             slot = d["slot"]
+            if slot >= n:
+                continue
+            weights, floor, burnable_only, ruled = rules[slot]
+            total = max(sum(weights[r] for r in core.RARITIES), 1)
             rr = core.roll(acc, slot, 0) % total
             rep.check(str(rr) == d["rarity_roll"], f"emplacement {slot} : rarity_roll {rr}", f"emplacement {slot} : rarity_roll {rr} ≠ {d['rarity_roll']}")
             rolled = core._rarity_from_roll(weights, rr)
             rep.check(rolled == d["rolled_rarity"], f"emplacement {slot} : rareté visée {rolled}", f"emplacement {slot} : rareté visée {rolled} ≠ {d['rolled_rarity']}")
-            ok_down = core.RARITIES.index(d["final_rarity"]) >= core.RARITIES.index(d["rolled_rarity"])
-            rep.check(ok_down, f"emplacement {slot} : retombée vers le bas seulement", f"emplacement {slot} : rareté finale plus haute que la rareté visée")
+            if not ruled:
+                ok_down = core.RARITIES.index(d["final_rarity"]) >= core.RARITIES.index(d["rolled_rarity"])
+                rep.check(ok_down, f"emplacement {slot} : retombée vers le bas seulement", f"emplacement {slot} : rareté finale plus haute que la rareté visée")
             if d["kind"] == "visible":
                 ok = d["index"] < len(table["cards"]) and table["cards"][d["index"]]["rarity"] == d["final_rarity"]
+                if ok and burnable_only and backed is not None:
+                    ok = bool(backed[d["index"]])
             else:
-                ok = d["final_rarity"] == "mythic" and d["index"] < len(table["mythics"])
-            rep.check(ok, f"emplacement {slot} : carte de la bonne rareté", f"emplacement {slot} : carte incohérente avec la rareté finale")
+                ok = d["final_rarity"] == "mythic" and d["index"] < len(table["mythics"]) and not burnable_only
+            rep.check(ok, f"emplacement {slot} : carte de la bonne rareté", f"emplacement {slot} : carte incohérente avec la rareté finale (ou la règle de l'emplacement)")
         rep.note("sans état des plafonds (--snapshot, --history ou --rpc) : card_roll et le choix de la carte ne sont pas recalculés")
+    verify_value(rep, ev, table, acc, mode, backed)
     return rep
 
 
@@ -492,18 +543,22 @@ class SeriesReplay:
                     missing.append(
                         f"pack_bought du booster {pid} absent : drapeau rush ({em.get('rush')}) non vérifiable"
                     )
-            if self.mech.get("burn"):
-                gaps = self._advance(em.get("burn_seq"), em.get("resurrect_seq"))
+            burn = self.mech.get("burn")
+            if burn or self.mech.get("value"):
+                # Burns (rareté pilotée) et résurrections (brûlables du tirage : brûlable garantie,
+                # répartition de la valeur) appliqués jusqu'aux numéros journalisés.
+                gaps = self._advance(em.get("burn_seq") if burn else None, em.get("resurrect_seq"))
                 missing += gaps
                 if not gaps:
-                    mech.update(
-                        burn=core.Burn(
-                            list(self.burned), list(self.backed), self.mech["burn"]["floor_bps"],
-                            self.mech["burn"]["prior_k"], core.resurrectable(self.table),
-                        ),
-                        burn_seq=self.burn_seq,
-                        resurrect_seq=self.resurrect_seq,
-                    )
+                    mech.update(resurrect_seq=self.resurrect_seq, backed=list(self.backed))
+                    if burn:
+                        mech.update(
+                            burn=core.Burn(
+                                list(self.burned), list(self.backed), burn["floor_bps"],
+                                burn["prior_k"], core.resurrectable(self.table),
+                            ),
+                            burn_seq=self.burn_seq,
+                        )
         rep = verify_pack(ev, self.table, self.m, self.mm, mech=mech)
         for x in missing:
             rep.errors.append(f"rejeu incomplet : {x}")

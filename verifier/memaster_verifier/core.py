@@ -12,7 +12,11 @@ Mécaniques (``docs/mecaniques-spec.md``), réimplémentées à part de ``draw.r
 
 - ``gold_roll = roll(acc, 0, 2) mod 10⁶`` ; gold pack si ``n + 1 ≥ N`` ou ``gold_roll < min(10⁶, p0 + k·n)`` ;
 - rareté pilotée par les burns : poids renormalisés entre brûlables de la rareté (``in_rarity_weight``) ;
-- gold rush : ``rush_on_buy`` (palier relatif, pause, fenêtre glissante par seaux).
+- gold rush : ``rush_on_buy`` (palier relatif, pause, fenêtre glissante par seaux) ;
+- gold pack : plancher de rareté par emplacement (``draw_slot_rule``, ``fallback_order``) ;
+- valeur : ``value_roll = roll(acc, 0, 3)``, palier, ``⌊prix × V / 10⁴⌋`` réparti entre les
+  brûlables au prorata des multiplicateurs (``split_value``) ; dernier emplacement d'un pack normal
+  tiré parmi les brûlables.
 """
 
 from __future__ import annotations
@@ -229,12 +233,183 @@ def pack_mode(pity_gold: bool, rush: bool) -> str:
 
 
 def mode_weights(table: dict, mode: str) -> dict:
+    """Poids d'un pack normal (base ou rush). Un gold pack tire chaque emplacement avec
+    ``gold_slot_weights``."""
     m = table.get("mechanics") or {}
-    if mode == "gold" and m.get("gold_weights"):
-        return m["gold_weights"]
     if mode == "rush" and m.get("rush"):
         return m["rush"]["weights"]
     return table["rarity_weights"]
+
+
+# ------------------------------------------------------------------ gold pack et brûlable garantie
+
+TAG_VALUE = 3
+
+
+def gold_slot_weights(base: dict, s: dict) -> dict:
+    """Poids propres de l'emplacement, ou poids de base mis à zéro sous le plancher."""
+    if s.get("weights") is not None:
+        return s["weights"]
+    f = RARITIES.index(s["floor"])
+    return {r: (base[r] if RARITIES.index(r) <= f else 0) for r in RARITIES}
+
+
+def fallback_order(rolled: str, floor: str) -> list:
+    """Visée, vers le bas jusqu'au plancher, puis vers le haut, puis sous le plancher."""
+    f = RARITIES.index(floor)
+    r = min(RARITIES.index(rolled), f)
+    return [RARITIES[i] for i in range(r, f + 1)] + [RARITIES[i] for i in range(r - 1, -1, -1)] + [
+        RARITIES[i] for i in range(f + 1, 5)
+    ]
+
+
+def burnable_weight(table: dict, minted, backed, burn, rarity: str) -> int:
+    """Poids tirables des seules brûlables d'une rareté (jamais une mythique)."""
+    if rarity == "mythic":
+        return 0
+    f = burn_factors(table, minted, burn, rarity) if burn is not None else None
+    tot = 0
+    for i, (c, n) in enumerate(zip(table["cards"], minted)):
+        if c["rarity"] != rarity or not backed[i]:
+            continue
+        tot += in_rarity_weight(table, i, n, burn, f) if burn is not None else _available(c["weight"], n, c.get("cap"))
+    return tot
+
+
+def draw_slot_rule(table, minted, mythic_minted, acc, slot, weights, floor, burnable_only, backed, burn=None):
+    """Même algorithme que ``draw::draw_slot_rule`` : rareté visée avec ``weights``, retombée selon
+    ``fallback_order``, choix de la carte (restreint aux brûlables si ``burnable_only``).
+    ``backed[i]`` : la carte ``i`` est brûlable au moment du tirage (table ou résurrection)."""
+    total = max(sum(weights[r] for r in RARITIES), 1)
+    rarity_roll = roll(acc, slot, 0) % total
+    rolled = _rarity_from_roll(weights, rarity_roll)
+
+    def avail(r):
+        if burnable_only:
+            return burnable_weight(table, minted, backed, burn, r)
+        return available_weight_mech(table, minted, mythic_minted, burn, r)
+
+    final, s = "common", 0
+    for r in fallback_order(rolled, floor):
+        a = avail(r)
+        if a > 0:
+            final, s = r, a
+            break
+    raw = roll(acc, slot, 1)
+    card_roll = 0 if s == 0 else raw % s
+    if final == "mythic" and s > 0:
+        c = pick = 0
+        for j, (m, n) in enumerate(zip(table["mythics"], mythic_minted)):
+            c += _available(m["weight"], n, m.get("cap"))
+            if card_roll < c:
+                pick = j
+                break
+        return SlotDraw(slot, rarity_roll, rolled, final, card_roll, "mythic", pick)
+    c = 0
+    pick = _first_unlimited_common(table)
+    f = burn_factors(table, minted, burn, final) if burn is not None else None
+    for i, (card, n) in enumerate(zip(table["cards"], minted)):
+        if card["rarity"] != final or (burnable_only and not backed[i]):
+            continue
+        c += in_rarity_weight(table, i, n, burn, f) if burn is not None else _available(card["weight"], n, card.get("cap"))
+        if card_roll < c:
+            pick = i
+            break
+    return SlotDraw(slot, rarity_roll, rolled, final, card_roll, "visible", pick)
+
+
+# ------------------------------------------------------------------ valeur du pack
+
+
+def value_table(v: dict, mode: str) -> list:
+    return v["normal"] if mode == "base" else v[mode]
+
+
+def value_tier(tiers: list, acc: bytes) -> tuple[int, int, int]:
+    """``value_roll = roll(acc, 0, 3) mod Σpoids`` ; (value_roll, palier, valeur en points de base)."""
+    total = max(sum(w for _, w in tiers), 1)
+    r = roll(acc, 0, TAG_VALUE) % total
+    cum = 0
+    for i, (bps, w) in enumerate(tiers):
+        cum += w
+        if r < cum:
+            return r, i, bps
+    return r, 0, tiers[0][0] if tiers else 0
+
+
+def value_total(price: int, bps: int) -> int:
+    return price * bps // 10_000
+
+
+def split_value(total: int, slots: list, mult: dict) -> list:
+    """``slots[i] = (rareté, brûlable)`` ; ``⌊total × m_i / Σm⌋``, le reste au plus fort
+    multiplicateur (premier emplacement en cas d'égalité) ; None hors brûlables."""
+    s = sum(mult[r] for r, b in slots if b)
+    if s == 0:
+        return [None] * len(slots)
+    out = [total * mult[r] // s if b else None for r, b in slots]
+    best = None
+    for i, (r, b) in enumerate(slots):
+        if b and (best is None or mult[r] > mult[slots[best][0]]):
+            best = i
+    out[best] += total - sum(x for x in out if x is not None)
+    return out
+
+
+def draw_pack_mech(table, minted, mythic_minted, acc, mode: str, burn=None, backed=None):
+    """Tous les emplacements comme ``finalize_pack`` : gold pack (un emplacement par plancher),
+    sinon ``cards_per_pack`` emplacements dont le dernier parmi les brûlables si la série a une
+    table de valeur. ``backed`` : brûlables au moment du tirage (par défaut : adossées par la table).
+    Renvoie (tirages, brûlables par emplacement). ``minted`` et ``mythic_minted`` sont modifiés."""
+    m = table.get("mechanics") or {}
+    if backed is None:
+        backed = burn.backed if burn is not None else [c.get("backing") is not None for c in table["cards"]]
+    value = m.get("value")
+    gold = m.get("gold") if mode == "gold" else None
+    weights = mode_weights(table, mode)
+    n = len(gold["slots"]) if gold else table["cards_per_pack"]
+    out, slots = [], []
+    for slot in range(n):
+        if gold:
+            gs = gold["slots"][slot]
+            d = draw_slot_rule(table, minted, mythic_minted, acc, slot, gold_slot_weights(table["rarity_weights"], gs),
+                               gs["floor"], gs["burnable"], backed, burn)
+        elif value and slot == n - 1:
+            d = draw_slot_rule(table, minted, mythic_minted, acc, slot, weights, "common", True, backed, burn)
+        else:
+            d = draw_slot(table, minted, mythic_minted, acc, slot, weights, burn)
+        slots.append((d.final_rarity, d.kind == "visible" and bool(backed[d.index])))
+        if d.kind == "visible":
+            minted[d.index] += 1
+        else:
+            mythic_minted[d.index] += 1
+        out.append(d)
+    return out, slots
+
+
+def slot_rules(table: dict, mode: str) -> list:
+    """Règle de chaque emplacement d'un pack de cette table de taux :
+    (poids, plancher, parmi les brûlables ?, emplacement à règle ?)."""
+    m = table.get("mechanics") or {}
+    gold = m.get("gold") if mode == "gold" else None
+    if gold:
+        return [(gold_slot_weights(table["rarity_weights"], s), s["floor"], s["burnable"], True) for s in gold["slots"]]
+    w = mode_weights(table, mode)
+    n = table["cards_per_pack"]
+    last = bool(m.get("value"))
+    return [(w, "common", last and i == n - 1, last and i == n - 1) for i in range(n)]
+
+
+def pack_value(table: dict, acc: bytes, mode: str, slots: list) -> dict | None:
+    """Valeur d'un pack, mêmes clés que ``pack_revealed.mechanics.value``."""
+    v = (table.get("mechanics") or {}).get("value")
+    if not v:
+        return None
+    r, tier, bps = value_tier(value_table(v, mode), acc)
+    total = value_total(int(table["price"]), bps)
+    amounts = split_value(total, slots, v["multipliers"])
+    return {"roll": r, "tier": tier, "bps": bps, "total": str(total),
+            "amounts": [None if a is None else str(a) for a in amounts]}
 
 
 def new_rush_state() -> dict:

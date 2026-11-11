@@ -99,13 +99,17 @@ fn table(mechanics: Option<Mechanics>) -> SeriesTable {
     }
 }
 
-fn gold() -> RarityWeights {
-    // Table or : légendaire seulement (le test voit tout de suite si elle est utilisée).
-    w(0, 1, 0, 0, 0)
+fn gold_w(weights: RarityWeights, floor: Rarity, n: usize) -> GoldParams {
+    GoldParams { slots: vec![GoldSlot { floor, weights: Some(weights), burnable: false }; n] }
+}
+
+fn gold() -> GoldParams {
+    // Gold pack : 5 emplacements légendaires (le test voit tout de suite s'il est utilisé).
+    gold_w(w(0, 1, 0, 0, 0), Rarity::Legendary, 5)
 }
 
 fn mech(pity: Option<PityParams>, burn: bool, rush: Option<RushParams>) -> Mechanics {
-    Mechanics { gold_weights: Some(gold()), pity, burn: burn.then_some(BurnParams { floor_bps: 2_500, prior_k: PRIOR_K }), rush, resurrection: None }
+    Mechanics { gold: Some(gold()), pity, burn: burn.then_some(BurnParams { floor_bps: 2_500, prior_k: PRIOR_K }), rush, resurrection: None, value: None }
 }
 
 fn contract_with(t: SeriesTable) -> Contract {
@@ -301,7 +305,7 @@ fn burn_mech() -> Mechanics {
 }
 
 fn burn_mech_k(prior_k: u32) -> Mechanics {
-    Mechanics { gold_weights: None, pity: None, burn: Some(BurnParams { floor_bps: FLOOR, prior_k }), rush: None, resurrection: None }
+    Mechanics { gold: None, pity: None, burn: Some(BurnParams { floor_bps: FLOOR, prior_k }), rush: None, resurrection: None, value: None }
 }
 
 #[test]
@@ -362,18 +366,19 @@ fn burn_counters_only_with_mechanic() {
 fn exhausted_card_stays_at_zero_after_burns() {
     // Légendaire plafonnée à 1 : une fois sortie et brûlée, elle reste épuisée (poids 0).
     let mut t = table(Some(Mechanics {
-        gold_weights: Some(gold()),
+        gold: Some(gold()),
         pity: Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 1 }),
         burn: Some(BurnParams { floor_bps: FLOOR, prior_k: PRIOR_K }),
         rush: None,
         resurrection: None,
+        value: None,
     }));
     t.cards[0].cap = Some(1);
     let mut c = contract_with(t);
     buy_reveal(&mut c, alice(), 1, 20);
     let r = rarities(&c, 0);
     assert_eq!(r[0], "legendary");
-    // Table or = légendaire seulement ; légendaire épuisée : retombée d'un cran (épique).
+    // Gold pack légendaire ; légendaire épuisée, aucune mythique au-dessus : sous le plancher (épique).
     assert!(r[1..].iter().all(|x| x == "epic"), "retombée : {r:?}");
     let leg = backed_tokens(&c, &alice(), "leg")[0].clone();
     assert!(burn(&mut c, alice(), &leg));
@@ -592,7 +597,8 @@ fn rejects(m: Mechanics, msg: &str) {
 #[test]
 fn invalid_mechanics_are_rejected() {
     let pity = |n| Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: n });
-    rejects(Mechanics { gold_weights: None, pity: pity(3), burn: None, rush: None, resurrection: None }, "pity exige gold_weights");
+    let none = Mechanics { gold: None, pity: None, burn: None, rush: None, resurrection: None, value: None };
+    rejects(Mechanics { pity: pity(3), ..none.clone() }, "pity exige gold");
     rejects(mech(pity(0), false, None), "n_max");
     rejects(mech(Some(PityParams { p0_ppm: 2_000_000, k_ppm: 0, n_max: 3 }), false, None), "ppm");
     rejects(mech(None, false, Some(rush(15_000, 2, 25, 100, 10, 5, 0))), "multiples");
@@ -603,13 +609,10 @@ fn invalid_mechanics_are_rejected() {
     rejects(mech(None, false, Some(RushParams { max_per_account: 0, ..rush(15_000, 2, 10, 100, 10, 5, 0) })), "max_per_account");
     rejects(mech(None, false, Some(rush(15_000, 2, 10, 100, 10, 0, 0))), "durée");
     rejects(mech(None, false, Some(rush(15_000, 2, 100, 100, 10, 5, 0))), "plus courte");
-    let mut same = rush(15_000, 2, 10, 100, 10, 5, 0);
-    same.weights = gold();
-    rejects(mech(None, false, Some(same)), "distincte de la table or");
-    rejects(Mechanics { gold_weights: Some(w(1, 0, 0, 0, 0)), pity: None, burn: None, rush: None, resurrection: None }, "engagement");
-    rejects(Mechanics { gold_weights: None, pity: None, burn: Some(BurnParams { floor_bps: 10_001, prior_k: 0 }), rush: None, resurrection: None }, "floor_bps");
+    rejects(Mechanics { gold: Some(gold_w(w(1, 0, 0, 0, 0), Rarity::Mythic, 1)), ..none.clone() }, "engagement");
+    rejects(Mechanics { burn: Some(BurnParams { floor_bps: 10_001, prior_k: 0 }), ..none.clone() }, "floor_bps");
     // Table or qui donne du poids à une rareté sans carte : refusée à l'ouverture.
-    let mut t = table(Some(Mechanics { gold_weights: Some(w(0, 1, 0, 0, 0)), pity: None, burn: None, rush: None, resurrection: None }));
+    let mut t = table(Some(Mechanics { gold: Some(gold()), ..none.clone() }));
     t.rarity_weights = w(0, 0, 9, 30, 960);
     t.cards.remove(0);
     let r = std::panic::catch_unwind(|| contract_with(t));
@@ -869,4 +872,409 @@ fn redeem_logs_the_backing_actually_delivered() {
     let ev = logs.iter().find(|l| l.contains("card_redeemed")).expect("card_redeemed");
     assert!(ev.contains("\"asset_id\":\"nep141:a.near\"") && ev.contains("\"amount\":\"11\""), "{ev}");
     assert!(ev.contains("\"replaced_by\":{\"asset_id\":\"nep141:b.near\""), "remplacement journalisé : {ev}");
+}
+
+// ----------------------------------------------------------------- valeur du pack et gold pack
+
+const MULT: RarityWeights = RarityWeights { mythic: 0, legendary: 20, epic: 5, rare: 2, common: 1 };
+
+fn none_mech() -> Mechanics {
+    Mechanics { gold: None, pity: None, burn: None, rush: None, resurrection: None, value: None }
+}
+
+fn value_p(normal: Vec<ValueTier>) -> ValueParams {
+    ValueParams { normal, gold: vec![(30_000, 1)], rush: vec![(9_000, 1)], multipliers: MULT }
+}
+
+fn value_mech(normal: Vec<ValueTier>) -> Mechanics {
+    Mechanics { value: Some(value_p(normal)), ..none_mech() }
+}
+
+/// Gold pack de la décision du 11/11 : 1-2 rare ou mieux (le 2 parmi les brûlables), 3-4 épique ou
+/// mieux, 5 légendaire 80 % ou mythique 20 %.
+fn gold_v2() -> GoldParams {
+    let s = |floor, burnable| GoldSlot { floor, weights: None, burnable };
+    GoldParams {
+        slots: vec![
+            s(Rarity::Rare, false),
+            s(Rarity::Rare, true),
+            s(Rarity::Epic, false),
+            s(Rarity::Epic, false),
+            GoldSlot { floor: Rarity::Legendary, weights: Some(w(20, 80, 0, 0, 0)), burnable: false },
+        ],
+    }
+}
+
+fn mythic_commit(i: u8, cap: u32) -> MythicCommitment {
+    MythicCommitment { commitment: hex_encode(&[i; 32]), content_hash: hex_encode(&[i + 100; 32]), weight: 1, cap }
+}
+
+/// Table de `table()` avec une mythique (plafond `cap`) et le gold pack v2 à chaque pack (N = 1).
+fn gold_table(myth_cap: u32, value: bool) -> SeriesTable {
+    let mut t = table(Some(Mechanics {
+        gold: Some(gold_v2()),
+        pity: Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 1 }),
+        value: value.then(|| value_p(vec![(7_500, 1)])),
+        ..none_mech()
+    }));
+    t.mythics = vec![mythic_commit(1, myth_cap)];
+    t
+}
+
+/// `pack_revealed` du dernier tirage (journal du dernier reçu).
+fn last_revealed() -> Value {
+    let logs = near_sdk::test_utils::get_logs();
+    let l = logs.iter().find(|l| l.contains("\"pack_revealed\"")).expect("pack_revealed");
+    serde_json::from_str::<Value>(l.strip_prefix("EVENT_JSON:").unwrap()).unwrap()["data"][0].clone()
+}
+
+fn draws(c: &Contract, id: u64) -> Vec<Value> {
+    pack(c, id)["draws"].as_array().unwrap().clone()
+}
+
+fn backed_at(c: &Contract, d: &Value) -> bool {
+    d["kind"] == "visible" && c.series_ref(0).draw_cards[d["index"].as_u64().unwrap() as usize].backed
+}
+
+/// Un seul palier : V fixe. Prix non multiple de 10⁴ : arrondi des yocto. Le total est réparti
+/// exactement entre les brûlables du pack, et le dernier emplacement en est toujours une.
+#[test]
+fn single_tier_value_is_split_exactly_among_burnables() {
+    let mut t = table(Some(value_mech(vec![(7_777, 3)])));
+    t.price = U128(NEAR / 10 + 7);
+    let mut c = contract_with(t);
+    let total = (NEAR / 10 + 7) * 7_777 / 10_000;
+    assert_eq!(draw::value_total(NEAR / 10 + 7, 7_777), total);
+    let mut several = 0;
+    for k in 0..30u8 {
+        let id = buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
+        let ev = last_revealed();
+        let v = &ev["mechanics"]["value"];
+        assert_eq!((v["tier"].as_u64(), v["bps"].as_u64()), (Some(0), Some(7_777)));
+        assert_eq!(v["total"], total.to_string());
+        let ds = draws(&c, id);
+        assert!(backed_at(&c, ds.last().unwrap()), "dernier emplacement brûlable : {ds:?}");
+        let amounts: Vec<Option<u128>> =
+            v["amounts"].as_array().unwrap().iter().map(|a| a.as_str().map(|s| s.parse().unwrap())).collect();
+        for (d, a) in ds.iter().zip(&amounts) {
+            assert_eq!(a.is_some(), backed_at(&c, d), "part seulement pour les brûlables");
+        }
+        assert_eq!(amounts.iter().flatten().sum::<u128>(), total, "aucun yocto perdu");
+        several += (amounts.iter().flatten().count() > 1) as u32;
+        // La vue redonne les mêmes montants (recalculés depuis bps et le masque).
+        assert_eq!(pack(&c, id)["value"]["amounts"], v["amounts"]);
+        assert_eq!(c.packs.get(&id).unwrap().value.unwrap().bps, 7_777);
+    }
+    assert!(several > 0, "jamais plus d'une brûlable dans un pack");
+}
+
+#[test]
+fn yocto_rounding_gives_remainder_to_highest_multiplier() {
+    let slots = [
+        (Rarity::Common, true),
+        (Rarity::Epic, true),
+        (Rarity::Rare, false),
+        (Rarity::Epic, true),
+        (Rarity::Mythic, false),
+        (Rarity::Common, true),
+    ];
+    let total = 1_000_000_000_000_000_000_000_007u128;
+    let a = draw::split_value(total, &slots, &MULT);
+    // Σm = 1 + 5 + 5 + 1 = 12.
+    let unit = total / 12;
+    assert_eq!(a[0], Some(unit));
+    assert_eq!(a[2], None);
+    assert_eq!(a[4], None);
+    assert_eq!(a[3], Some(total * 5 / 12));
+    assert_eq!(a[1], Some(total * 5 / 12 + (total - 2 * unit - 2 * (total * 5 / 12))), "reste au premier plus fort multiplicateur");
+    assert_eq!(a.iter().flatten().sum::<u128>(), total);
+    // 1 yocto à partager entre deux cartes : tout au plus fort multiplicateur.
+    assert_eq!(draw::split_value(1, &[(Rarity::Common, true), (Rarity::Legendary, true)], &MULT), vec![Some(0), Some(1)]);
+    // Aucune brûlable : rien n'est réparti.
+    assert_eq!(draw::split_value(9, &[(Rarity::Common, false)], &MULT), vec![None]);
+    // Pas de dépassement sur un prix extrême.
+    assert_eq!(draw::value_total(u128::MAX, 10_000), u128::MAX - u128::MAX % 10_000 + (u128::MAX % 10_000));
+    assert_eq!(draw::value_total(u128::MAX, 5_000), u128::MAX / 2);
+}
+
+/// Pack sans brûlable tirée naturellement : seules des communes de collection sortent ; le dernier
+/// emplacement vise une commune, n'en trouve aucune brûlable et remonte à la rare brûlable.
+#[test]
+fn last_slot_climbs_to_a_burnable_when_none_is_drawn_naturally() {
+    let mut t = table(Some(value_mech(vec![(5_000, 1)])));
+    t.rarity_weights = w(0, 0, 0, 1, 999_999);
+    t.cards = vec![
+        card("rare_b", Rarity::Rare, 1, None, true),
+        card("com_x", Rarity::Common, 1, None, false),
+        card("com_y", Rarity::Common, 1, None, false),
+    ];
+    let mut c = contract_with(t);
+    for k in 0..10u8 {
+        let id = buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
+        let ds = draws(&c, id);
+        for d in &ds[..4] {
+            assert_eq!(d["final_rarity"], "common");
+            assert!(!backed_at(&c, d));
+        }
+        let last = &ds[4];
+        assert_eq!((last["rolled_rarity"].as_str(), last["final_rarity"].as_str(), last["index"].as_u64()), (Some("common"), Some("rare"), Some(0)));
+        let v = &pack(&c, id)["value"];
+        assert_eq!(v["amounts"], serde_json::json!([null, null, null, null, (NEAR / 20).to_string()]));
+    }
+}
+
+/// Retombée de la brûlable garantie : d'abord vers le bas (épique visée, commune brûlable), jamais
+/// vers une légendaire brûlable tant qu'une brûlable existe plus bas.
+#[test]
+fn burnable_slot_falls_down_before_climbing() {
+    let mut t = table(Some(value_mech(vec![(5_000, 1)])));
+    t.rarity_weights = w(0, 1, 999_998, 0, 1);
+    t.cards = vec![
+        card("leg_b", Rarity::Legendary, 1, None, true),
+        card("epic_x", Rarity::Epic, 1, None, false),
+        card("com_b", Rarity::Common, 1, None, true),
+        card("com_x", Rarity::Common, 1, None, false),
+    ];
+    let mut c = contract_with(t);
+    for k in 0..10u8 {
+        let id = buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
+        let last = &draws(&c, id)[4];
+        assert_eq!(last["rolled_rarity"], "epic");
+        assert_eq!((last["final_rarity"].as_str(), last["index"].as_u64()), (Some("common"), Some(2)));
+    }
+}
+
+#[test]
+fn fallback_order_rules() {
+    use Rarity::*;
+    assert_eq!(draw::fallback_order(Epic, Common), vec![Epic, Rare, Common, Legendary, Mythic]);
+    assert_eq!(draw::fallback_order(Legendary, Legendary), vec![Legendary, Mythic, Epic, Rare, Common]);
+    assert_eq!(draw::fallback_order(Mythic, Legendary), vec![Mythic, Legendary, Epic, Rare, Common]);
+    assert_eq!(draw::fallback_order(Epic, Rare), vec![Epic, Rare, Legendary, Mythic, Common]);
+    // Visée sous le plancher (impossible avec des poids validés) : traitée comme le plancher.
+    assert_eq!(draw::fallback_order(Common, Epic), vec![Epic, Legendary, Mythic, Rare, Common]);
+}
+
+/// Gold pack : 5 cartes, aucune commune, planchers par emplacement, 80 / 20 au dernier, le 2 parmi
+/// les brûlables ; table de valeur gold.
+#[test]
+fn gold_pack_has_slot_floors_and_no_common() {
+    let mut t = gold_table(100, true);
+    t.mechanics.as_mut().unwrap().value.as_mut().unwrap().gold = vec![(30_000, 1)];
+    let mut c = contract_with(t);
+    let (mut myth, mut leg) = (0, 0);
+    for k in 0..80u8 {
+        let id = buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
+        assert_eq!(pack(&c, id)["mode"], "gold");
+        let ds = draws(&c, id);
+        assert_eq!(ds.len(), 5);
+        let rank = |d: &Value| ["mythic", "legendary", "epic", "rare", "common"].iter().position(|r| d["final_rarity"] == *r).unwrap();
+        assert!(ds.iter().all(|d| d["final_rarity"] != "common"), "aucune commune : {ds:?}");
+        assert!(rank(&ds[0]) <= 3 && rank(&ds[1]) <= 3);
+        assert!(rank(&ds[2]) <= 2 && rank(&ds[3]) <= 2);
+        assert!(rank(&ds[4]) <= 1);
+        assert!(backed_at(&c, &ds[1]), "emplacement 2 parmi les brûlables");
+        match ds[4]["final_rarity"].as_str() {
+            Some("mythic") => myth += 1,
+            _ => leg += 1,
+        }
+        assert_eq!(pack(&c, id)["value"]["bps"], 30_000, "table de valeur gold");
+    }
+    assert!(myth >= 6 && myth <= 30, "mythique au dernier emplacement : {myth} sur 80 (20 % attendus)");
+    assert!(leg > myth);
+}
+
+/// Gold pack, légendaires épuisées : le 5 visé légendaire monte à la mythique ; mythique épuisée à
+/// son tour, il descend sous le plancher (épique). Les emplacements rare+ ne montent pas sans raison.
+#[test]
+fn gold_pack_with_exhausted_legendaries() {
+    let mut t = gold_table(1, false);
+    t.cards[0].cap = Some(0); // la seule légendaire, épuisée d'emblée
+    let mut c = contract_with(t);
+    let id = buy_reveal(&mut c, alice(), 1, 20);
+    let ds = draws(&c, id);
+    assert!(ds.iter().all(|d| d["final_rarity"] != "legendary"));
+    assert_eq!(ds[4]["final_rarity"], "mythic", "légendaire épuisée : vers le haut");
+    for k in 2..12u8 {
+        let id = buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
+        let ds = draws(&c, id);
+        assert_eq!(ds[4]["final_rarity"], "epic", "légendaire et mythique épuisées : sous le plancher, {ds:?}");
+        assert!(ds[2..4].iter().all(|d| d["final_rarity"] == "epic"));
+    }
+}
+
+/// Mythique au plafond : l'emplacement qui la vise retombe sur la légendaire (vers le bas d'abord).
+#[test]
+fn mythic_at_cap_falls_down_to_legendary() {
+    let mut t = gold_table(1, false);
+    t.mechanics.as_mut().unwrap().gold.as_mut().unwrap().slots[4].weights = Some(w(1, 0, 0, 0, 0));
+    let mut c = contract_with(t);
+    let id = buy_reveal(&mut c, alice(), 1, 20);
+    let first = draws(&c, id);
+    assert_eq!(first[4]["final_rarity"], "mythic");
+    for k in 2..6u8 {
+        let id = buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
+        let ds = draws(&c, id);
+        assert_eq!((ds[4]["rolled_rarity"].as_str(), ds[4]["final_rarity"].as_str()), (Some("mythic"), Some("legendary")));
+    }
+}
+
+/// La table de valeur suit la table de taux du pack : normale, gold (pitié), rush (figé à l'achat).
+#[test]
+fn value_table_follows_pack_mode() {
+    // N = 2 : le deuxième pack d'alice est un gold pack ; carol achète pendant le rush.
+    let mut m = mech(Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 2 }), false, Some(small_rush()));
+    m.value = Some(ValueParams { normal: vec![(5_000, 1)], gold: vec![(30_000, 1)], rush: vec![(9_000, 1)], multipliers: MULT });
+    let mut c = contract_with(table(Some(m)));
+    let mut seen = vec![];
+    for (k, h) in [(1u8, 0u64), (2, 60), (3, 60), (4, 70)] {
+        let who = [alice(), bob(), alice(), accounts(3)][k as usize - 1].clone();
+        let id = buy_reveal(&mut c, who, k, h);
+        seen.push((pack(&c, id)["mode"].as_str().unwrap().to_string(), pack(&c, id)["value"]["bps"].as_u64().unwrap()));
+    }
+    let want = |m: &str| match m {
+        "base" => 5_000,
+        "gold" => 30_000,
+        _ => 9_000,
+    };
+    assert!(seen.iter().all(|(m, b)| *b == want(m)), "{seen:?}");
+    assert!(seen.iter().any(|(m, _)| m == "rush"), "{seen:?}");
+    assert!(seen.iter().any(|(m, _)| m == "gold"), "{seen:?}");
+}
+
+/// `redeem` transmet au redeemer la part de la valeur tirée (pas le montant de la table).
+#[test]
+fn redeem_sends_the_drawn_value() {
+    let mut c = contract_with(table(Some(value_mech(vec![(2_000, 1), (20_000, 1)]))));
+    let id = buy_reveal(&mut c, alice(), 3, 20);
+    let v = pack(&c, id)["value"].clone();
+    let slot = v["amounts"].as_array().unwrap().iter().rposition(|a| !a.is_null()).unwrap();
+    let tid = token_id_of(id, slot as u8);
+    let amount: u128 = v["amounts"][slot].as_str().unwrap().parse().unwrap();
+    let b = c.get_backing(tid.clone()).unwrap();
+    assert_eq!(b.amount, U128(amount));
+    assert_ne!(b.amount, U128(1_000), "pas le montant de la table");
+    assert_eq!(c.get_card(tid.clone()).unwrap().backing, Some(b.clone()));
+    set(alice(), 1, 40);
+    let _ = c.redeem(tid.clone());
+    let logs = near_sdk::test_utils::get_logs();
+    assert!(logs.iter().any(|l| l.contains("redeem_started") && l.contains(&format!("\"amount\":\"{amount}\""))), "{logs:?}");
+    set_result(PromiseResult::Successful(vec![]));
+    assert!(c.on_redeem_complete(tid, alice(), b));
+    let logs = near_sdk::test_utils::get_logs();
+    let ev = logs.iter().find(|l| l.contains("card_redeemed")).unwrap();
+    assert!(ev.contains(&format!("\"amount\":\"{amount}\"")) && ev.contains("\"replaced_by\":null"), "{ev}");
+}
+
+/// Cas spécial documenté : un exemplaire devenu brûlable après son tirage (résurrection) n'a pas
+/// de part de valeur ; il garde le montant de l'oracle. Les exemplaires tirés ensuite en ont une.
+#[test]
+fn card_resurrected_after_draw_keeps_oracle_amount() {
+    let mut m = res_mech(&[6]);
+    m.value = Some(value_p(vec![(10_000, 1)]));
+    let mut t = epic_table(Some(m));
+    t.mechanics.as_mut().unwrap().burn = None;
+    let mut c = contract_with(t);
+    for k in 0..6u8 {
+        buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
+    }
+    let old = backed_tokens(&c, &alice(), "epic_b")[0].clone();
+    install_oracle(&mut c, 100);
+    set(oracle(), NEAR, 101);
+    c.set_resurrected(0, 6, Backing { asset_id: "nep141:revived.near".into(), amount: U128(77) });
+    assert_eq!(c.get_backing(old).unwrap().amount, U128(77));
+    let mut seen = false;
+    for k in 10..30u8 {
+        let id = buy_reveal(&mut c, bob(), k, 200 + 10 * k as u64);
+        let ev = last_revealed();
+        assert_eq!(ev["mechanics"]["resurrect_seq"], 1, "résurrections journalisées");
+        for (slot, d) in draws(&c, id).iter().enumerate() {
+            if d["kind"] == "visible" && d["index"] == 6 {
+                let b = c.get_backing(token_id_of(id, slot as u8)).unwrap();
+                assert_eq!(b.asset_id, "nep141:revived.near");
+                assert_eq!(Some(b.amount.0), c.slot_value(c.packs.get(&id).unwrap(), slot), "part de la valeur");
+                seen = true;
+            }
+        }
+    }
+    assert!(seen, "epic_b jamais retirée après la résurrection");
+}
+
+#[test]
+fn invalid_value_tables_are_rejected() {
+    let v = |f: &dyn Fn(&mut ValueParams)| {
+        let mut p = value_p(vec![(7_500, 1)]);
+        f(&mut p);
+        Mechanics { value: Some(p), ..none_mech() }
+    };
+    rejects(v(&|p| p.normal = vec![(1_999, 1)]), "value.normal");
+    rejects(v(&|p| p.normal = vec![(20_001, 1)]), "value.normal");
+    rejects(v(&|p| p.normal = vec![(7_500, 0)]), "poids nuls");
+    rejects(v(&|p| p.normal = vec![]), "paliers");
+    rejects(v(&|p| p.normal = vec![(7_500, 1); 33]), "paliers");
+    rejects(v(&|p| p.gold = vec![(0, 1)]), "value.gold");
+    rejects(v(&|p| p.rush = vec![(1_000_001, 1)]), "value.rush");
+    rejects(v(&|p| p.multipliers.mythic = 1), "mythic = 0");
+    rejects(v(&|p| p.multipliers.rare = 0), "multipliers.rare");
+    let mut t = table(Some(value_mech(vec![(7_500, 1)])));
+    t.price = U128(u128::MAX / 3);
+    let r = std::panic::catch_unwind(|| contract_with(t));
+    assert!(r.err().unwrap().downcast_ref::<String>().unwrap().contains("dépassement"));
+    // Gold : planchers et nombre d'emplacements.
+    let g = |slots: Vec<GoldSlot>| Mechanics { gold: Some(GoldParams { slots }), ..none_mech() };
+    rejects(g(vec![]), "1 à 10");
+    rejects(g(vec![GoldSlot { floor: Rarity::Rare, weights: None, burnable: false }; 11]), "1 à 10");
+    rejects(g(vec![GoldSlot { floor: Rarity::Epic, weights: Some(w(0, 1, 1, 1, 0)), burnable: false }]), "sous le plancher");
+    rejects(g(vec![GoldSlot { floor: Rarity::Mythic, weights: None, burnable: false }]), "poids nuls");
+}
+
+/// Brûlable garantie : refusée sans carte adossée illimitée (table de valeur, ou emplacement gold
+/// `burnable`).
+#[test]
+fn burnable_guarantee_needs_an_unlimited_backed_card() {
+    for m in [value_mech(vec![(7_500, 1)]), Mechanics { gold: Some(gold_v2()), ..none_mech() }] {
+        let mut t = table(Some(m));
+        t.mythics = vec![mythic_commit(1, 5)];
+        for c in t.cards.iter_mut().filter(|c| c.backing.is_some()) {
+            c.cap = Some(10);
+        }
+        let r = std::panic::catch_unwind(|| contract_with(t));
+        assert!(r.err().unwrap().downcast_ref::<String>().unwrap().contains("Brûlable garantie"));
+    }
+}
+
+/// Stockage prépayé : un gold pack plus long que `cards_per_pack` et la valeur sont comptés.
+#[test]
+fn storage_covers_longer_gold_packs_and_value() {
+    let mut t0 = table(Some(none_mech()));
+    t0.mythics = vec![mythic_commit(1, 5)];
+    let plain = contract_with(t0).get_series(0).storage_per_pack;
+    let mut g = gold_v2();
+    g.slots.extend(g.slots.clone()[..2].iter().cloned());
+    let mut t = table(Some(Mechanics { gold: Some(g), value: Some(value_p(vec![(7_500, 1)])), ..none_mech() }));
+    t.mythics = vec![mythic_commit(1, 5)];
+    let mut c = contract_with(t);
+    let s = c.get_series(0).storage_per_pack;
+    assert_eq!(s, plain + 2 * (PER_CARD_BYTES + SEALED_TOKEN_BYTES) + PACK_VALUE_BYTES);
+    // Le gold pack a bien 7 cartes (pitié absente : on force le mode or par le tirage pur).
+    let cards: Vec<DrawCard> = c.series_ref(0).draw_cards.clone();
+    let mut minted = vec![0; cards.len()];
+    let (d, slots) = draw::draw_pack_mech(&c.series_ref(0).table, PackMode::Gold, &cards, &mut minted, &mut [0], None, &[7; 32]);
+    assert_eq!((d.len(), slots.len()), (7, 7));
+    assert!(slots[1].1, "emplacement 2 brûlable");
+    let _ = &mut c;
+}
+
+/// Série à mécaniques sans table de valeur : pas de règle au dernier emplacement, `value` nul.
+#[test]
+fn series_without_value_has_no_value_and_no_rule() {
+    let mut c = contract_with(table(Some(burn_mech())));
+    let id = buy_reveal(&mut c, alice(), 1, 20);
+    assert!(last_revealed()["mechanics"]["value"].is_null());
+    assert!(pack(&c, id)["value"].is_null());
+    assert!(c.packs.get(&id).unwrap().value.is_none());
+    let tid = backed_tokens(&c, &alice(), "com_a").into_iter().next();
+    if let Some(t) = tid {
+        assert_eq!(c.get_backing(t).unwrap().amount, U128(1_000), "montant de la table");
+    }
 }
