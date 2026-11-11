@@ -211,6 +211,9 @@ def load_mythic_secrets(path, catalogue):
             by_id = {}
             for e in data:
                 key = e.get("catalogue_id") or e.get("id_catalogue")
+                if key is None and e.get("id") in mythic_ids:
+                    # format écrit par consolider.py : {"mythiques": [{"id": "<id catalogue>", "nom": …}]}
+                    key = e["id"]
                 if key is None:
                     raise SystemExit(f"{path} : chaque mythique doit porter \"catalogue_id\" (id du catalogue)")
                 by_id[key] = e.get("secret", e)
