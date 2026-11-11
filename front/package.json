@@ -11,7 +11,8 @@
     "typecheck": "tsc -b",
     "indexer": "node indexer/indexer.mjs",
     "test": "vitest run && node scripts/check-mythics.mjs",
-    "check:mythics": "node scripts/check-mythics.mjs"
+    "check:mythics": "node scripts/check-mythics.mjs",
+    "smoke": "node scripts/smoke-readonly.mjs"
   },
   "dependencies": {
     "@hot-labs/near-connect": "0.12.0",
@@ -24,6 +25,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
+    "playwright": "1.65.0",
     "typescript": "7.0.2",
     "vite": "8.3.5",
     "vitest": "5.0.5"

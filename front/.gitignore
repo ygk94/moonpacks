@@ -8,3 +8,5 @@ public/catalog.json
 *.tsbuildinfo
 # Base SQLite de l indexeur
 indexer/data/
+# Captures de npm run smoke
+smoke-captures/
