@@ -9,9 +9,10 @@ import { Modal } from "../components/Modal";
 import { loadCatalog } from "../lib/catalog";
 import { RARITY_LABEL } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
-import { getPacksForOwner, getTokensForOwner } from "../near/contract";
+import { getCard, getPacksForOwner, getResurrected, getTokensForOwner } from "../near/contract";
 import { RARITIES, RARITY_RANK, type Rarity } from "../near/types";
 import { useWallet } from "../near/wallet";
+import { VerifyPanel } from "../verify/VerifyPanel";
 
 interface OwnedCard {
   tokenId: string;
@@ -20,7 +21,7 @@ interface OwnedCard {
   burnable: boolean;
   packId: number;
   ticker: string;
-  dead: boolean;
+  revived: boolean;
 }
 
 export function Collection({ onReplay }: { onReplay: (packId: number) => void }) {
@@ -33,7 +34,7 @@ export function Collection({ onReplay }: { onReplay: (packId: number) => void })
   const cards = useAsync(async (): Promise<OwnedCard[]> => {
     if (!accountId) return [];
     const [tokens, catalog] = await Promise.all([getTokensForOwner(accountId), loadCatalog()]);
-    return tokens.map((t) => {
+    const list = tokens.map((t) => {
       let extra: { card_id?: string; rarity?: Rarity; burnable?: boolean; pack_id?: number } = {};
       try {
         extra = JSON.parse(t.metadata?.extra ?? "{}");
@@ -50,9 +51,19 @@ export function Collection({ onReplay }: { onReplay: (packId: number) => void })
         burnable: !!extra.burnable,
         packId: extra.pack_id ?? Math.floor(Number(t.token_id) / 10),
         ticker: rarity === "mythic" ? "?" : (e?.ticker ?? cardId ?? "?"),
-        dead: e?.state === "dead",
+        revived: false,
       };
     });
+    // Cartes ressuscitées (`card_resurrected`) : seules les épiques et légendaires peuvent l'être.
+    await Promise.all(
+      list
+        .filter((c) => c.burnable && (c.rarity === "epic" || c.rarity === "legendary"))
+        .map(async (c) => {
+          const v = await getCard(c.tokenId).catch(() => null);
+          if (v?.kind === "visible") c.revived = (await getResurrected(v.series_id, v.index).catch(() => null)) != null;
+        }),
+    );
+    return list;
   }, [accountId]);
 
   const packs = useAsync(() => (accountId ? getPacksForOwner(accountId) : Promise.resolve([])), [accountId]);
@@ -121,7 +132,7 @@ export function Collection({ onReplay }: { onReplay: (packId: number) => void })
                   cardId={c.cardId}
                   rarity={c.rarity}
                   burnable={c.burnable}
-                  badge={c.burnable && c.dead ? "Back from the dead" : undefined}
+                  badge={c.revived ? "Back from the dead" : undefined}
                   onClick={() => setOpen(c.tokenId)}
                   size="md"
                 />
@@ -137,10 +148,13 @@ export function Collection({ onReplay }: { onReplay: (packId: number) => void })
           {packs.data && !packs.data.length && <p className="muted">No pack yet.</p>}
           {[...(packs.data ?? [])].reverse().map((id) => (
             <div key={id} className="packs-list__row">
-              <span>Pack #{id}</span>
-              <button className="btn btn--ghost" onClick={() => onReplay(id)}>
-                Replay opening
-              </button>
+              <div className="packs-list__head">
+                <span>Pack #{id}</span>
+                <button className="btn btn--ghost" onClick={() => onReplay(id)}>
+                  Replay opening
+                </button>
+              </div>
+              <VerifyPanel packId={id} />
             </div>
           ))}
         </div>

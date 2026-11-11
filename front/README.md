@@ -19,7 +19,27 @@ puis lance Vite :
   en a 1 646), plus le dos « ? » commun aux mythiques. Ils ne sont régénérés que si le catalogue ou `art/` change.
 
 Ces fichiers sont ignorés par git. Autres commandes : `npm run build` (vérification des types et build de prod dans
-`dist/`) et `npm run typecheck`.
+`dist/`), `npm run typecheck` et `npm test` (vitest).
+
+## Indexeur (facultatif)
+
+Dans un second terminal, depuis `front/` :
+
+```sh
+npm run indexer
+```
+
+Ce petit service (`indexer/`, Node seul, SQLite intégré `node:sqlite`) lit les transactions du contrat avec l'API
+de fastnear (`tx.test.fastnear.com` : `/v0/account`, puis `/v0/transactions`, reçus et journaux compris). Il garde
+les événements NEP-297 dans `indexer/data/` (ignoré par git) et expose une API en lecture seule sur le port 8787 :
+`/status`, `/trending?hours=24`, `/sales`, `/resurrected` et `/events?event=…`. Il ne parcourt pas les blocs :
+neardata renvoie vite des 429. Il ne lit une transaction qu'une fois passés 20 blocs, quand le tirage est fini.
+
+En dev, le front l'interroge sur `http://localhost:8787`, ou sur `VITE_INDEXER_URL` si elle est définie. S'il ne
+répond pas, « Trending » se rabat sur les annonces du contrat.
+
+Limite : `/v0/account` renvoie la liste en une fois. La pagination n'est pas gérée, et l'indexeur écrit un
+avertissement si la liste est tronquée. C'est sans effet à l'échelle de la démo (45 transactions au 11/11).
 
 ## Configuration
 
@@ -49,6 +69,13 @@ Pas de routeur ni de bibliothèque d'état : un routeur par hash suffit (`#/shop
   scène : fond or, annonce à la déchirure, suspense sur la dernière carte. Si le pack ne progresse plus pendant
   `retry_delay_blocks`, le bouton « Retry reveal » apparaît. Un pack `stuck` affiche un message. Le rejeu d'une
   ouverture passée se fait depuis Collection, onglet Packs, ou par l'URL `#/open?pack=N`.
+- **Vérification d'un tirage** (`src/verify/`) : un bouton « Verify this pack » dans le récapitulatif de
+  l'ouverture et dans Collection, onglet Packs. Il reprend la logique de `verifier/` au niveau « sans état » :
+  hash de la table recalculé, chaîne des graines jusqu'à `acc`, jet de rareté de chaque emplacement et retombée,
+  rareté de la carte, palier de valeur du pack. Le choix exact de la carte dans sa rareté et la décision gold
+  demandent tout l'historique, donc le vérificateur en ligne de commande. Testé sur les 31 packs réels de
+  `docs/data/testnet-2026-11-11-v2/`.
+- **Cartes ressuscitées** : badge « Back from the dead », lu dans la vue `get_resurrected` du contrat.
 - **Mythiques** : toujours la carte « ? ». Aucun nom ni fichier de mythique n'est servi (`prepare-assets` refuse un
   fichier `mythique-*`).
 - **Pas de pourcentage de rentabilité ni de « valeur garantie »** : on n'affiche que des quantités de jetons et des
@@ -70,10 +97,8 @@ Pas de routeur ni de bibliothèque d'état : un routeur par hash suffit (`#/shop
    l'estimation de ce qui est réellement consommé.
 3. **Prix des packs.** Le contrat n'a qu'une série, à 0,1 NEAR. Les packs à 0,20 $ et 0,50 $ demandent de nouvelles
    séries côté contrat. La boutique affiche déjà toutes les séries ouvertes.
-4. **Trending.** En attendant un indexeur, « Trending » classe les coins les plus listés à partir des annonces
-   (`get_listings`). Indexeur proposé : un petit service qui suit les reçus du contrat (flux de blocs fastnear, ou
-   l'API de nearblocks), garde `card_listed`, `card_sold` et `card_delisted` dans SQLite, et expose
-   `/trending?window=24h` (ventes et annonces par `card_id`). Il permettrait aussi d'afficher les dernières ventes.
+4. **Trending.** Il vient de l'indexeur (ventes et annonces sur 24 h, plus les dernières ventes), et à défaut des
+   annonces en cours. Pour un déploiement public, il faudra héberger l'indexeur ; il vise un seul contrat.
 5. **Pack bloqué.** Le contrat n'accepte `retry_reveal` que sur un pack `pending`. Après `MAX_ATTEMPTS`, le pack
    passe `stuck` et ne peut plus être relancé. Le front propose donc la relance avant ce stade.
 6. **MetaMask sur iOS** et **WalletConnect** : il faut un `projectId` WalletConnect (variable d'environnement) pour
@@ -81,8 +106,14 @@ Pas de routeur ni de bibliothèque d'état : un routeur par hash suffit (`#/shop
 
 ## Testé
 
+- `npm test` : 26 tests. Formats, événements, traduction des erreurs, ordre de révélation, vérification d'un
+  tirage sur les vrais packs du testnet (et rejet d'une graine ou d'une rareté falsifiée), logique de l'indexeur.
 - Build et vérification des types.
 - Contre le contrat v2 sur testnet, dans un navigateur : boutique (prix, dépôt, gold rush), rejeu complet de packs
-  réels (`#/open?pack=0`, `#/open?pack=7`) jusqu'au récapitulatif, page des taux (taux, hash de table, hash du code),
-  marché vide, liste des wallets avec MetaMask en premier, mise en page mobile.
-- **Pas encore testé, faute de wallet** : connexion, achat signé, burn, mise en vente et achat sur le marché.
+  réels jusqu'au récapitulatif, page des taux (taux, hash de table, hash du code), vérification des packs 0, 12 et
+  30 sur les données en direct, marché branché sur l'indexeur, liste des wallets avec MetaMask en premier, mise en
+  page mobile.
+- Indexeur : il a rattrapé les 45 transactions du contrat, avec autant d'événements que dans le relevé de référence
+  (31 `pack_bought`, 31 `pack_revealed`, 62 `reveal_step`).
+- **Pas encore testé, faute de wallet** : connexion, achat signé, burn, mise en vente et achat sur le marché. Il
+  n'y a pas encore eu de vente ni de résurrection sur `app2`, donc « Trending » et les dernières ventes sont vides.

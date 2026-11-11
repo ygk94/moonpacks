@@ -6,7 +6,7 @@ import { estimateTokens, type TokenEstimate } from "../lib/backing";
 import { loadCatalog, STATE_LABEL, type CatalogEntry } from "../lib/catalog";
 import { formatNear, formatQty, formatUsd, parseNear, RARITY_LABEL } from "../lib/format";
 import { coinUsd, nearUsd } from "../lib/prices";
-import { getCard, getConfig } from "../near/contract";
+import { getCard, getConfig, getResurrected } from "../near/contract";
 import { humanError } from "../near/errors";
 import { eventsOf, findEvent } from "../near/events";
 import type { CardView } from "../near/types";
@@ -49,6 +49,15 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
     });
   }, [card?.card_id, card?.backing]);
 
+  const [revived, setRevived] = useState(false);
+  useEffect(() => {
+    if (!card || card.kind !== "visible" || !card.backing) return setRevived(false);
+    getResurrected(card.series_id, card.index).then(
+      (b) => setRevived(b != null),
+      () => setRevived(false),
+    );
+  }, [card]);
+
   if (card === undefined) return <p className="muted">Loading card…</p>;
   if (card === null) return <p className="muted">This card no longer exists (it may have been burned).</p>;
 
@@ -56,7 +65,7 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
   const mythic = card.kind === "mythic";
   const burnable = !!card.backing;
   // Carte d'un coin mort devenue brûlable (`card_resurrected`) : on le signale.
-  const resurrected = burnable && entry?.state === "dead";
+  const resurrected = burnable && revived;
 
   const doBurn = async () => {
     setBurn({ kind: "pending" });

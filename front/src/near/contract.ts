@@ -22,6 +22,9 @@ export const getPack = (packId: number) => view<PackView | null>("get_pack", { p
 export const getCard = (tokenId: string) => view<CardView | null>("get_card", { token_id: tokenId });
 export const getBacking = (tokenId: string) => view<Backing | null>("get_backing", { token_id: tokenId });
 export const getListing = (tokenId: string) => view<Listing | null>("get_listing", { token_id: tokenId });
+/** Adossement donné par l'oracle à une carte d'un coin mort (`card_resurrected`), ou `null`. */
+export const getResurrected = (seriesId: number, cardIndex: number) =>
+  view<Backing | null>("get_resurrected", { series_id: seriesId, card_index: cardIndex });
 export const getTableHash = (seriesId = SERIES_ID) =>
   view<{ stored: string | null; card_count: number }>("get_series_table_hash", { series_id: seriesId });
 

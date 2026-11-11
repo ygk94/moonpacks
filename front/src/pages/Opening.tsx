@@ -13,6 +13,7 @@ import { PackArt } from "../components/PackArt";
 import { estimateTokens, type TokenEstimate } from "../lib/backing";
 import { loadCatalog, type CatalogEntry } from "../lib/catalog";
 import { formatQty, RARITY_LABEL } from "../lib/format";
+import { burnableLast } from "../lib/reveal";
 import { navigate } from "../lib/router";
 import { getCardDefs, getConfig, getPack } from "../near/contract";
 import { humanError } from "../near/errors";
@@ -20,6 +21,7 @@ import { eventsOf, findEvent, returnValue } from "../near/events";
 import { blockHeight } from "../near/rpc";
 import type { PackMode, PackView, Rarity, SeriesView } from "../near/types";
 import { useWallet } from "../near/wallet";
+import { VerifyPanel } from "../verify/VerifyPanel";
 
 export type OpeningRequest = { kind: "buy"; series: SeriesView } | { kind: "replay"; packId: number };
 
@@ -162,7 +164,7 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
           {phase === "revealing" && (
             <RevealStage key="reveal" cards={cards} gold={mode === "gold"} onDone={() => setPhase("done")} />
           )}
-          {phase === "done" && <Summary key="done" cards={cards} />}
+          {phase === "done" && <Summary key="done" cards={cards} packId={packId} />}
           {phase === "error" && (
             <motion.div key="err" className="opening__message" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <h2>The pack was not bought</h2>
@@ -245,7 +247,7 @@ async function resolveCards(p: PackView): Promise<RevealCard[]> {
       entry: cardId ? catalog[cardId] : undefined,
     };
   });
-  return [...cards.filter((c) => !c.burnable), ...cards.filter((c) => c.burnable)];
+  return burnableLast(cards);
 }
 
 // --- Étapes de la scène ------------------------------------------------------------------------
@@ -499,7 +501,7 @@ function BurnableLine({ card }: { card: RevealCard }) {
   );
 }
 
-function Summary({ cards }: { cards: RevealCard[] }) {
+function Summary({ cards, packId }: { cards: RevealCard[]; packId: number | null }) {
   return (
     <motion.div className="summary" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <h2>Your pack</h2>
@@ -527,6 +529,7 @@ function Summary({ cards }: { cards: RevealCard[] }) {
           public market prices.
         </p>
       )}
+      {packId != null && <VerifyPanel packId={packId} />}
     </motion.div>
   );
 }

@@ -8,6 +8,9 @@ export const CONTRACT_ID: string = env.VITE_CONTRACT_ID ?? "app2.memaster-demo-j
 export const RPC_URL: string = env.VITE_RPC_URL ?? "https://rpc.testnet.fastnear.com";
 export const SERIES_ID = Number(env.VITE_SERIES_ID ?? 0);
 export const BLOCK_TIME_S = Number(env.VITE_BLOCK_TIME_S ?? 0.6);
+// Indexeur facultatif (front/indexer/) : Trending et ventes récentes. En dev, localhost:8787 par défaut ;
+// vide : désactivé. Sans réponse, le front se rabat sur les annonces du contrat.
+export const INDEXER_URL: string = (env.VITE_INDEXER_URL ?? (env.DEV ? "http://localhost:8787" : "")).replace(/\/$/, "");
 
 export const EXPLORER = NETWORK === "testnet" ? "https://testnet.nearblocks.io" : "https://nearblocks.io";
 
