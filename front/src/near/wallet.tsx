@@ -3,7 +3,7 @@
 import { NearConnector, type NearConnectorOptions, type NearWalletBase } from "@hot-labs/near-connect";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { CONTRACT_ID, NETWORK, RPC_URL, WALLETCONNECT_PROJECT_ID } from "../config";
-import { failureOf } from "./events";
+import { failureOf, txHashOf } from "./events";
 import { txStatus, type TxOutcome } from "./rpc";
 
 // Identifiant near-connect du connecteur « Ethereum Wallets » (MetaMask et autres wallets EVM).
@@ -144,8 +144,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         ],
       })) as unknown as Partial<TxOutcome>;
       // Certains wallets ne renvoient que le hash : on relit alors la transaction et ses reçus.
-      const full =
-        out?.receipts_outcome && out.status ? (out as TxOutcome) : await txStatus(out!.transaction!.hash, accountId);
+      let full: TxOutcome;
+      if (out?.receipts_outcome && out.status) full = out as TxOutcome;
+      else {
+        const hash = txHashOf(out);
+        // Signée mais illisible : on ne prétend pas qu'elle a échoué.
+        if (!hash) throw new Error("The wallet did not return the transaction. Check your wallet history before retrying.");
+        full = await txStatus(hash, accountId);
+      }
       const failure = failureOf(full);
       if (failure) throw new Error(failure);
       return full;

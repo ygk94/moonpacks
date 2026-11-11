@@ -29,7 +29,17 @@ export function eventsOf(outcome: Pick<TxOutcome, "transaction_outcome" | "recei
 }
 
 export function findEvent(events: MemasterEvent[], name: string): Record<string, unknown> | undefined {
-  return events.find((e) => e.event === name)?.data[0];
+  const data = events.find((e) => e.event === name)?.data;
+  return Array.isArray(data) ? data[0] : undefined;
+}
+
+/** Hash de la transaction renvoyée par un wallet : résultat complet, `transaction_outcome.id`, ou hash seul. */
+export function txHashOf(out: unknown): string | undefined {
+  if (typeof out === "string") return /^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(out) ? out : undefined;
+  if (!out || typeof out !== "object") return undefined;
+  const o = out as { transaction?: { hash?: unknown }; transaction_outcome?: { id?: unknown } };
+  const h = o.transaction?.hash ?? o.transaction_outcome?.id;
+  return typeof h === "string" && h ? h : undefined;
 }
 
 /** Valeur de retour d'une transaction réussie (JSON), ou `undefined`. */

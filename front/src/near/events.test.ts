@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { humanError } from "./errors";
-import { eventsOf, failureOf, findEvent, parseLogs, returnValue } from "./events";
+import { eventsOf, failureOf, findEvent, parseLogs, returnValue, txHashOf } from "./events";
 
 const ev = (event: string, data: object) =>
   `EVENT_JSON:${JSON.stringify({ standard: "memaster", version: "1.0.0", event, data: [data] })}`;
@@ -28,6 +30,21 @@ describe("events", () => {
     expect(events.map((e) => e.event)).toEqual(["pack_bought", "pack_revealed"]);
     expect(findEvent(events, "pack_bought")).toEqual({ pack_id: 3 });
     expect(findEvent(events, "card_sold")).toBeUndefined();
+  });
+
+  it("tolerates an event without data", () => {
+    const events = parseLogs([`EVENT_JSON:${JSON.stringify({ standard: "memaster", version: "1.0.0", event: "pack_bought" })}`]);
+    expect(findEvent(events, "pack_bought")).toBeUndefined();
+  });
+
+  it("finds the transaction hash in what a wallet returns", () => {
+    const h = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin";
+    expect(txHashOf({ transaction: { hash: h } })).toBe(h);
+    expect(txHashOf({ transaction_outcome: { id: h } })).toBe(h);
+    expect(txHashOf(h)).toBe(h);
+    expect(txHashOf(undefined)).toBeUndefined();
+    expect(txHashOf({})).toBeUndefined();
+    expect(txHashOf("not a hash")).toBeUndefined();
   });
 
   it("decodes the return value", () => {
@@ -83,5 +100,31 @@ describe("contract errors in English", () => {
       "Carte en cours de burn",
     ];
     for (const p of panics) expect(humanError(new Error(p)), p).not.toMatch(/[éèàç]|Carte|Dépôt|Série/);
+  });
+});
+
+describe("contract errors: every user-facing panic of the contract", () => {
+  // Messages des méthodes appelées par le front (achat, relance, burn, marché), lus dans le code du contrat :
+  // un nouveau message en français fera échouer ce test tant qu'il n'est pas traduit dans errors.ts.
+  const src = resolve(__dirname, "../../../contract/src");
+  const INTERNAL = /^(Bloc de liste|Table non hachée|test-hooks|Liste .* incohérente|pack \{\}|Aucun redeemer)/;
+  const panics = ["pack.rs", "market.rs", "redeem.rs"].flatMap((f) =>
+    [...readFileSync(`${src}/${f}`, "utf8").matchAll(/(?:require!\(|panic_str\(|format!\()[^";]*?"([^"]+)"/g)]
+      .map((m) => m[1].replace(/\{[^}]*\}/g, "42"))
+      .filter((m) => !INTERNAL.test(m)),
+  );
+
+  it("finds the messages in the contract source", () => {
+    expect(panics.length).toBeGreaterThan(20);
+    expect(panics).toContain("Délai de relance non écoulé");
+  });
+
+  it("translates each of them", () => {
+    for (const p of panics) expect(humanError(new Error(`Smart contract panicked: ${p}`)), p).not.toMatch(/[éèàçê]|panicked/);
+  });
+
+  it("keeps the burn-specific gas message", () => {
+    expect(humanError(new Error("Gaz insuffisant pour le burn"))).toMatch(/for the burn/);
+    expect(humanError(new Error("Gaz insuffisant : 160 Tgas requis"))).toMatch(/^Not enough gas attached to the transaction/);
   });
 });

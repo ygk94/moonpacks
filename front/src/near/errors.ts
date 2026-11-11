@@ -2,8 +2,11 @@
 
 const MESSAGES: [RegExp, string][] = [
   [/Dépôt insuffisant/, "Insufficient deposit: the attached amount must cover the pack price plus the storage deposit."],
+  // Le message propre au burn avant le message générique (le premier qui correspond l'emporte).
+  [/Gaz insuffisant pour le burn/, "Not enough gas attached for the burn. Please try again."],
   [/Gaz insuffisant/, "Not enough gas attached to the transaction. Please try again."],
   [/Série non ouverte/, "This series is not on sale right now."],
+  [/Série inconnue/, "This pack series does not exist."],
   [/Délai de relance non écoulé/, "The reveal can only be retried a little later. Please wait a few seconds."],
   [/Tirage déjà écrit/, "This pack is already revealed."],
   [/Pack inconnu/, "Unknown pack."],
@@ -12,10 +15,9 @@ const MESSAGES: [RegExp, string][] = [
   [/Burn déjà en cours/, "A burn is already in progress for this card."],
   [/Carte non brûlable/, "This card is not burnable."],
   [/Aucun redeemer/, "Burning is not available right now."],
-  [/Gaz insuffisant pour le burn/, "Not enough gas attached for the burn. Please try again."],
   [/Le prix de l'annonce a changé/, "The listing price changed. Please check the new price."],
   [/Déjà en vente/, "This card is already listed."],
-  [/Prix nul/, "The price must be greater than zero."],
+  [/Prix nul|Le prix doit être > 0/, "The price must be greater than zero."],
   [/Dépôt d'annonce/, "Listing a card requires a small storage deposit, returned when the listing ends."],
   [/Pas en vente/, "This card is not listed anymore."],
   [/Le vendeur ne peut pas acheter/, "You cannot buy your own card."],
