@@ -298,6 +298,7 @@ fn rand_rush(rng: &mut Rng) -> RushParams {
         bucket_blocks: bucket,
         duration_blocks: 1 + rng.below(40),
         cooldown_blocks: rng.below(60),
+        max_per_account: 1 + rng.below(4) as u32,
         weights: rand_weights(rng),
     }
 }
@@ -414,16 +415,25 @@ fn mech_vectors() {
         let mut st = RushState::default();
         let mut h = rng.below(1_000);
         let mut buys = Vec::new();
+        // Trois comptes : plafond de packs rush par compte et par rush (`rush_account`).
+        let mut accounts: [Option<(u64, u32)>; 3] = [None; 3];
         for _ in 0..250 {
             h += match rng.below(10) {
                 0..=5 => 0,
                 6..=8 => 1 + rng.below(3 * p.bucket_blocks),
                 _ => rng.below(p.baseline_blocks * 2),
             };
+            let who = rng.below(3) as usize;
             let o = draw::rush_on_buy(&p, &mut st, h);
+            let prev = if o.active { accounts[who] } else { None };
+            let (rush, capped, entry) = draw::rush_account(&p, o.active, st.last_trigger, prev);
+            if rush {
+                accounts[who] = entry;
+            }
             buys.push(json!({
-                "height": h, "active": o.active, "window_count": o.window_count,
+                "height": h, "account": who, "active": o.active, "window_count": o.window_count,
                 "baseline_count": o.baseline_count, "triggered": o.triggered,
+                "rush": rush, "capped": capped,
             }));
         }
         rushes.push(json!({ "params": p, "buys": buys, "rush_count": st.rush_count }));
@@ -431,7 +441,7 @@ fn mech_vectors() {
     write_json(
         "mech_vectors.json",
         &json!({
-            "source": "memaster::draw (contract/src/draw.rs) : pity_is_gold, pack_mode, mode_weights, draw_slot_mech, rush_on_buy",
+            "source": "memaster::draw (contract/src/draw.rs) : pity_is_gold, pack_mode, mode_weights, draw_slot_mech, rush_on_buy, rush_account",
             "cases": cases,
             "rushes": rushes,
         }),

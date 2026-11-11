@@ -462,3 +462,18 @@ pub fn rush_on_buy(p: &RushParams, st: &mut RushState, h: u64) -> RushOutcome {
     }
     RushOutcome { active, window_count: cw, baseline_count: cl, triggered }
 }
+
+/// Plafond de packs rush par compte et par rush. `prev` = (déclenchement, packs rush du compte
+/// pendant ce rush) avant l'achat. Renvoie (pack rush ?, plafonné ?, nouvel état du compte).
+/// Hors rush, rien ne change. Le compteur repart de zéro à chaque nouveau déclenchement.
+pub fn rush_account(p: &RushParams, active: bool, trigger: Option<u64>, prev: Option<(u64, u32)>) -> (bool, bool, Option<(u64, u32)>) {
+    let Some(t) = trigger.filter(|_| active) else {
+        return (false, false, prev);
+    };
+    let n = prev.filter(|(pt, _)| *pt == t).map(|(_, n)| n).unwrap_or(0);
+    if n >= p.max_per_account {
+        (false, true, Some((t, n)))
+    } else {
+        (true, false, Some((t, n + 1)))
+    }
+}

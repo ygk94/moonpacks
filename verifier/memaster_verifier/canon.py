@@ -137,6 +137,7 @@ def rush_json(r: dict) -> str:
             ("bucket_blocks", _u64(r["bucket_blocks"])),
             ("duration_blocks", _u64(r["duration_blocks"])),
             ("cooldown_blocks", _u64(r["cooldown_blocks"])),
+            ("max_per_account", _u32(r["max_per_account"])),
             ("weights", rarity_weights_json(r["weights"])),
         ]
     )

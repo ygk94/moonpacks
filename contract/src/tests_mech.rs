@@ -398,6 +398,7 @@ fn rush(ratio_bps: u32, min_packs: u32, window: u64, baseline: u64, bucket: u64,
         bucket_blocks: bucket,
         duration_blocks: duration,
         cooldown_blocks: cooldown,
+        max_per_account: 1_000,
         weights: rush_weights(),
     }
 }
@@ -488,11 +489,11 @@ fn rush_is_frozen_at_purchase_not_at_reveal() {
     assert_eq!(c.get_pity(alice(), 0)["n"], 1);
     buy_reveal(&mut c, bob(), 2, 60);
     let b = buy_reveal(&mut c, bob(), 3, 60); // 2 packs dans la fenêtre courte, ×2 la moyenne : déclenche
-    assert_eq!(c.get_rush_state(0, Some(60))["last_trigger"], 60);
+    assert_eq!(c.get_rush_state(0, Some(60), None)["last_trigger"], 60);
     assert_eq!(pack(&c, b)["rush"], false);
     // Acheté pendant le rush, révélé bien après sa fin : reste un pack rush (table rush).
     let p = buy_at(&mut c, alice(), 70);
-    assert_eq!(c.get_rush_state(0, Some(70))["active"], true);
+    assert_eq!(c.get_rush_state(0, Some(70), None)["active"], true);
     reveal(&mut c, p, 4, 500);
     assert_eq!(pack(&c, p)["rush"], true);
     assert_eq!(pack(&c, p)["mode"], "rush");
@@ -598,6 +599,7 @@ fn invalid_mechanics_are_rejected() {
     rejects(mech(None, false, Some(rush(9_999, 2, 10, 100, 10, 5, 0))), "ratio_bps ≥ 10 000");
     rejects(mech(None, false, Some(rush(60_000, 2, 10, 50, 10, 5, 0))), "inatteignable");
     rejects(mech(None, false, Some(rush(15_000, 0, 10, 100, 10, 5, 0))), "min_packs");
+    rejects(mech(None, false, Some(RushParams { max_per_account: 0, ..rush(15_000, 2, 10, 100, 10, 5, 0) })), "max_per_account");
     rejects(mech(None, false, Some(rush(15_000, 2, 10, 100, 10, 0, 0))), "durée");
     rejects(mech(None, false, Some(rush(15_000, 2, 100, 100, 10, 5, 0))), "plus courte");
     let mut same = rush(15_000, 2, 10, 100, 10, 5, 0);
@@ -803,4 +805,36 @@ fn oracle_change_is_two_step_with_delay() {
     c.revoke_price_oracle();
     assert!(near_sdk::test_utils::get_logs().iter().any(|l| l.contains("price_oracle_revoked")));
     assert_eq!(c.get_config()["price_oracle_id"], Value::Null);
+}
+
+/// Paramètres du rush de `small_rush`, avec un plafond de packs rush par compte et par rush.
+fn capped_rush(cap: u32) -> RushParams {
+    RushParams { max_per_account: cap, ..small_rush() }
+}
+
+/// Revue, point 2 : après un creux, un seul acteur déclenche le rush puis achète au taux rush. Au-delà
+/// du plafond par compte (3), ses packs sont normaux, figés à l'achat et journalisés.
+#[test]
+fn rush_packs_are_capped_per_account() {
+    let mut c = contract_with(table(Some(mech(None, false, Some(capped_rush(3))))));
+    buy_reveal(&mut c, alice(), 1, 0);
+    buy_at(&mut c, bob(), 60);
+    buy_at(&mut c, bob(), 60); // déclenche
+    assert_eq!(c.get_rush_state(0, Some(60), None)["last_trigger"], 60);
+    let mut rush = vec![];
+    for k in 0..5u64 {
+        let p = buy_at(&mut c, bob(), 61 + k);
+        let logs = near_sdk::test_utils::get_logs();
+        rush.push(pack(&c, p)["rush"].as_bool().unwrap());
+        if k == 4 {
+            assert!(logs.iter().any(|l| l.contains("\"capped\":true") && l.contains("\"account_rush_packs\":3")), "{logs:?}");
+        }
+    }
+    assert_eq!(rush, [true, true, true, false, false], "3 packs rush par compte et par rush");
+    let st = c.get_rush_state(0, Some(66), Some(bob()));
+    assert_eq!(st["account"]["rush_packs"], 3);
+    assert_eq!(st["account"]["remaining"], 0);
+    // Un autre compte a son propre plafond.
+    let p = buy_at(&mut c, alice(), 70);
+    assert_eq!(pack(&c, p)["rush"], true);
 }

@@ -68,12 +68,13 @@
     },
     "rush": {
       "ratio_bps": 25000,
-      "min_packs": 50,
+      "min_packs": 100,
       "window_blocks": 6000,
       "baseline_blocks": 144000,
       "bucket_blocks": 1500,
       "duration_blocks": 3000,
       "cooldown_blocks": 36000,
+      "max_per_account": 3,
       "multipliers": {
         "mythic": 1.51,
         "legendary": 1.51,

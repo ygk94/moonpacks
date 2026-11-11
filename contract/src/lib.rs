@@ -97,6 +97,8 @@ pub const NEW_CHUNKS_BYTES: u64 = 120 + 50 + 120;
 pub const NEW_ACCOUNT_BYTES: u64 = 230;
 /// Entrée du compteur de pitié (compte, série), à son premier tirage.
 pub const PITY_ENTRY_BYTES: u64 = 120;
+/// Entrée du plafond de packs rush (compte, série), au premier pack rush du compte.
+pub const RUSH_ENTRY_BYTES: u64 = 130;
 /// Marge.
 pub const PACK_MARGIN_BYTES: u64 = 64;
 /// Dépôt d'une annonce de marché.
@@ -134,6 +136,7 @@ enum StorageKey {
     Approvals,
     Pity,
     Listings,
+    RushAccounts,
 }
 
 #[near(contract_state)]
@@ -167,6 +170,9 @@ pub struct Contract {
     approvals: LookupMap<u64, TokenApprovals>,
     /// Compteur de pitié : `(compte, série) → packs consécutifs sans gold pack`.
     pity: LookupMap<(AccountId, u32), u32>,
+    /// Packs rush d'un compte pendant le dernier rush où il en a acheté :
+    /// `(compte, série) → (hauteur du déclenchement, packs rush)`.
+    rush_accounts: LookupMap<(AccountId, u32), (u64, u32)>,
     listings: IterableMap<TokenId, Listing>,
     next_pack_id: u64,
     /// Total encaissé en prix de boosters (yoctoNEAR). Aucun retrait pour l'instant.
@@ -224,6 +230,7 @@ impl Contract {
             total_supply: 0,
             approvals: LookupMap::new(StorageKey::Approvals),
             pity: LookupMap::new(StorageKey::Pity),
+            rush_accounts: LookupMap::new(StorageKey::RushAccounts),
             listings: IterableMap::new(StorageKey::Listings),
             next_pack_id: 0,
             revenue: 0,

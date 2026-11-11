@@ -68,14 +68,23 @@ class MechVectors(unittest.TestCase):
 
     def test_rush_sequences(self):
         triggered = 0
+        capped = 0
         for r in MECH["rushes"]:
             st = core.new_rush_state()
+            accounts = {}
             for b in r["buys"]:
                 o = core.rush_on_buy(r["params"], st, b["height"])
                 self.assertEqual(o, {k: b[k] for k in o})
+                prev = accounts.get(b["account"]) if o["active"] else None
+                rush, cap, entry = core.rush_account(r["params"], o["active"], st["last_trigger"], prev)
+                if rush:
+                    accounts[b["account"]] = entry
+                self.assertEqual((rush, cap), (b["rush"], b["capped"]))
                 triggered += o["triggered"]
+                capped += cap
             self.assertEqual(st["rush_count"], r["rush_count"])
         self.assertGreater(triggered, 50)
+        self.assertGreater(capped, 20)
 
     def test_renormalization_keeps_burnable_share(self):
         """La part des brûlables dans leur rareté est celle de leurs poids de base (produits croisés)."""
@@ -111,6 +120,25 @@ class ReviewFixes(unittest.TestCase):
         self.assertLess(share[20], 0.11)
         self.assertEqual(core.raw_burn_weight(100, 1, 1, None, 2_500, 20), 95)
         self.assertEqual(core.raw_burn_weight(100, 60, 60, None, 2_500, 20), 25)
+
+    def test_single_actor_rush_is_capped(self):
+        """Après un creux, un acteur déclenche le rush par une rafale dans un bloc, puis achète :
+        3 packs rush au plus pour son compte, le reste au taux normal."""
+        p = dict(ratio_bps=25_000, min_packs=100, window_blocks=6_000, baseline_blocks=144_000,
+                 bucket_blocks=1_500, duration_blocks=3_000, cooldown_blocks=36_000, max_per_account=3)
+        st, acct = core.new_rush_state(), {}
+        core.rush_on_buy(p, st, 0)
+        h = 30 * 6_000
+        trig = [core.rush_on_buy(p, st, h)["triggered"] for _ in range(100)]
+        self.assertEqual(trig.index(True), 99, "min_packs = 100 : la 100e achat déclenche")
+        rush = []
+        for i in range(10):
+            o = core.rush_on_buy(p, st, h + 1 + i)
+            r, capped, e = core.rush_account(p, o["active"], st["last_trigger"], acct.get("acteur"))
+            if r:
+                acct["acteur"] = e
+            rush.append(r)
+        self.assertEqual(rush, [True] * 3 + [False] * 7)
 
     def test_resurrected_card_enters_with_mean_ratio(self):
         # 4 épiques adossées toutes brûlées, une morte (index 4) émise 100 fois puis ressuscitée.

@@ -456,6 +456,9 @@ impl Contract {
         if s.table.mechanics.as_ref().is_some_and(|m| m.pity.is_some()) {
             bytes += PITY_ENTRY_BYTES;
         }
+        if s.table.mechanics.as_ref().is_some_and(|m| m.rush.is_some()) {
+            bytes += RUSH_ENTRY_BYTES;
+        }
         bytes
     }
 }

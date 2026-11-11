@@ -1304,6 +1304,7 @@ async fn max_size_series_fits() -> Result<()> {
             bucket_blocks: 1_500,
             duration_blocks: 3_000,
             cooldown_blocks: 36_000,
+            max_per_account: 3,
             weights: weights(2, 2, 2, 2, 1),
         }),
         // Toutes les cartes sont adossées par la table : aucune n'est ressuscitable.
@@ -1545,6 +1546,8 @@ async fn mechanics_end_to_end() -> Result<()> {
             bucket_blocks: 5,
             duration_blocks: 20,
             cooldown_blocks: 20,
+            // Le pic vient de trois comptes : le plafond par compte ne coupe pas le rush.
+            max_per_account: 3,
             weights: weights(0, 30, 150, 250, 570),
         }),
         // leg_b et epic_c, non adossées par la table.

@@ -419,6 +419,8 @@ class SeriesReplay:
         self.pending_res: dict[int, int] = {}
         self.rush_state = core.new_rush_state()
         self.rush_of: dict[int, bool] = {}
+        # Plafond de packs rush par compte : compte → (déclenchement, packs rush pendant ce rush).
+        self.rush_accounts: dict[str, tuple] = {}
         self.saw_bought = False
 
     def on_bought(self, ev: dict) -> Report | None:
@@ -426,10 +428,17 @@ class SeriesReplay:
             return None
         self.saw_bought = True
         rep = Report(f"Achat du booster {ev['pack_id']} (gold rush)")
-        o = core.rush_on_buy(self.mech["rush"], self.rush_state, int(ev["block_height"]))
-        self.rush_of[int(ev["pack_id"])] = o["active"]
+        p = self.mech["rush"]
+        o = core.rush_on_buy(p, self.rush_state, int(ev["block_height"]))
+        owner = ev["owner_id"]
+        prev = self.rush_accounts.get(owner) if o["active"] else None
+        rush, capped, entry = core.rush_account(p, o["active"], self.rush_state["last_trigger"], prev)
+        if rush:
+            self.rush_accounts[owner] = entry
+        self.rush_of[int(ev["pack_id"])] = rush
         er = ev.get("rush") or {}
-        for k in ("active", "window_count", "baseline_count", "triggered"):
+        o.update(rush=rush, capped=capped, account_rush_packs=entry[1] if o["active"] and entry else None)
+        for k in ("active", "window_count", "baseline_count", "triggered", "rush", "capped", "account_rush_packs"):
             rep.check(er.get(k) == o[k], f"{k} = {o[k]}", f"{k} journalisé {er.get(k)} ≠ rejoué {o[k]}")
         return rep
 

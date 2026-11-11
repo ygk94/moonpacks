@@ -43,17 +43,30 @@ impl Contract {
         let mut rush_ev = None;
         let series = self.series.get_mut(series_id).unwrap();
         series.packs_sold += 1;
+        let mut rush_account = None;
         if let Some(rp) = series.table.mechanics.as_ref().and_then(|m| m.rush.clone()) {
             let st = series.rush.get_or_insert_with(RushState::default);
             let o = draw::rush_on_buy(&rp, st, height);
-            if o.active {
+            // Plafond par compte et par rush : au-delà, pack normal (figé ici, journalisé).
+            let key = (buyer.clone(), series_id);
+            let prev = if o.active { self.rush_accounts.get(&key).copied() } else { None };
+            let (rush, capped, entry) = draw::rush_account(&rp, o.active, st.last_trigger, prev);
+            if rush {
                 flags |= FLAG_RUSH;
             }
             rush_ev = Some(json!({
                 "active": o.active, "window_count": o.window_count, "baseline_count": o.baseline_count,
                 "triggered": o.triggered, "last_trigger": st.last_trigger,
                 "rush_until": st.last_trigger.map(|t| t.saturating_add(rp.duration_blocks)),
+                "rush": rush, "capped": capped,
+                "account_rush_packs": entry.filter(|_| o.active).map(|(_, n)| n),
             }));
+            if rush {
+                rush_account = entry.map(|e| (key, e));
+            }
+        }
+        if let Some((key, e)) = rush_account {
+            self.rush_accounts.insert(key, e);
         }
 
         let pack = Pack {

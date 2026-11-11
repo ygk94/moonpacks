@@ -79,6 +79,7 @@ pub(crate) fn validate_mechanics(t: &SeriesTable) {
         }
         require!(r.ratio_bps >= 10_000, "rush.ratio_bps ≥ 10 000 (×1)");
         require!(r.min_packs >= 1, "rush.min_packs ≥ 1");
+        require!(r.max_per_account >= 1, "rush.max_per_account ≥ 1");
         require!(r.bucket_blocks >= 1 && r.duration_blocks >= 1, "rush : seaux et durée ≥ 1 bloc");
         require!(
             r.window_blocks % r.bucket_blocks == 0 && r.baseline_blocks % r.bucket_blocks == 0,
@@ -195,8 +196,9 @@ impl Contract {
 
     /// État du gold rush : dernier déclenchement, fin du rush, nombre de rushes, packs dans la
     /// fenêtre à la hauteur `at_height` (bloc courant par défaut), et si un achat à cette hauteur
-    /// serait un pack rush.
-    pub fn get_rush_state(&self, series_id: u32, at_height: Option<u64>) -> Value {
+    /// serait un pack rush. Avec `account_id` : packs rush de ce compte pendant le rush en cours et
+    /// packs rush qui lui restent (`max_per_account`).
+    pub fn get_rush_state(&self, series_id: u32, at_height: Option<u64>, account_id: Option<AccountId>) -> Value {
         let s = self.series_ref(series_id);
         let Some(p) = s.table.mechanics.as_ref().and_then(|m| m.rush.as_ref()) else {
             return json!({ "enabled": false });
@@ -221,6 +223,10 @@ impl Contract {
             "start_height": st.start_height,
             "pause_until": pause_until,
             "active": active,
+            "account": account_id.map(|a| {
+                let n = self.rush_accounts.get(&(a.clone(), series_id)).filter(|(t, _)| Some(*t) == st.last_trigger).map(|(_, n)| *n).unwrap_or(0);
+                json!({ "account_id": a, "rush_packs": n, "remaining": if active { p.max_per_account.saturating_sub(n) } else { 0 } })
+            }),
         })
     }
 

@@ -302,7 +302,8 @@ def build_mechanics(params, table, etat=None):
         r = m["rush"]
         weights = r.get("weights") or scaled_weights(base, r["multipliers"])
         out["rush"] = {k: int(r[k]) for k in ("ratio_bps", "min_packs", "window_blocks", "baseline_blocks",
-                                               "bucket_blocks", "duration_blocks", "cooldown_blocks")}
+                                               "bucket_blocks", "duration_blocks", "cooldown_blocks",
+                                               "max_per_account")}
         out["rush"]["weights"] = weights
     if m.get("resurrection"):
         out["resurrection"] = {"eligible": resurrectable_indices(m["resurrection"], table["cards"], etat or {})}

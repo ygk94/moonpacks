@@ -277,6 +277,17 @@ def rush_on_buy(p: dict, st: dict, h: int) -> dict:
     return {"active": active, "window_count": cw, "baseline_count": cl, "triggered": triggered}
 
 
+def rush_account(p: dict, active: bool, trigger, prev):
+    """Même règle que ``draw::rush_account`` : plafond de packs rush par compte et par rush.
+    ``prev`` = (déclenchement, packs rush du compte) ou None. Renvoie (rush, plafonné, nouvel état)."""
+    if not active or trigger is None:
+        return False, False, prev
+    n = prev[1] if prev is not None and prev[0] == trigger else 0
+    if n >= p["max_per_account"]:
+        return False, True, (trigger, n)
+    return True, False, (trigger, n + 1)
+
+
 def _rarity_from_roll(weights: dict, rarity_roll: int) -> str:
     cum = 0
     for r in RARITIES:

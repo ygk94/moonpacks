@@ -219,7 +219,8 @@ pub struct BurnParams {
 /// (`window_blocks`), au moins `min_packs` packs ont été achetés et le rythme vaut au moins
 /// `ratio_bps / 10⁴` fois le rythme moyen de la fenêtre longue (`baseline_blocks`, 24 h), une fois
 /// la série active depuis `baseline_blocks` blocs et hors pause (`cooldown_blocks` après la fin du
-/// rush précédent). Les packs achetés dans les `duration_blocks` blocs suivants utilisent `weights`.
+/// rush précédent). Les packs achetés dans les `duration_blocks` blocs suivants utilisent `weights`,
+/// dans la limite de `max_per_account` packs rush par compte et par rush.
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RushParams {
@@ -230,6 +231,9 @@ pub struct RushParams {
     pub bucket_blocks: u64,
     pub duration_blocks: u64,
     pub cooldown_blocks: u64,
+    /// Packs rush au plus par compte et par rush. Au-delà, le pack est normal (figé à l'achat,
+    /// journalisé dans `pack_bought.rush.capped`).
+    pub max_per_account: u32,
     /// Table de taux « rush », distincte de la table or (couverture ≤ 80 %, contrôlée hors chaîne
     /// par `scripts/build_series.py`).
     pub weights: RarityWeights,
