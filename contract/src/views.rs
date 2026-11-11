@@ -226,6 +226,7 @@ impl Contract {
                                 "mythic_index": j, "commitment": m.commitment, "weight": m.weight,
                                 "cap": m.cap, "minted": s.mythic_minted[j],
                                 "ppm": ppm(rw, total, m.weight as u64, sum),
+                                "ppb": scaled(rw, total, m.weight as u64, sum, 1_000_000_000),
                             })
                         })
                         .collect();
@@ -244,6 +245,7 @@ impl Contract {
                                 "minted": s.minted[i],
                                 "burnable": c.backing.is_some() || self.resurrected.contains_key(&(series_id, i as u32)),
                                 "ppm": ppm(rw, total, c.weight as u64, sum),
+                                "ppb": scaled(rw, total, c.weight as u64, sum, 1_000_000_000),
                                 // Poids dans la rareté (renormalisé entre brûlables) et part en ppm de la rareté.
                                 "effective_weight": bv.as_ref().map(|bv| U128(draw::in_rarity_weight(&s.draw_cards[i], i, s.minted[i], bv, burn_f[r.index()]))),
                             })
@@ -256,13 +258,17 @@ impl Contract {
                     "rarity_weight": rw,
                     "total_rarity_weight": total,
                     "rarity_ppm": if total == 0 { 0 } else { rw * 1_000_000 / total },
+                    // Parties par milliard : la mythique (5 sur 2·10⁷ par emplacement) vaut 0 ppm arrondi.
+                    "rarity_ppb": if total == 0 { 0 } else { (rw as u128 * 1_000_000_000 / total as u128) as u64 },
                     "rarity_card_weight": sum,
                     "available_card_weight": draw::available_weight_compact(&s.draw_cards, &t.mythics, &s.minted, &s.mythic_minted, *r),
                     // Rareté pilotée par les burns : somme des poids renormalisés (modulo de card_roll).
                     "effective_card_weight": bv.as_ref().map(|bv| U128(draw::available_weight_mech(&s.draw_cards, &t.mythics, &s.minted, &s.mythic_minted, Some(bv), *r))),
                     "rush_rarity_ppm": t.mechanics.as_ref().and_then(|m| m.rush.as_ref()).map(|x| rarity_ppm(&x.weights, *r)),
+                    "rush_rarity_ppb": t.mechanics.as_ref().and_then(|m| m.rush.as_ref()).map(|x| rarity_scaled(&x.weights, *r, 1_000_000_000)),
                     // Gold pack : probabilité visée de la rareté, emplacement par emplacement (plancher compris).
                     "gold_slot_ppm": t.mechanics.as_ref().and_then(|m| m.gold.as_ref()).map(|g| g.slots.iter().map(|gs| rarity_ppm(&draw::gold_slot_weights(&t.rarity_weights, gs), *r)).collect::<Vec<_>>()),
+                    "gold_slot_ppb": t.mechanics.as_ref().and_then(|m| m.gold.as_ref()).map(|g| g.slots.iter().map(|gs| rarity_scaled(&draw::gold_slot_weights(&t.rarity_weights, gs), *r, 1_000_000_000)).collect::<Vec<_>>()),
                     "cards": cards,
                 })
             })
@@ -354,12 +360,11 @@ impl Contract {
         let d = pack.draws[slot];
         let owner_id = pack.cards[slot].owner.clone().unwrap_or_else(|| pack.owner_id.clone());
         let s = self.series_ref(pack.series_id);
-        let (card_id, sealed) = match d.kind {
-            CardKind::Visible => (Some(self.card_def(pack.series_id, d.index).card_id), false),
-            CardKind::Mythic => match &s.revealed_mythics[d.index as usize] {
-                Some(r) => (Some(r.card_id.clone()), false),
-                None => (None, true),
-            },
+        // Mythique : ni `card_id` ni adossement, même après la révélation (rien ne trahit le coin ;
+        // `sealed` dit seulement si l'engagement a été ouvert, `get_backing` reste la vue du burn).
+        let (card_id, sealed, backing) = match d.kind {
+            CardKind::Visible => (Some(self.card_def(pack.series_id, d.index).card_id), false, self.slot_backing(pack, slot)),
+            CardKind::Mythic => (None, s.revealed_mythics[d.index as usize].is_none(), None),
         };
         Some(CardView {
             token_id: token_id.clone(),
@@ -371,7 +376,7 @@ impl Contract {
             rarity: d.final_rarity,
             state: pack.cards[slot].state,
             sealed,
-            backing: self.slot_backing(pack, slot),
+            backing,
             listing: self.listings.get(&token_id).cloned(),
         })
     }
@@ -423,17 +428,27 @@ impl Contract {
 }
 
 fn ppm(rw: u64, total: u64, w: u64, sum: u64) -> u64 {
+    scaled(rw, total, w, sum, 1_000_000)
+}
+
+/// `rw / total × w / sum × unit`, arrondi vers le bas, en u128 : `rw, w < 2³²`, `total, sum < 2⁴²`
+/// (2 000 cartes de poids u32 au plus), `unit ≤ 10⁹`, donc le produit reste sous 2⁹⁴.
+fn scaled(rw: u64, total: u64, w: u64, sum: u64, unit: u128) -> u64 {
     if total == 0 || sum == 0 {
         return 0;
     }
-    ((rw as u128 * w as u128 * 1_000_000) / (total as u128 * sum as u128)) as u64
+    ((rw as u128 * w as u128 * unit) / (total as u128 * sum as u128)) as u64
 }
 
 fn rarity_ppm(w: &RarityWeights, r: Rarity) -> u64 {
+    rarity_scaled(w, r, 1_000_000)
+}
+
+fn rarity_scaled(w: &RarityWeights, r: Rarity, unit: u128) -> u64 {
     let total = w.total();
     if total == 0 {
         0
     } else {
-        w.get(r) as u64 * 1_000_000 / total
+        (w.get(r) as u128 * unit / total as u128) as u64
     }
 }

@@ -47,7 +47,9 @@ class MechVectors(unittest.TestCase):
             m = c["table"]["mechanics"]
             if m["pity"]:
                 g, r, pp = core.pity_is_gold(m["pity"], c["pity_n"], acc)
-                self.assertEqual((g, r, pp), (c["pity_gold"], c["gold_roll"], c["p_ppm"]))
+                self.assertEqual((g, r, pp), (c["pity_gold"], c["gold_roll"], c["p_ppb"]))
+                mode = core.pack_mode(g, c["rush"])
+                self.assertEqual(core.pity_after(m["pity"], c["pity_n"], mode), c["pity_after"])
                 golds += g
             mode = core.pack_mode(c["pity_gold"] and m["gold"] is not None, c["rush"])
             self.assertEqual(mode, c["mode"])
@@ -296,6 +298,32 @@ class SandboxMechanics(unittest.TestCase):
             self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
             self.assertIn("série à mécaniques", out.stdout)
             self.assertNotIn("NON CONFORME", out.stdout)
+
+
+class PityFormats(unittest.TestCase):
+    """Pitié en ppb sans garantie (contrat du 11/11) et ancien format en ppm (séries déjà déployées)."""
+
+    def test_new_format(self):
+        p = {"p0_ppb": 20_000, "k_ppb": 20, "p_max_ppb": 40_000, "n_max": None}
+        self.assertEqual(canon.pity_json(p), '{"p0_ppb":20000,"k_ppb":20,"p_max_ppb":40000,"n_max":null}')
+        self.assertEqual([core.pity_p(p, n) for n in (0, 1, 500, 1000, 10**6)], [20_000, 20_020, 30_000, 40_000, 40_000])
+        acc = bytes(32)
+        g, r, pp = core.pity_is_gold(p, 10**9, acc)
+        self.assertEqual((g, pp), (r < 40_000, 40_000))
+        self.assertLess(r, 10**9)
+        self.assertEqual(core.pity_after(p, 7, "rush"), 8, "un pack rush fait monter le compteur")
+        self.assertEqual(core.pity_after(p, 7, "gold"), 0)
+        self.assertEqual(core.pity_after(p, core.U32_MAX, "base"), core.U32_MAX, "saturé comme le contrat")
+        q = dict(p, n_max=3)
+        self.assertTrue(canon.pity_json(q).endswith('"n_max":3}'))
+        self.assertTrue(core.pity_is_gold(dict(q, p0_ppb=0, k_ppb=0, p_max_ppb=0), 2, acc)[0], "garantie optionnelle")
+
+    def test_legacy_format(self):
+        p = {"p0_ppm": 20_000, "k_ppm": 2_000, "n_max": 20}
+        self.assertEqual(canon.pity_json(p), '{"p0_ppm":20000,"k_ppm":2000,"n_max":20}')
+        self.assertEqual(core.pity_p(p, 10), 40_000)
+        self.assertEqual(core.pity_after(p, 7, "rush"), 0)
+        self.assertTrue(core.pity_is_gold(p, 19, bytes(32))[0])
 
 
 if __name__ == "__main__":

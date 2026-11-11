@@ -279,7 +279,7 @@ fn verify_pack_event(ev: &Value, owner: &str, table: &SeriesTable) {
 }
 
 /// Gold pack de la décision du 11/11 : 1-2 rare ou mieux (le 2 parmi les brûlables), 3-4 épique ou
-/// mieux, 5 légendaire 80 % ou mythique 20 % (`mythic` : poids mythique, 0 sans mythique).
+/// mieux, 5 légendaire 99 % ou mythique 1 % (`mythic` : poids mythique sur 100, 0 sans mythique).
 fn gold_v2(mythic: u32) -> GoldParams {
     let s = |floor, burnable| GoldSlot { floor, weights: None, burnable };
     GoldParams {
@@ -288,17 +288,17 @@ fn gold_v2(mythic: u32) -> GoldParams {
             s(Rarity::Rare, true),
             s(Rarity::Epic, false),
             s(Rarity::Epic, false),
-            GoldSlot { floor: Rarity::Legendary, weights: Some(weights(mythic, 80, 0, 0, 0)), burnable: false },
+            GoldSlot { floor: Rarity::Legendary, weights: Some(weights(mythic, 99, 0, 0, 0)), burnable: false },
         ],
     }
 }
 
-/// Tables de valeur provisoires de `scripts/serie-exemple.json` (normale 20 à 200 %, moyenne 75 %).
+/// Tables de valeur de `scripts/serie-exemple.json` (normale et rush de 20 à 200 %, moyenne 75 %).
 fn value_v2() -> ValueParams {
     ValueParams {
         normal: vec![(2_000, 15), (3_000, 13), (4_000, 10), (5_000, 10), (6_000, 10), (8_000, 10), (10_000, 10), (12_000, 8), (15_000, 5), (20_000, 9)],
         gold: vec![(10_000, 30), (15_000, 25), (20_000, 20), (30_000, 13), (50_000, 8), (80_000, 4)],
-        rush: vec![(2_000, 13), (3_000, 12), (4_000, 10), (5_000, 10), (6_000, 10), (8_000, 10), (10_000, 10), (12_000, 9), (15_000, 7), (20_000, 9)],
+        rush: vec![(2_000, 15), (3_000, 13), (4_000, 10), (5_000, 10), (6_000, 10), (8_000, 10), (10_000, 10), (12_000, 8), (15_000, 5), (20_000, 9)],
         multipliers: weights(0, 20, 5, 2, 1),
     }
 }
@@ -586,10 +586,11 @@ async fn mythic_reveal_and_commitment_check() -> Result<()> {
     let sealed_id = drawn[0]["token_id"].as_str().unwrap().to_string();
     assert_eq!(drawn[0]["commitment"], m.commitment);
     let tok: Value = env.contract.view("nft_token").args_json(json!({ "token_id": sealed_id })).await?.json()?;
-    assert_eq!(tok["metadata"]["title"], "Mythique scellée");
+    assert_anonymous_mythic(&tok);
+    let sealed_meta = tok["metadata"].clone();
     let card: Value = env.contract.view("get_card").args_json(json!({ "token_id": sealed_id })).await?.json()?;
     assert_eq!(card["sealed"], true);
-    assert!(card["backing"].is_null());
+    assert!(card["backing"].is_null() && card["card_id"].is_null());
 
     // Mauvais sel : refusé.
     let bad = env
@@ -621,8 +622,12 @@ async fn mythic_reveal_and_commitment_check() -> Result<()> {
     let content_pub: MythicContent = serde_json::from_value(ev["content"].clone())?;
     assert_eq!(hex::encode(sha(&[&serde_json::to_vec(&content_pub)?, &sel_pub])), m.content_hash);
 
+    // Métadonnées inchangées après la révélation : toujours « ? », rien sur le coin.
     let tok: Value = env.contract.view("nft_token").args_json(json!({ "token_id": sealed_id })).await?.json()?;
-    assert_eq!(tok["metadata"]["title"], "PEPE MYTHIQUE");
+    assert_anonymous_mythic(&tok);
+    assert_eq!(tok["metadata"], sealed_meta);
+    assert!(ev.get("token_ids").is_some());
+    assert!(!ok.logs().iter().any(|l| l.contains("nft_metadata_update")), "aucune mise à jour de métadonnées");
     let backing: Value = env.contract.view("get_backing").args_json(json!({ "token_id": sealed_id })).await?.json()?;
     assert_eq!(backing["amount"], "777");
     let views: Value = env.contract.view("get_mythic_commitments").args_json(json!({ "series_id": sid })).await?.json()?;
@@ -635,9 +640,28 @@ async fn mythic_reveal_and_commitment_check() -> Result<()> {
     let direct = ev2["draws"].as_array().unwrap().iter().find(|d| d["kind"] == "mythic").expect("mythique attendue");
     let card: Value = env.contract.view("get_card").args_json(json!({ "token_id": direct["token_id"] })).await?.json()?;
     assert_eq!(card["sealed"], false);
-    assert_eq!(card["card_id"], "pepe-mythic");
-    assert_eq!(card["backing"]["amount"], "777");
+    assert!(card["card_id"].is_null() && card["backing"].is_null(), "get_card ne montre pas le coin : {card}");
+    let tok: Value = env.contract.view("nft_token").args_json(json!({ "token_id": direct["token_id"] })).await?.json()?;
+    assert_anonymous_mythic(&tok);
     Ok(())
+}
+
+/// Métadonnées NEP-177 d'une mythique : « ? » partout, rien qui trahisse le coin ni ne distingue
+/// une mythique d'une autre (seuls la série, le pack et la date varient).
+fn assert_anonymous_mythic(tok: &Value) {
+    let m = &tok["metadata"];
+    assert_eq!(m["title"], "?");
+    assert_eq!(m["description"], "?");
+    assert_eq!(m["media"], memaster::MYTHIC_MEDIA);
+    for k in ["reference", "media_hash", "copies", "updated_at"] {
+        assert!(m[k].is_null(), "{k} : {m}");
+    }
+    let extra: Value = serde_json::from_str(m["extra"].as_str().unwrap()).unwrap();
+    let mut keys: Vec<&String> = extra.as_object().unwrap().keys().collect();
+    keys.sort();
+    assert_eq!(keys, ["pack_id", "rarity", "series_id"], "{extra}");
+    let txt = tok.to_string().to_lowercase();
+    assert!(!txt.contains("pepe"), "le coin apparaît : {txt}");
 }
 
 async fn simple_backed_series(env: &Env) -> Result<u32> {
@@ -1126,15 +1150,23 @@ fn tgas(g: u64) -> f64 {
     g as f64 / 1e12
 }
 
-/// Exécute `scripts/build_series.py` (catalogue v2 complet) dans un dossier temporaire.
+/// Exécute `scripts/build_series.py` (catalogue v2 complet) dans un dossier temporaire. Les
+/// paramètres sont ceux de `serie-exemple.json`, avec une seule différence : la garantie de pitié
+/// optionnelle `n_max = 20` (la série v2 n'en a pas ; ici, elle assure un gold pack mesuré en 20 packs).
 fn build_v2_args(tag: &str) -> std::path::PathBuf {
     let root = env!("CARGO_MANIFEST_DIR");
     let dir = std::path::PathBuf::from(format!("{root}/target/near-test/build-series-{tag}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut params: Value = serde_json::from_slice(&std::fs::read(format!("{root}/scripts/serie-exemple.json")).unwrap()).unwrap();
+    assert!(params["mechanics"]["pity"]["n_max"].is_null(), "série v2 sans garantie de pitié");
+    params["mechanics"]["pity"]["n_max"] = json!(20);
+    let params_path = dir.join("params.json");
+    std::fs::write(&params_path, serde_json::to_vec_pretty(&params).unwrap()).unwrap();
     let out = std::process::Command::new("python3")
         .arg("-I")
         .arg(format!("{root}/scripts/build_series.py"))
-        .arg(format!("{root}/scripts/serie-exemple.json"))
+        .arg(&params_path)
         .arg("--out")
         .arg(dir.join("out"))
         .arg("--secrets")
@@ -1274,7 +1306,7 @@ async fn catalogue_v2_batched_load_and_packs() -> Result<()> {
     let mut jsonl = String::new();
     let (mut worst_total, mut worst_buy, mut worst_final, mut worst_used) = (0u64, 0u64, 0u64, 0u64);
     let mut modes = std::collections::BTreeMap::<String, u32>::new();
-    // alice achète les 20 premiers : la pitié garantit au moins un gold pack (N = 20).
+    // alice achète les 20 premiers : la garantie de test (n_max = 20) donne au moins un gold pack.
     for i in 0..22 {
         let who = if i < 20 || i % 2 == 0 { &env.alice } else { &env.bob };
         let b = env.worker.view_account(env.contract.id()).await?;
@@ -1345,11 +1377,11 @@ async fn max_size_series_fits() -> Result<()> {
     t.cards_per_pack = 10;
     // Pire cas des mécaniques : toutes actives (pitié garantie un pack sur deux, burns, rush).
     // Gold pack de 10 emplacements (le maximum) : le gold pack v2 deux fois.
-    let mut gold = gold_v2(20);
+    let mut gold = gold_v2(1);
     gold.slots.extend(gold.slots.clone());
     t.mechanics = Some(Mechanics {
         gold: Some(gold),
-        pity: Some(PityParams { p0_ppm: 20_000, k_ppm: 2_000, n_max: 2 }),
+        pity: Some(PityParams { p0_ppb: 20_000_000, k_ppb: 2_000_000, p_max_ppb: 1_000_000_000, n_max: Some(2) }),
         burn: Some(BurnParams { floor_bps: 2_500, prior_k: 20 }),
         value: Some(value_v2()),
         rush: Some(RushParams {
@@ -1592,7 +1624,7 @@ async fn mechanics_end_to_end() -> Result<()> {
     t.mechanics = Some(Mechanics {
         gold: Some(gold_v2(0)),
         value: Some(value_v2()),
-        pity: Some(PityParams { p0_ppm: 100_000, k_ppm: 50_000, n_max: 3 }),
+        pity: Some(PityParams { p0_ppb: 100_000_000, k_ppb: 50_000_000, p_max_ppb: 1_000_000_000, n_max: Some(3) }),
         // A priori petit : sur une vingtaine de boosters, les burns doivent se voir dans les tirages.
         burn: Some(BurnParams { floor_bps: 2_500, prior_k: 2 }),
         rush: Some(RushParams {
@@ -1750,8 +1782,8 @@ async fn value_and_gold_pack_end_to_end() -> Result<()> {
         &env.owner,
     );
     t.mechanics = Some(Mechanics {
-        gold: Some(gold_v2(20)),
-        pity: Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 2 }),
+        gold: Some(gold_v2(1)),
+        pity: Some(PityParams { p0_ppb: 0, k_ppb: 0, p_max_ppb: 0, n_max: Some(2) }),
         burn: None,
         rush: None,
         resurrection: None,
@@ -1850,7 +1882,7 @@ async fn worst_case_cascade_with_burns_fits() -> Result<()> {
     t.mechanics = Some(Mechanics {
         gold: Some(GoldParams { slots: (0..10).map(|i| leg(i % 5 == 1)).collect() }),
         value: Some(value_v2()),
-        pity: Some(PityParams { p0_ppm: 20_000, k_ppm: 2_000, n_max: 2 }),
+        pity: Some(PityParams { p0_ppb: 20_000_000, k_ppb: 2_000_000, p_max_ppb: 1_000_000_000, n_max: Some(2) }),
         burn: Some(BurnParams { floor_bps: 2_500, prior_k: 20 }),
         rush: Some(RushParams {
             ratio_bps: 25_000,

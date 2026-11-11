@@ -43,8 +43,10 @@ impl Contract {
     }
 
     /// Révèle une mythique déjà sortie au moins une fois. Le dépôt couvre le stockage ajouté
-    /// (excédent rendu). Les cartes scellées prennent le contenu révélé à la lecture
-    /// (`nft_metadata_update` les liste).
+    /// (excédent rendu). **Publie le contenu** (`card_id`, sel, titre, médias, adossement) dans
+    /// `mythic_revealed` et `get_mythic_commitments` : c'est ce qui rend l'engagement vérifiable, et
+    /// ce qu'exige le burn d'une mythique (son adossement est dans le contenu). Les métadonnées
+    /// NEP-177 et `get_card` restent anonymes (« ? »).
     #[payable]
     pub fn reveal_mythic(
         &mut self,
@@ -96,9 +98,8 @@ impl Contract {
                 "content_hash": m.content_hash, "token_ids": sealed,
             }),
         );
-        if !sealed.is_empty() {
-            events::emit_nft_metadata_update(&sealed);
-        }
+        // Pas de `nft_metadata_update` : les métadonnées d'une mythique restent anonymes (« ? »)
+        // après la révélation, elles ne changent pas.
 
         // Stockage : flush explicite pour mesurer, puis facturation au révélateur.
         self.series.flush();

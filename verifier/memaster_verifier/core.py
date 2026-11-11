@@ -10,7 +10,9 @@ Tout est calculé octet par octet comme le contrat :
 
 Mécaniques (``docs/mecaniques-spec.md``), réimplémentées à part de ``draw.rs`` :
 
-- ``gold_roll = roll(acc, 0, 2) mod 10⁶`` ; gold pack si ``n + 1 ≥ N`` ou ``gold_roll < min(10⁶, p0 + k·n)`` ;
+- ``gold_roll = roll(acc, 0, 2) mod 10⁹`` ; gold pack si ``gold_roll < min(p_max, p0 + k·n)`` (ppb), ou si la
+  garantie optionnelle ``n_max`` est atteinte ; le compteur ne repart à 0 qu'après un gold pack (ancien format en ppm
+  avec garantie à N et remise à 0 après un pack rush : encore lu, pour les séries déjà déployées) ;
 - rareté pilotée par les burns : poids renormalisés entre brûlables de la rareté (``in_rarity_weight``) ;
 - gold rush : ``rush_on_buy`` (palier relatif, pause, fenêtre glissante par seaux) ;
 - gold pack : plancher de rareté par emplacement (``draw_slot_rule``, ``fallback_order``) ;
@@ -123,6 +125,8 @@ def _first_unlimited_common(table: dict) -> int:
 # ------------------------------------------------------------------ mécaniques
 
 PPM = 1_000_000
+PPB = 1_000_000_000
+U32_MAX = (1 << 32) - 1
 TAG_GOLD = 2
 
 
@@ -215,17 +219,37 @@ def available_weight_mech(table, minted, mythic_minted, burn: Burn | None, rarit
     )
 
 
-def pity_p_ppm(p: dict, n: int) -> int:
-    return min(PPM, p["p0_ppm"] + p["k_ppm"] * n)
+def pity_legacy(p: dict) -> bool:
+    """Ancien format de pitié (ppm, garantie à N, remise à 0 après un pack rush)."""
+    return "p0_ppm" in p
 
 
-def gold_roll(acc: bytes) -> int:
-    return roll(acc, 0, TAG_GOLD) % PPM
+def pity_p(p: dict, n: int) -> int:
+    """Probabilité d'un gold pack après n packs sans gold pack : ppb (ppm dans l'ancien format)."""
+    if pity_legacy(p):
+        return min(PPM, p["p0_ppm"] + p["k_ppm"] * n)
+    return min(p["p_max_ppb"], p["p0_ppb"] + p["k_ppb"] * n, PPB)
+
+
+def gold_roll(acc: bytes, unit: int = PPB) -> int:
+    return roll(acc, 0, TAG_GOLD) % unit
 
 
 def pity_is_gold(p: dict, n: int, acc: bytes) -> tuple[bool, int, int]:
-    r, pp = gold_roll(acc), pity_p_ppm(p, n)
-    return (n + 1 >= p["n_max"] or r < pp), r, pp
+    if pity_legacy(p):
+        r, pp = gold_roll(acc, PPM), pity_p(p, n)
+        return (n + 1 >= p["n_max"] or r < pp), r, pp
+    r, pp = gold_roll(acc), pity_p(p, n)
+    guaranteed = p.get("n_max") is not None and min(n + 1, U32_MAX) >= p["n_max"]
+    return (guaranteed or r < pp), r, pp
+
+
+def pity_after(p: dict, n: int, mode: str) -> int:
+    """Compteur après le tirage : 0 après un gold pack seulement, n + 1 (saturé sur u32) sinon. Ancien
+    format : 0 aussi après un pack rush."""
+    if pity_legacy(p):
+        return n + 1 if mode == "base" else 0
+    return 0 if mode == "gold" else min(n + 1, U32_MAX)
 
 
 def pack_mode(pity_gold: bool, rush: bool) -> str:

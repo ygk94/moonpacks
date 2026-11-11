@@ -236,15 +236,15 @@ impl Contract {
             let mut pity_n = None;
             if let Some(p) = &m.pity {
                 let nb = self.pity.get(&(owner.clone(), series_id)).copied().unwrap_or(0);
-                let (g, roll, p_ppm) = draw::pity_is_gold(p, nb, &pack.acc);
+                let (g, roll, p_ppb) = draw::pity_is_gold(p, nb, &pack.acc);
                 pity_gold = g;
                 pity_n = Some(nb);
-                pity_ev = json!({ "before": nb, "gold_roll": roll, "p_ppm": p_ppm, "gold": g });
+                pity_ev = json!({ "before": nb, "gold_roll": roll, "p_ppb": p_ppb, "gold": g });
             }
             mode = draw::pack_mode(pity_gold, rush);
             if let Some(nb) = pity_n {
-                // Gold pack (pitié) ou pack rush : le compteur repart à 0.
-                let after = if mode == PackMode::Base { nb.saturating_add(1) } else { 0 };
+                // Le compteur repart à 0 après un gold pack seulement ; un pack rush le fait monter.
+                let after = draw::pity_after(nb, pity_gold);
                 self.pity.insert((owner.clone(), series_id), after);
                 pity_ev["after"] = json!(after);
             }

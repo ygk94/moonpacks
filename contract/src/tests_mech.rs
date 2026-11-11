@@ -152,7 +152,7 @@ fn rarities(c: &Contract, id: u64) -> Vec<String> {
 
 #[test]
 fn pity_n1_makes_every_pack_gold() {
-    let mut c = contract_with(table(Some(mech(Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 1 }), false, None))));
+    let mut c = contract_with(table(Some(mech(Some(PityParams { p0_ppb: 0, k_ppb: 0, p_max_ppb: 0, n_max: Some(1) }), false, None))));
     for k in 0..4u8 {
         let p = buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
         assert_eq!(pack(&c, p)["mode"], "gold");
@@ -164,7 +164,7 @@ fn pity_n1_makes_every_pack_gold() {
 #[test]
 fn pity_is_guaranteed_at_n_max_minus_one_then_resets() {
     // p0 = k = 0 : seul la garantie peut donner un gold pack.
-    let mut c = contract_with(table(Some(mech(Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 4 }), false, None))));
+    let mut c = contract_with(table(Some(mech(Some(PityParams { p0_ppb: 0, k_ppb: 0, p_max_ppb: 0, n_max: Some(4) }), false, None))));
     let mut modes = vec![];
     for k in 0..9u8 {
         let p = buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
@@ -179,28 +179,59 @@ fn pity_is_guaranteed_at_n_max_minus_one_then_resets() {
 
 #[test]
 fn pity_roll_uses_acc_with_new_tag() {
-    // p0 = 50 % : le choix suit exactement gold_roll(acc) < p, avec acc final du tirage.
-    let p = PityParams { p0_ppm: 500_000, k_ppm: 0, n_max: 1_000 };
+    // p0 = 50 % : le choix suit exactement gold_roll(acc) < p (mod 10⁹), avec acc final du tirage.
+    let p = PityParams { p0_ppb: 500_000_000, k_ppb: 0, p_max_ppb: 500_000_000, n_max: None };
     let mut c = contract_with(table(Some(mech(Some(p.clone()), false, None))));
     let (mut gold_n, mut n) = (0, 0u32);
     for k in 0..40u8 {
         let id = buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
         let acc: [u8; 32] = hex_decode(pack(&c, id)["acc"].as_str().unwrap()).unwrap().try_into().unwrap();
         let (g, roll, pp) = draw::pity_is_gold(&p, n, &acc);
-        assert_eq!(roll as u128, draw::roll(&acc, 0, draw::TAG_GOLD) % 1_000_000);
-        assert_eq!(pp, 500_000);
+        assert_eq!(roll as u128, draw::roll(&acc, 0, draw::TAG_GOLD) % 1_000_000_000);
+        assert_eq!(pp, 500_000_000);
         assert_eq!(pack(&c, id)["mode"] == "gold", g);
         n = if g { gold_n += 1; 0 } else { n + 1 };
+        assert_eq!(c.get_pity(alice(), 0)["n"], n);
     }
     assert!(gold_n > 5 && gold_n < 35, "{gold_n} gold packs sur 40 à 50 %");
 }
 
 #[test]
 fn pity_probability_grows_linearly_and_caps() {
-    let p = PityParams { p0_ppm: 20_000, k_ppm: 10_000, n_max: 500 };
-    assert_eq!(draw::pity_p_ppm(&p, 0), 20_000);
-    assert_eq!(draw::pity_p_ppm(&p, 10), 120_000);
-    assert_eq!(draw::pity_p_ppm(&p, 200), 1_000_000);
+    // Paramètres de la série v2 : 1 sur 50 000 au départ, 1 sur 25 000 au plus, plafond en 1 000 packs.
+    let p = PityParams { p0_ppb: 20_000, k_ppb: 20, p_max_ppb: 40_000, n_max: None };
+    assert_eq!(draw::pity_p_ppb(&p, 0), 20_000);
+    assert_eq!(draw::pity_p_ppb(&p, 1), 20_020);
+    assert_eq!(draw::pity_p_ppb(&p, 500), 30_000);
+    assert_eq!(draw::pity_p_ppb(&p, 999), 39_980);
+    assert_eq!(draw::pity_p_ppb(&p, 1_000), 40_000);
+    assert_eq!(draw::pity_p_ppb(&p, 5_000), 40_000);
+    assert_eq!(draw::pity_p_ppb(&p, u32::MAX), 40_000, "aucun dépassement : u128");
+    // Bornes extrêmes : jamais plus de 10⁹.
+    let q = PityParams { p0_ppb: 1_000_000_000, k_ppb: 1_000_000_000, p_max_ppb: 1_000_000_000, n_max: None };
+    assert_eq!(draw::pity_p_ppb(&q, u32::MAX), 1_000_000_000);
+    // Sans garantie, même à n = u32::MAX : décision = gold_roll < p, et le compteur sature.
+    let acc = [7u8; 32];
+    let (g, r, pp) = draw::pity_is_gold(&p, u32::MAX, &acc);
+    assert_eq!((g, pp), (r < 40_000, 40_000));
+    assert_eq!(draw::pity_after(u32::MAX, false), u32::MAX);
+    assert_eq!(draw::pity_after(12, true), 0);
+}
+
+#[test]
+fn pity_without_guarantee_keeps_climbing() {
+    // p = 0 ppb au départ, + 1 ppb par pack, n_max absent : aucun gold pack en 30 packs, le compteur monte.
+    let p = PityParams { p0_ppb: 0, k_ppb: 1, p_max_ppb: 40_000, n_max: None };
+    let mut c = contract_with(table(Some(mech(Some(p), false, None))));
+    for k in 0..30u8 {
+        let id = buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
+        assert_eq!(pack(&c, id)["mode"], "base");
+    }
+    let v = c.get_pity(alice(), 0);
+    assert_eq!(v["n"], 30);
+    assert_eq!(v["p_ppb"], 30);
+    assert_eq!(v["packs_to_max"], 40_000 - 30);
+    assert!(v["guaranteed_in"].is_null(), "{v}");
 }
 
 #[test]
@@ -367,7 +398,7 @@ fn exhausted_card_stays_at_zero_after_burns() {
     // Légendaire plafonnée à 1 : une fois sortie et brûlée, elle reste épuisée (poids 0).
     let mut t = table(Some(Mechanics {
         gold: Some(gold()),
-        pity: Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 1 }),
+        pity: Some(PityParams { p0_ppb: 0, k_ppb: 0, p_max_ppb: 0, n_max: Some(1) }),
         burn: Some(BurnParams { floor_bps: FLOOR, prior_k: PRIOR_K }),
         rush: None,
         resurrection: None,
@@ -490,7 +521,7 @@ fn small_rush() -> RushParams {
 
 #[test]
 fn rush_is_frozen_at_purchase_not_at_reveal() {
-    let mut c = contract_with(table(Some(mech(Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 1_000 }), false, Some(small_rush())))));
+    let mut c = contract_with(table(Some(mech(Some(PityParams { p0_ppb: 0, k_ppb: 0, p_max_ppb: 0, n_max: Some(1_000) }), false, Some(small_rush())))));
     buy_reveal(&mut c, alice(), 1, 0); // début de la fenêtre longue
     assert_eq!(c.get_pity(alice(), 0)["n"], 1);
     buy_reveal(&mut c, bob(), 2, 60);
@@ -504,8 +535,8 @@ fn rush_is_frozen_at_purchase_not_at_reveal() {
     assert_eq!(pack(&c, p)["rush"], true);
     assert_eq!(pack(&c, p)["mode"], "rush");
     assert!(rarities(&c, p).iter().all(|r| r == "epic"));
-    // Un pack rush remet le compteur de pitié à zéro.
-    assert_eq!(c.get_pity(alice(), 0)["n"], 0);
+    // Un pack rush ne remet plus le compteur de pitié à zéro : il compte comme un pack sans gold pack.
+    assert_eq!(c.get_pity(alice(), 0)["n"], 2);
     // Acheté après la fin : pack normal, même révélé tout de suite.
     let q = buy_reveal(&mut c, bob(), 5, 600);
     assert_eq!(pack(&c, q)["rush"], false);
@@ -596,11 +627,15 @@ fn rejects(m: Mechanics, msg: &str) {
 
 #[test]
 fn invalid_mechanics_are_rejected() {
-    let pity = |n| Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: n });
+    let pity = |n| Some(PityParams { p0_ppb: 0, k_ppb: 0, p_max_ppb: 0, n_max: Some(n) });
     let none = Mechanics { gold: None, pity: None, burn: None, rush: None, resurrection: None, value: None };
     rejects(Mechanics { pity: pity(3), ..none.clone() }, "pity exige gold");
     rejects(mech(pity(0), false, None), "n_max");
-    rejects(mech(Some(PityParams { p0_ppm: 2_000_000, k_ppm: 0, n_max: 3 }), false, None), "ppm");
+    rejects(mech(pity(10_001), false, None), "n_max");
+    rejects(mech(Some(PityParams { p0_ppb: 2_000_000_000, k_ppb: 0, p_max_ppb: 2_000_000_000, n_max: None }), false, None), "ppb");
+    rejects(mech(Some(PityParams { p0_ppb: 0, k_ppb: 2_000_000_000, p_max_ppb: 10, n_max: None }), false, None), "ppb");
+    rejects(mech(Some(PityParams { p0_ppb: 50_000, k_ppb: 20, p_max_ppb: 40_000, n_max: None }), false, None), "p0_ppb ≤ p_max_ppb");
+    rejects(mech(Some(PityParams { p0_ppb: 0, k_ppb: 20, p_max_ppb: 0, n_max: None }), false, None), "inatteignable");
     rejects(mech(None, false, Some(rush(15_000, 2, 25, 100, 10, 5, 0))), "multiples");
     rejects(mech(None, false, Some(rush(15_000, 2, 10, 1_000, 10, 5, 0))), "96 seaux");
     rejects(mech(None, false, Some(rush(9_999, 2, 10, 100, 10, 5, 0))), "ratio_bps ≥ 10 000");
@@ -891,7 +926,7 @@ fn value_mech(normal: Vec<ValueTier>) -> Mechanics {
 }
 
 /// Gold pack de la décision du 11/11 : 1-2 rare ou mieux (le 2 parmi les brûlables), 3-4 épique ou
-/// mieux, 5 légendaire 80 % ou mythique 20 %.
+/// mieux, 5 légendaire 99 % ou mythique 1 %.
 fn gold_v2() -> GoldParams {
     let s = |floor, burnable| GoldSlot { floor, weights: None, burnable };
     GoldParams {
@@ -900,7 +935,7 @@ fn gold_v2() -> GoldParams {
             s(Rarity::Rare, true),
             s(Rarity::Epic, false),
             s(Rarity::Epic, false),
-            GoldSlot { floor: Rarity::Legendary, weights: Some(w(20, 80, 0, 0, 0)), burnable: false },
+            GoldSlot { floor: Rarity::Legendary, weights: Some(w(1, 99, 0, 0, 0)), burnable: false },
         ],
     }
 }
@@ -913,7 +948,7 @@ fn mythic_commit(i: u8, cap: u32) -> MythicCommitment {
 fn gold_table(myth_cap: u32, value: bool) -> SeriesTable {
     let mut t = table(Some(Mechanics {
         gold: Some(gold_v2()),
-        pity: Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 1 }),
+        pity: Some(PityParams { p0_ppb: 0, k_ppb: 0, p_max_ppb: 0, n_max: Some(1) }),
         value: value.then(|| value_p(vec![(7_500, 1)])),
         ..none_mech()
     }));
@@ -1055,7 +1090,7 @@ fn fallback_order_rules() {
     assert_eq!(draw::fallback_order(Common, Epic), vec![Epic, Legendary, Mythic, Rare, Common]);
 }
 
-/// Gold pack : 5 cartes, aucune commune, planchers par emplacement, 80 / 20 au dernier, le 2 parmi
+/// Gold pack : 5 cartes, aucune commune, planchers par emplacement, 99 / 1 au dernier, le 2 parmi
 /// les brûlables ; table de valeur gold.
 #[test]
 fn gold_pack_has_slot_floors_and_no_common() {
@@ -1080,8 +1115,26 @@ fn gold_pack_has_slot_floors_and_no_common() {
         }
         assert_eq!(pack(&c, id)["value"]["bps"], 30_000, "table de valeur gold");
     }
-    assert!(myth >= 6 && myth <= 30, "mythique au dernier emplacement : {myth} sur 80 (20 % attendus)");
+    assert!(myth <= 5, "mythique au dernier emplacement : {myth} sur 80 (1 % attendu)");
     assert!(leg > myth);
+    // Fréquence du 1 % sur 20 000 tirages du 5e emplacement (même fonction que le dernier reçu).
+    let t = gold_table(1_000_000, true);
+    let g = t.mechanics.as_ref().unwrap().gold.clone().unwrap();
+    let cards: Vec<DrawCard> = t.cards.iter().map(DrawCard::from).collect();
+    let minted = vec![0u32; cards.len()];
+    let mm = vec![0u32; t.mythics.len()];
+    let mut hits = 0;
+    for i in 0..20_000u32 {
+        if i % 500 == 0 {
+            set(owner(), 0, 10); // gaz du contexte simulé renouvelé (les sha256 en consomment)
+        }
+        let acc = env::sha256_array(&i.to_le_bytes());
+        let gs = &g.slots[4];
+        let wts = draw::gold_slot_weights(&t.rarity_weights, gs);
+        let d = draw::draw_slot_rule(&wts, gs.floor, gs.burnable, &cards, &t.mythics, &minted, &mm, None, &acc, 4);
+        hits += (d.final_rarity == Rarity::Mythic) as u32;
+    }
+    assert!((140..=270).contains(&hits), "{hits} mythiques sur 20 000 (200 attendues)");
 }
 
 /// Gold pack, légendaires épuisées : le 5 visé légendaire monte à la mythique ; mythique épuisée à
@@ -1123,7 +1176,7 @@ fn mythic_at_cap_falls_down_to_legendary() {
 #[test]
 fn value_table_follows_pack_mode() {
     // N = 2 : le deuxième pack d'alice est un gold pack ; carol achète pendant le rush.
-    let mut m = mech(Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 2 }), false, Some(small_rush()));
+    let mut m = mech(Some(PityParams { p0_ppb: 0, k_ppb: 0, p_max_ppb: 0, n_max: Some(2) }), false, Some(small_rush()));
     m.value = Some(ValueParams { normal: vec![(5_000, 1)], gold: vec![(30_000, 1)], rush: vec![(9_000, 1)], multipliers: MULT });
     let mut c = contract_with(table(Some(m)));
     let mut seen = vec![];

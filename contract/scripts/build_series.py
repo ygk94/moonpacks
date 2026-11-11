@@ -97,6 +97,9 @@ MIN_NORMAL_VALUE_BPS = 2_000
 MAX_NORMAL_VALUE_BPS = 20_000
 MAX_VALUE_BPS = 1_000_000
 MAX_VALUE_MULT = 1_000_000
+# Pitié (src/lib.rs) : probabilités en parties par milliard, garantie optionnelle bornée.
+PPB = 1_000_000_000
+MAX_PITY_N = 10_000
 DEFAULT_MYTHICS = os.path.join(REPO, "docs", "data", "secrets", "mythiques.json")
 VISIBLE = ("legendary", "epic", "rare", "common")
 
@@ -417,6 +420,25 @@ def value_tables(spec, price):
     return v
 
 
+def pity_params(spec):
+    """Pitié en ppb (10⁹) : `p0_ppb`, `k_ppb`, `p_max_ppb`, `n_max` (optionnel, `null` = aucune
+    garantie). Mêmes contrôles que le contrat (src/mechanics.rs)."""
+    if "p0_ppm" in spec or "k_ppm" in spec:
+        raise SystemExit("mechanics.pity : p0_ppm / k_ppm retirés, la pitié est en ppb (p0_ppb, k_ppb, p_max_ppb, n_max)")
+    p = {k: int(spec[k]) for k in ("p0_ppb", "k_ppb", "p_max_ppb")}
+    n = spec.get("n_max")
+    p["n_max"] = None if n is None else int(n)
+    if any(not 0 <= p[k] <= PPB for k in ("p0_ppb", "k_ppb", "p_max_ppb")):
+        raise SystemExit("mechanics.pity : probabilités en ppb, dans [0, 10⁹]")
+    if p["p0_ppb"] > p["p_max_ppb"]:
+        raise SystemExit("mechanics.pity : p0_ppb ≤ p_max_ppb")
+    if p["n_max"] is not None and not 1 <= p["n_max"] <= MAX_PITY_N:
+        raise SystemExit(f"mechanics.pity.n_max : absent, ou 1 à {MAX_PITY_N}")
+    if p["p_max_ppb"] == 0 and p["n_max"] is None:
+        raise SystemExit("mechanics.pity : gold pack inatteignable (p_max_ppb = 0 sans n_max)")
+    return {k: p[k] for k in ("p0_ppb", "k_ppb", "p_max_ppb", "n_max")}
+
+
 def mean_value(tiers):
     """Valeur moyenne d'une table, en multiples du prix."""
     return sum(b * w for b, w in tiers) / sum(w for _, w in tiers) / 10_000
@@ -434,7 +456,7 @@ def build_mechanics(params, table, etat=None):
     if m.get("gold"):
         out["gold"] = gold_slots(m["gold"], base)
     if m.get("pity"):
-        out["pity"] = {k: int(m["pity"][k]) for k in ("p0_ppm", "k_ppm", "n_max")}
+        out["pity"] = pity_params(m["pity"])
     if m.get("burn"):
         out["burn"] = {"floor_bps": int(m["burn"]["floor_bps"]), "prior_k": int(m["burn"]["prior_k"])}
     if m.get("rush"):
@@ -481,6 +503,20 @@ def build_mechanics(params, table, etat=None):
     return out, coverage
 
 
+def sim_value_tables(tv):
+    """Tables de valeur de --tables-valeur : format de ce script ({"normale": …, "multiplicateurs": …}),
+    ou format publié par la simulation (sim/resultats/serie*/tables-valeur.json :
+    {"value_tables": {"base"|"gold"|"rush": {"tiers": […]}}, "split_multipliers": {…}})."""
+    if "value_tables" not in tv:
+        return tv
+    vt = tv["value_tables"]
+    try:
+        return {"normale": vt["base"]["tiers"], "gold": vt["gold"]["tiers"], "rush": vt["rush"]["tiers"],
+                "multiplicateurs": tv["split_multipliers"]}
+    except KeyError as e:
+        raise SystemExit(f"--tables-valeur : format de la simulation incomplet ({e})")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("params")
@@ -504,7 +540,7 @@ def main(argv=None):
             tv = json.load(f)
         if not params.get("mechanics"):
             raise SystemExit("--tables-valeur exige des mécaniques dans les paramètres")
-        params["mechanics"]["value"] = tv
+        params["mechanics"]["value"] = sim_value_tables(tv)
     mythic_secrets = load_mythic_secrets(a.mythiques, catalogue)
     slug = params.get("slug", "serie")
     out = a.out or os.path.join(HERE, "out", slug)

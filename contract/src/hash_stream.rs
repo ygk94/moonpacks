@@ -198,7 +198,7 @@ mod tests {
                     },
                 ],
             }),
-            pity: Some(PityParams { p0_ppm: 20_000, k_ppm: 10_000, n_max: 30 }),
+            pity: Some(PityParams { p0_ppb: 20_000, k_ppb: 20, p_max_ppb: 40_000, n_max: None }),
             burn: Some(BurnParams { floor_bps: 2_500, prior_k: 20 }),
             rush: Some(RushParams {
                 ratio_bps: 25_000,
@@ -224,7 +224,7 @@ mod tests {
             r#""royalties":[{"account_id":"r.near","bps":10}],"#,
             r#""mechanics":{"gold":{"slots":[{"floor":"rare","weights":null,"burnable":true},"#,
             r#"{"floor":"legendary","weights":{"mythic":20,"legendary":80,"epic":0,"rare":0,"common":0},"burnable":false}]},"#,
-            r#""pity":{"p0_ppm":20000,"k_ppm":10000,"n_max":30},"burn":{"floor_bps":2500,"prior_k":20},"#,
+            r#""pity":{"p0_ppb":20000,"k_ppb":20,"p_max_ppb":40000,"n_max":null},"burn":{"floor_bps":2500,"prior_k":20},"#,
             r#""rush":{"ratio_bps":25000,"min_packs":50,"window_blocks":6000,"baseline_blocks":144000,"#,
             r#""bucket_blocks":1500,"duration_blocks":3000,"cooldown_blocks":36000,"max_per_account":3,"#,
             r#""weights":{"mythic":3,"legendary":30,"epic":241,"rare":936,"common":8790}},"#,

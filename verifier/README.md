@@ -17,7 +17,7 @@ journalisé, et le vérificateur le **rejoue à partir des événements seuls**,
 
 | Mécanique | Événements lus | Ce qui est recalculé |
 |---|---|---|
-| Pitié | `pack_revealed.mechanics.pity` | `gold_roll = roll(acc, 0, 2) mod 10⁶`, `p = min(10⁶, p0 + k·n)`, décision (`n + 1 ≥ N` ou `gold_roll < p`), `after`, et le compteur de chaque compte chaîné d'un booster au suivant |
+| Pitié | `pack_revealed.mechanics.pity` | `gold_roll = roll(acc, 0, 2) mod 10⁹`, `p = min(p_max, p0 + k·n)` en ppb, décision (`gold_roll < p`, ou garantie optionnelle `n + 1 ≥ n_max`), `after` (0 après un gold pack seulement), et le compteur de chaque compte chaîné d'un booster au suivant ; l'ancien format (ppm, garantie à N, remise à 0 après un pack rush) reste lu pour les séries déjà déployées |
 | Table de taux | `pack_revealed.mechanics.mode` | `gold` si la pitié l'accorde, sinon `rush` si le pack est rush, sinon `base` ; `rarity_roll` avec les poids de cette table |
 | Gold pack | `pack_revealed.draws` d'un pack `gold` | un emplacement par entrée de `mechanics.gold.slots` ; poids de l'emplacement (les siens, ou la base tronquée sous le plancher), retombée `core.fallback_order` (vers le bas jusqu'au plancher, vers le haut, puis sous le plancher), choix de la carte, restreint aux brûlables pour un emplacement `burnable` |
 | Valeur du pack | `pack_revealed.mechanics.value`, `card_resurrected` | dernier emplacement d'un pack normal tiré parmi les brûlables ; `value_roll = roll(acc, 0, 3) mod Σpoids`, palier de la table du pack (normale, gold, rush), `total = ⌊prix × V / 10⁴⌋`, répartition au prorata des multiplicateurs entre les brûlables du tirage (résurrections rejouées), reste au plus fort multiplicateur (`core.split_value`) |
