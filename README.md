@@ -32,7 +32,17 @@ recalculer avec le gaz réel mesuré sur testnet.
 
 ## État au 11/11/2026
 
-C'est de la recherche, pas encore de code. **Le plan de travail est dans `docs/plan.md`.** Tout est dans `docs/` :
+Branche `feat/socle-v2` : catalogue v2 et premier socle technique, rien de déployé.
+
+| Dossier | Contenu |
+|---|---|
+| `docs/catalogue-v2.md` | **Catalogue v2** : 1 649 cartes 100 % mèmes (3 mythiques scellés « ? »), 101 « À décider » ; régénéré par `docs/recherche-v2/consolider.py` |
+| `contract/` | Contrat NFT NEAR (Rust) : boosters, tirage vérifiable, mythiques scellés, marché, burn abstrait, séries par lots |
+| `verifier/` | Vérificateur public des tirages (Python) |
+| `sim/` | Simulation Monte-Carlo de l'économie (séries 1 et 2) |
+| `art/` | Générateur de visuels originaux (SVG) |
+
+**Le plan de travail est dans `docs/plan.md`.** La recherche est dans `docs/` :
 
 | Fichier | Contenu |
 |---|---|
