@@ -36,7 +36,7 @@ export interface FullTable {
   } | null;
 }
 
-interface RushParams {
+export interface RushParams {
   ratio_bps: number;
   min_packs: number;
   window_blocks: number;
@@ -74,7 +74,7 @@ function available(w: number, minted: number, cap: number | null): bigint {
   return w === 0 || (cap != null && minted >= cap) ? 0n : big(w);
 }
 
-interface Burn {
+export interface Burn {
   burned: number[];
   backed: boolean[];
   floorBps: number;
@@ -273,7 +273,7 @@ function goldSlotWeights(base: Weights, s: { floor: R; weights: Weights | null }
   return Object.fromEntries(RARITIES.map((r, i) => [r, i <= f ? base[r] : 0])) as Weights;
 }
 
-async function drawPackMech(t: FullTable, minted: number[], mm: number[], acc: Uint8Array, mode: string, burn: Burn | null, backed: boolean[]) {
+export async function drawPackMech(t: FullTable, minted: number[], mm: number[], acc: Uint8Array, mode: string, burn: Burn | null, backed: boolean[]) {
   const m = t.mechanics ?? {};
   const gold = mode === "gold" ? m.gold : null;
   const weights = mode === "rush" && m.rush ? m.rush.weights : t.rarity_weights;
@@ -298,13 +298,13 @@ async function drawPackMech(t: FullTable, minted: number[], mm: number[], acc: U
 
 // --- Gold rush, pitié, valeur ------------------------------------------------------------------
 
-interface RushState {
+export interface RushState {
   ring: [number | null, number][];
   start: number | null;
   lastTrigger: number | null;
 }
 
-function rushOnBuy(p: RushParams, st: RushState, h: number) {
+export function rushOnBuy(p: RushParams, st: RushState, h: number) {
   const bsz = Math.max(p.bucket_blocks, 1);
   const ml = Math.max(Math.floor(p.baseline_blocks / bsz), 1);
   const mw = Math.min(Math.max(Math.floor(p.window_blocks / bsz), 1), ml);
@@ -329,14 +329,14 @@ function rushOnBuy(p: RushParams, st: RushState, h: number) {
   return { active, window_count: cw, baseline_count: cl, triggered };
 }
 
-function rushAccount(p: RushParams, active: boolean, trigger: number | null, prev: [number, number] | undefined) {
+export function rushAccount(p: RushParams, active: boolean, trigger: number | null, prev: [number, number] | undefined) {
   if (!active || trigger == null) return { rush: false, capped: false, entry: prev };
   const n = prev && prev[0] === trigger ? prev[1] : 0;
   if (n >= p.max_per_account) return { rush: false, capped: true, entry: [trigger, n] as [number, number] };
   return { rush: true, capped: false, entry: [trigger, n + 1] as [number, number] };
 }
 
-function splitValue(totalV: bigint, slots: [R, boolean][], mult: Weights): (string | null)[] {
+export function splitValue(totalV: bigint, slots: [R, boolean][], mult: Weights): (string | null)[] {
   const s = slots.reduce((a, [r, b]) => (b ? a + big(mult[r]) : a), 0n);
   if (s === 0n) return slots.map(() => null);
   const out = slots.map(([r, b]) => (b ? (totalV * big(mult[r])) / s : null));

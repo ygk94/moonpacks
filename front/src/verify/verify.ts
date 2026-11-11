@@ -76,9 +76,12 @@ export async function sha256(...parts: Uint8Array[]): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.digest("SHA-256", concat(...parts)));
 }
 
-function u64le(n: number): Uint8Array {
-  const b = new Uint8Array(8);
+/** Entier u64 en petit-boutiste. `bigint` accepté : un pack_id au-delà de 2⁵³ n'est pas représentable en `number`. */
+export function u64le(n: number | bigint): Uint8Array {
+  if (typeof n === "number" && !Number.isSafeInteger(n)) throw new Error(`pack_id not a safe integer: ${n}`);
   let v = BigInt(n);
+  if (v < 0n || v >= 1n << 64n) throw new Error(`pack_id out of u64: ${n}`);
+  const b = new Uint8Array(8);
   for (let i = 0; i < 8; i++) {
     b[i] = Number(v & 0xffn);
     v >>= 8n;
@@ -90,11 +93,11 @@ export async function tableHash(table: unknown): Promise<string> {
   return hex(await sha256(enc.encode(JSON.stringify(table))));
 }
 
-export async function initialAcc(packId: number, owner: string, tableHashHex: string): Promise<Uint8Array> {
+export async function initialAcc(packId: number | bigint, owner: string, tableHashHex: string): Promise<Uint8Array> {
   return sha256(enc.encode("memaster:pack"), u64le(packId), enc.encode(owner), unhex(tableHashHex));
 }
 
-export async function mix(acc: Uint8Array, seed: Uint8Array, packId: number, owner: string): Promise<Uint8Array> {
+export async function mix(acc: Uint8Array, seed: Uint8Array, packId: number | bigint, owner: string): Promise<Uint8Array> {
   return sha256(acc, seed, u64le(packId), enc.encode(owner));
 }
 
