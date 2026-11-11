@@ -225,12 +225,10 @@ class TestBout(unittest.TestCase):
                 md = f.read()
         myth = [o for o in data if o["rarete"] == "mythique"]
         self.assertEqual(len(myth), 3)
-        self.assertEqual(sorted(o["secret"]["ticker"] for o in myth), ["DOGE", "PEPE", "SHIB"])
         self.assertTrue(all(o["nom"] == "?" and o["visuel"] == "?" for o in myth))
         self.assertEqual(len({o["id"] for o in data}), len(data))
         self.assertTrue(all(o["burn"] == "à définir" for o in data))
         self.assertIn("3 mythiques scellés", md)
-        self.assertNotIn("| Dogecoin | DOGE |", md)
         tick = {o["ticker"] for o in data if o["section"] == "catalogue"}
         self.assertNotIn("PUMP", tick)  # retrait R5
         self.assertNotIn("MEMETOON", {o["nom"] for o in data})
@@ -249,6 +247,94 @@ class TestBout(unittest.TestCase):
         self.assertTrue(par_tk["SHIBDOGE"]["pic_aberrant"])
         self.assertEqual(par_tk["BABYDOGE"]["rarete"], "épique")
         self.assertIn("## Annexe 5 : pics aberrants", md)
+
+    def test_secrets_hors_json_public(self):
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            C.main(["--out-dir", d, "--demo"])
+            chemin = os.path.join(d, "secrets", "mythiques.json")
+            self.assertEqual(os.stat(chemin).st_mode & 0o777, 0o600)
+            with open(chemin, encoding="utf-8") as f:
+                secrets = json.load(f)["mythiques"]
+            publics = {}
+            for nom in ("catalogue-v2.json", "catalogue-demo.json", "catalogue-v2.md", "catalogue-demo.md"):
+                with open(os.path.join(d, nom), encoding="utf-8") as f:
+                    publics[nom] = f.read()
+        # Les vrais tickers sont vérifiés par empreinte : aucun n'est écrit dans un fichier suivi.
+        self.assertEqual(sorted(C.empreinte_ticker(m["ticker"]) for m in secrets), sorted(C.MYTHIQUES_V1.values()))
+        self.assertEqual([m["id"] for m in secrets], ["mythique-m1", "mythique-m2", "mythique-m3"])
+        self.assertNotIn("| (scellé) |", publics["catalogue-v2.md"])  # homonymes d'une mythique non listés
+        for nom, texte in publics.items():
+            self.assertNotIn('"secret"', texte, nom)
+            for m in secrets:
+                self.assertNotIn("| %s | %s |" % (m["nom"], m["ticker"]), texte, nom)
+                if m["coingecko_id"]:
+                    self.assertNotIn("`%s`" % m["coingecko_id"], texte, nom)
+                    self.assertNotIn('"%s"' % m["coingecko_id"], texte, nom)
+        for nom in ("catalogue-v2.json", "catalogue-demo.json"):
+            for o in json.loads(publics[nom]):
+                self.assertNotIn("secret", o)
+                if o["rarete"] == "mythique":
+                    self.assertTrue(all(o[k] in ("?", None, [], False) for k in C.CHAMPS_SECRET[2:]
+                                        if k in o), o["id"])
+
+
+class TestDemo(unittest.TestCase):
+    def test_demo(self):
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            C.main(["--out-dir", d, "--demo"])
+            with open(os.path.join(d, "catalogue-demo.json"), encoding="utf-8") as f:
+                demo = json.load(f)
+            with open(os.path.join(d, "catalogue-v2.json"), encoding="utf-8") as f:
+                v2 = {o["id"]: o for o in json.load(f)}
+            with open(os.path.join(d, "catalogue-demo.md"), encoding="utf-8") as f:
+                md = f.read()
+        ids = [o["id"] for o in demo]
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertTrue(all(o["section"] == "catalogue" for o in demo))
+        rein = [o for o in demo if o["reintegree"]]
+        self.assertEqual(rein, [])  # assez de matière : aucune exclue réintégrée
+        for o in demo:
+            self.assertEqual(o["section_v2"], "catalogue", o["id"])
+            self.assertFalse(any(x in o["drapeau"] for x in C.DRAPEAUX_DEMO), o["id"])
+            self.assertIsInstance(o["brulable_possible"], bool)
+            self.assertTrue(o["raison_brulable"])
+            self.assertEqual(o["numero"], v2[o["id"]]["numero"])
+            if o["brulable_possible"]:
+                self.assertFalse(o["etat"].startswith("mort"), o["id"])
+                self.assertGreaterEqual(o["liquidite"]["volume_24h_usd"], 2e4)
+                self.assertGreaterEqual(o["liquidite"]["capitalisation_usd"], 1e6)
+        noms = {o["nom"] for o in demo}
+        for exclu in ("HarryPotterObamaSonic10Inu", "HarryPotterTrumpHomerSimpson777Inu", "Official Trump"):
+            self.assertNotIn(exclu, noms)
+        myth = [o for o in demo if o["rarete"] == "mythique"]
+        self.assertEqual(len(myth), 3)
+        self.assertTrue(all(not o["brulable_possible"] and o["liquidite"] is None for o in myth))
+        brul = [o for o in demo if o["brulable_possible"]]
+        self.assertGreaterEqual(len(brul), C.MIN_BRULABLES)
+        self.assertTrue(any(o["rarete"] in ("commune", "rare") for o in brul))
+        self.assertIn("### Politiciens sans drapeau", md)
+
+    def test_reintegration_par_paliers(self):
+        def carte(nom, drap="", a_dec=False, cid="x"):
+            c = C.Carte(nom=nom, ticker=nom.upper(), etat="actif", cg_ids=[cid], drapeaux=[drap] if drap else [],
+                        a_decider=a_dec)
+            c.rarete, c.numero, c.id = "commune", nom, nom
+            return c
+        cg = {"x": {"total_volume": "50000", "market_cap": "2000000"}}
+        cat = [carte("propre"), carte("star", "personne réelle"), carte("sale", "obscène"),
+               carte("escroc", "arnaque avérée"), carte("mort", cid="absent")]
+        dec = [carte("suspens", a_dec=True)]
+        demo = C.construire_demo(cat, dec, cg, min_brulables=3)
+        # « mort » reste (sans drapeau) mais ne compte pas ; « star » puis « sale » comblent le manque.
+        self.assertEqual([c.nom for c in demo["cartes"]], ["propre", "star", "sale", "mort"])
+        self.assertEqual([c.brulable for c in demo["cartes"]], [True, True, True, False])
+        self.assertTrue(demo["atteint"])
+        demo = C.construire_demo(cat, dec, cg, min_brulables=10)
+        self.assertNotIn("escroc", [c.nom for c in demo["cartes"]])  # jamais d'arnaque avérée
+        self.assertIn("suspens", [c.nom for c in demo["cartes"]])
+        self.assertFalse(demo["atteint"])
 
 
 if __name__ == "__main__":

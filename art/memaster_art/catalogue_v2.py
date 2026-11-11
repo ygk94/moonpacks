@@ -4,8 +4,9 @@ Règles :
 - seules les entrées `section == "catalogue"` sont prises, sauf `inclure_a_decider=True`
   (ajoute la section « à décider ») ;
 - l'identifiant de carte est l'`id` stable (slug), pas le numéro ;
-- le champ `secret` des mythiques n'est jamais lu : il est retiré dès le décodage JSON
-  (`object_pairs_hook`), puis seuls les champs de `CHAMPS_LUS` sont consultés ;
+- le JSON public n'a plus de champ `secret` (vrais noms dans docs/data/secrets/, hors git, jamais lu ici) ;
+  par prudence, un `secret` d'un ancien JSON est retiré dès le décodage (`object_pairs_hook`), puis seuls
+  les champs de `CHAMPS_LUS` sont consultés ;
 - une mythique est toujours scellée : ticker et nom forcés à « ? », rien d'autre n'est gardé ;
 - `drapeau` n'est pas lu (il ne s'affiche pas sur la carte) ; `burn = à définir` devient ''.
 """

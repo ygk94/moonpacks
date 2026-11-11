@@ -150,18 +150,19 @@ class Catalogue(unittest.TestCase):
     def test_lecture_catalogue_final(self):
         cartes = lire_catalogue(CATALOGUE)
         self.assertGreater(len(cartes), 500)
-        self.assertEqual(cartes[0].ticker, "DOGE")
+        self.assertEqual(cartes[0].numero, 1)
+        self.assertTrue(cartes[0].ticker not in ("", "?"))
         self.assertTrue(all(c.rarete in RARETES and c.etat in ETATS for c in cartes))
 
     def test_format_v2_mythique(self):
         texte = (
             "## Cartes\n\n| N° | Nom | Ticker | Chaîne | Lancement | État actuel | Rareté proposée | Adresse |\n"
             "|---|---|---|---|---|---|---|---|\n"
-            "| 1 | Dogecoin | DOGE | Dogecoin (blockchain propre) | déc. 2013 | actif | mythique | sans objet |\n"
+            "| 1 | Toutoucoin | TOUT | Toutoucoin (blockchain propre) | déc. 2013 | actif | mythique | sans objet |\n"
             "| 2 | Vieux mème | OLD | Solana (à vérifier) | 2021 | mort | commune* | `So1aNa` |\n"
         )
         l1, l2 = [ligne_vers_carte(l, i + 1) for i, l in enumerate(lire_lignes(texte))]
-        self.assertEqual((l1.rarete, l1.chaine, l1.annee_pic, l1.identifiant), ("mythique", "Dogecoin", 2013, "memaster:1"))
+        self.assertEqual((l1.rarete, l1.chaine, l1.annee_pic, l1.identifiant), ("mythique", "Toutoucoin", 2013, "memaster:1"))
         self.assertEqual((l2.rarete, l2.etat, l2.chaine, l2.identifiant), ("commune", "mort", "Solana", "So1aNa"))
 
 

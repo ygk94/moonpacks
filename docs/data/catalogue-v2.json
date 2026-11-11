@@ -26,27 +26,7 @@
   "origines": [],
   "coingecko_id": "?",
   "adresse": "?",
-  "visuel": "?",
-  "secret": {
-   "id": "mythique-m1",
-   "nom": "Dogecoin",
-   "ticker": "DOGE",
-   "chaine": "Dogecoin (blockchain propre)",
-   "chaine_normalisee": "blockchain propre",
-   "lancement": "2013",
-   "epoque": "2013-2018",
-   "pic": "≈ 88,80 Md$ (sourcé)",
-   "pic_usd": 88800000000.0,
-   "nature_pic": "sourcé",
-   "etat": "en déclin",
-   "histoire": "",
-   "source": "CG `dogecoin`",
-   "origines": [
-    "v1 n° 1"
-   ],
-   "coingecko_id": "dogecoin",
-   "adresse": ""
-  }
+  "visuel": "?"
  },
  {
   "id": "mythique-m2",
@@ -75,27 +55,7 @@
   "origines": [],
   "coingecko_id": "?",
   "adresse": "?",
-  "visuel": "?",
-  "secret": {
-   "id": "mythique-m2",
-   "nom": "Shiba Inu",
-   "ticker": "SHIB",
-   "chaine": "Ethereum",
-   "chaine_normalisee": "Ethereum",
-   "lancement": "2020",
-   "epoque": "2019-2022",
-   "pic": "≈ 40,00 Md$ (sourcé)",
-   "pic_usd": 40000000000.0,
-   "nature_pic": "sourcé",
-   "etat": "en déclin",
-   "histoire": "",
-   "source": "CG `shiba-inu`",
-   "origines": [
-    "v1 n° 2"
-   ],
-   "coingecko_id": "shiba-inu",
-   "adresse": "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce"
-  }
+  "visuel": "?"
  },
  {
   "id": "mythique-m3",
@@ -124,28 +84,7 @@
   "origines": [],
   "coingecko_id": "?",
   "adresse": "?",
-  "visuel": "?",
-  "secret": {
-   "id": "mythique-m3",
-   "nom": "Pepe",
-   "ticker": "PEPE",
-   "chaine": "Ethereum",
-   "chaine_normalisee": "Ethereum",
-   "lancement": "2023",
-   "epoque": "2023-2026",
-   "pic": "≈ 11,78 Md$ (estimé CG, au-dessus de la borne sourcée)",
-   "pic_usd": 11780000000.0,
-   "nature_pic": "estimé",
-   "etat": "en déclin",
-   "histoire": "",
-   "source": "CG `pepe`",
-   "origines": [
-    "v1 n° 3",
-    "correction r3"
-   ],
-   "coingecko_id": "pepe",
-   "adresse": "0x6982508145454ce325ddbe47a25d4ec3d2311933"
-  }
+  "visuel": "?"
  },
  {
   "id": "bonk-bonk",

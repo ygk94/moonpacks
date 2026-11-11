@@ -4,3 +4,6 @@ docs/images/
 .DS_Store
 __pycache__/
 *.pyc
+
+# Vrais noms des mythiques scellées (consolider.py) : jamais dans git
+docs/data/secrets/

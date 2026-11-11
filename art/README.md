@@ -28,7 +28,7 @@ Options :
 - `--planche` : planches HTML de contact, 50 cartes par page (`planche-01.html`, …), à ouvrir dans un navigateur.
 - `--base-url https://…/` : préfixe des champs `media` et `reference`. Vide par défaut : chemins relatifs.
 - `--mythiques 1,2,3` : passe ces N° en mythique (règle v2). On peut aussi donner un ticker, mais il vise toutes
-  les cartes qui le portent (8 cartes pour `DOGE,SHIB,PEPE` dans le catalogue actuel). Un catalogue v2 dont la
+  les cartes qui le portent (homonymes compris). Un catalogue v2 dont la
   colonne Rareté vaut déjà « mythique » n'a pas besoin de cette option.
 
 `out/` est ignoré par git (`art/.gitignore`). `exemples/` est versionné : 11 cartes et le dos scellé, en SVG,
@@ -39,13 +39,17 @@ PNG et JSON, plus une planche.
 - Seule la section `catalogue` est lue (1 649 cartes) ; `--inclure-a-decider` ajoute les 101 « à décider ».
 - L'identifiant de carte est l'`id` stable (slug) : nom des fichiers (`bonk-bonk.svg`), graine de l'art,
   `identifiant` des métadonnées. Le N° (« 12 », « M1 », « AD3 ») n'est qu'affiché.
-- Champs lus : liste blanche `CHAMPS_LUS` de `catalogue_v2.py`. Le champ `secret` est jeté au décodage JSON et
-  n'est jamais lu ni écrit ; `drapeau` n'est pas lu (rien sur la carte).
+- Champs lus : liste blanche `CHAMPS_LUS` de `catalogue_v2.py` ; `drapeau` n'est pas lu (rien sur la carte).
+  Le JSON public n'a plus de champ `secret` : les vrais noms des mythiques sont dans `docs/data/secrets/mythiques.json`
+  (ignoré par git), que ce générateur ne lit jamais. Un ancien JSON qui aurait encore `secret` le voit jeté au décodage.
 - Mythiques : toujours scellées. Pas de recto : `mythique-m1.json` pointe vers `dos-mythique.svg`, sans
-  `reference`, avec seulement l'`id` et le N° dans `extra`. Un test vérifie l'absence de DOGE/SHIB/PEPE.
+  `reference`, avec seulement l'`id` et le N° dans `extra`. Si `docs/data/secrets/mythiques.json` existe, un test vérifie
+  qu'aucun vrai nom, ticker, id CoinGecko ou adresse n'apparaît dans leurs sorties.
 - État : « mort… » donne le style cimetière, « en déclin… », « actif », sinon « à vérifier ».
 - Chaîne : `chaine_normalisee`. Année du pic : première année du `pic`, sinon du `lancement`.
 - Burn : « à définir » n'est pas affiché ; `burn: null` dans le `.ref.json`, avec l'`adresse` si connue.
+- Démo : `docs/data/catalogue-demo.json` (`consolider.py --demo`) se lit de la même façon :
+  `python3 -m memaster_art --catalogue ../docs/data/catalogue-demo.json --out out/demo/ --planche`.
 - `exemples/v2/` : 2 cartes par rareté (une vivante, une morte si possible) et le dos, plus `planche-v2.png`.
 
 ## Sorties par carte
@@ -120,7 +124,7 @@ D'après `docs/marche-droits-economie.md` (section 2.3) et `docs/visuels-droits.
   kabosu, visage, officiel, …) hors des champs de données. Un test vérifie que ce garde-fou détecte bien un mot
   interdit.
 - **À faire avant toute mise en ligne.** Faire valider l'approche par un juriste. Les 233 cartes de la liste A de
-  `visuels-droits.md` (dont DOGE, SHIB, PEPE) gardent leur risque de nom et de ticker, même avec un art abstrait.
+  `visuels-droits.md` gardent leur risque de nom et de ticker, même avec un art abstrait.
 
 ## Rendu PNG
 

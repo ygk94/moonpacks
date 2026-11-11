@@ -15,9 +15,22 @@ from memaster_art.catalogue_v2 import lire_catalogue_v2, lire_entrees  # noqa: E
 from memaster_art.cli import generer, main  # noqa: E402
 from memaster_art.rendu import rendre_carte, rendre_dos  # noqa: E402
 
-CATALOGUE_V2 = os.path.join(ICI, "..", "..", "docs", "data", "catalogue-v2.json")
-# Vrais noms des mythiques : ne doivent apparaître dans aucune sortie publique de M1–M3.
-VRAIS_NOMS = re.compile(r"doge|dogecoin|shib|shiba|pepe", re.I)
+DATA = os.path.join(ICI, "..", "..", "docs", "data")
+CATALOGUE_V2 = os.path.join(DATA, "catalogue-v2.json")
+CATALOGUE_DEMO = os.path.join(DATA, "catalogue-demo.json")
+# Vrais noms des mythiques : hors git (docs/data/secrets/, écrit par consolider.py), jamais dans ce dépôt.
+SECRETS = os.path.join(DATA, "secrets", "mythiques.json")
+
+
+def vrais_noms():
+    """Motif des vrais noms, tickers, ids CoinGecko et adresses des mythiques, ou None sans fichier secret."""
+    if not os.path.exists(SECRETS):
+        return None
+    with open(SECRETS, encoding="utf-8") as f:
+        mythiques = json.load(f)["mythiques"]
+    mots = {v for m in mythiques for k in ("nom", "ticker", "coingecko_id", "adresse")
+            for v in [str(m.get(k) or "").strip("`")] if len(v) >= 3}
+    return re.compile("|".join(re.escape(m) for m in sorted(mots, key=len, reverse=True)), re.I)
 
 MINI = [
     {"id": "vieux-meme-old", "numero": "7", "section": "catalogue", "nom": "Vieux mème †", "ticker": "OLD",
@@ -29,7 +42,8 @@ MINI = [
      "etat": "à vérifier (source muette)", "rarete": "rare", "drapeau": "politique", "burn": "à définir", "adresse": ""},
     {"id": "mythique-m1", "numero": "M1", "section": "catalogue", "nom": "?", "ticker": "?", "etat": "?",
      "rarete": "mythique", "burn": "à définir", "adresse": "?", "visuel": "?",
-     "secret": {"nom": "Dogecoin", "ticker": "DOGE", "adresse": "0xSECRETSECRETSECRET"}},
+     # Ancien format (avant le 11/11) : un champ `secret` éventuel doit toujours être jeté au décodage.
+     "secret": {"nom": "Nom Caché", "ticker": "CACHE", "adresse": "0xSECRETSECRETSECRET"}},
 ]
 
 
@@ -74,7 +88,22 @@ class LectureV2(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             entrees = lire_entrees(_ecrire_mini(d))
         self.assertTrue(all("secret" not in e and "drapeau" not in e for e in entrees))
-        self.assertNotIn("Dogecoin", json.dumps(entrees, ensure_ascii=False))
+        texte = json.dumps(entrees, ensure_ascii=False)
+        self.assertNotIn("Nom Caché", texte)
+        self.assertNotIn("0xSECRET", texte)
+
+    def test_json_publics_sans_secret(self):
+        for chemin in (CATALOGUE_V2, CATALOGUE_DEMO):
+            with open(chemin, encoding="utf-8") as f:
+                texte = f.read()
+            self.assertNotIn('"secret"', texte, chemin)
+            motif = vrais_noms()
+            for e in json.loads(texte):
+                self.assertNotIn("secret", e)
+                if e["rarete"] == "mythique":
+                    self.assertEqual((e["nom"], e["ticker"], e["coingecko_id"], e["adresse"]), ("?",) * 4)
+                    if motif:
+                        self.assertIsNone(motif.search(json.dumps(e, ensure_ascii=False)), e["id"])
 
 
 class MythiquesScellees(unittest.TestCase):
@@ -92,11 +121,13 @@ class MythiquesScellees(unittest.TestCase):
             dos = rendre_dos().encode()
             with open(os.path.join(d, "dos-mythique.svg"), "rb") as f:
                 self.assertEqual(f.read(), dos)
+            motif = vrais_noms()
             for nom in fichiers:
                 with open(os.path.join(d, nom), encoding="utf-8") as f:
                     contenu = f.read()
-                self.assertIsNone(VRAIS_NOMS.search(contenu), nom)
-                self.assertNotIn("0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce", contenu.lower())
+                self.assertNotIn("secret", contenu.lower(), nom)
+                if motif:
+                    self.assertIsNone(motif.search(contenu), nom)
             for c in mythiques:
                 with open(os.path.join(d, c.nom_fichier + ".json"), encoding="utf-8") as f:
                     meta = json.load(f)
@@ -139,6 +170,17 @@ class CliV2(unittest.TestCase):
         for c in cartes[:80]:
             if not c.scellee:
                 self.assertLess(len(rendre_carte(c).encode()), 30_000)
+
+
+class CatalogueDemo(unittest.TestCase):
+    def test_demo_lisible(self):
+        cartes = lire_catalogue_v2(CATALOGUE_DEMO)
+        with open(CATALOGUE_DEMO, encoding="utf-8") as f:
+            brut = json.load(f)
+        self.assertEqual(len(cartes), len(brut))
+        self.assertEqual(sum(c.rarete == "mythique" for c in cartes), 3)
+        self.assertTrue(all(c.scellee for c in cartes if c.rarete == "mythique"))
+        self.assertGreaterEqual(sum(e["brulable_possible"] for e in brut), 150)
 
 
 if __name__ == "__main__":
