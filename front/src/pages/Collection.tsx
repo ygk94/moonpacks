@@ -6,7 +6,7 @@ import { Card } from "../components/Card";
 import { CardDetail } from "../components/CardDetail";
 import { ConnectButton } from "../components/Header";
 import { Modal } from "../components/Modal";
-import { loadCatalog } from "../lib/catalog";
+import { cardFromToken, loadCatalog } from "../lib/catalog";
 import { RARITY_LABEL } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { getCard, getPacksForOwner, getResurrected, getTokensForOwner } from "../near/contract";
@@ -34,26 +34,7 @@ export function Collection({ onReplay }: { onReplay: (packId: number) => void })
   const cards = useAsync(async (): Promise<OwnedCard[]> => {
     if (!accountId) return [];
     const [tokens, catalog] = await Promise.all([getTokensForOwner(accountId), loadCatalog()]);
-    const list = tokens.map((t) => {
-      let extra: { card_id?: string; rarity?: Rarity; burnable?: boolean; pack_id?: number } = {};
-      try {
-        extra = JSON.parse(t.metadata?.extra ?? "{}");
-      } catch {
-        // métadonnées sans extra lisible
-      }
-      const rarity = extra.rarity ?? "common";
-      const cardId = rarity === "mythic" ? null : (extra.card_id ?? null);
-      const e = cardId ? catalog[cardId] : undefined;
-      return {
-        tokenId: t.token_id,
-        cardId,
-        rarity,
-        burnable: !!extra.burnable,
-        packId: extra.pack_id ?? Math.floor(Number(t.token_id) / 10),
-        ticker: rarity === "mythic" ? "?" : (e?.ticker ?? cardId ?? "?"),
-        revived: false,
-      };
-    });
+    const list: OwnedCard[] = tokens.map((t) => ({ ...cardFromToken(t, catalog), revived: false }));
     // Cartes ressuscitées (`card_resurrected`) : seules les épiques et légendaires peuvent l'être.
     await Promise.all(
       list
