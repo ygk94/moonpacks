@@ -97,7 +97,7 @@ function PackOffer({
         </div>
         <p className="small muted">
           + storage deposit: {formatNear(storageMax, 3)} NEAR is attached to pay for the cards' on-chain storage (
-          {usedText}). It is returned when the card is burned.
+          {usedText}).
         </p>
         {!connected ? (
           <ConnectButton />

@@ -89,6 +89,8 @@ Pas de routeur ni de bibliothèque d'état : un routeur par hash suffit (`#/shop
 
 ## Points ouverts (à voir avec Hugo)
 
+La liste complète des décisions, des tests et du travail restants est dans `docs/front/RESTE-A-FAIRE.md`.
+
 1. **Quantité de jetons.** Sur testnet, l'adossement (`amount`) est une part de la valeur du pack en yoctoNEAR, pas
    une quantité de jetons (`docs/mecaniques-spec.md`). Le front l'estime avec `amount × cours NEAR / cours du coin`.
    Il faudra lire la vraie quantité quand le redeemer achètera les jetons.
