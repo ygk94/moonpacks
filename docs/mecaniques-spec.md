@@ -8,6 +8,9 @@ ppb, de 1 sur 50 000 à 1 sur 25 000, section 2), **mythique à 1 pour 1 000 000
 2·10⁷), **mythique à 1 % au dernier emplacement du gold pack**, **valeur moyenne 75 % pour le normal et le rush**, et
 **mythiques anonymes** (« ? », section 11).
 
+Mise à jour du 12/11, branche `feat/contrat-v3` : stockage prépayé rendu au tirage, stockage rendu au burn,
+remboursement d'un pack `stuck`, retrait des recettes avec garde-fous, codes d'erreur stables (section 12).
+
 Mise en œuvre de `docs/mecaniques.md` dans `contract/` (branche `feat/mecaniques-contrat`), avec les corrections tirées
 de la simulation de la série 3 (`sim/RAPPORT.md`, branche `feat/mecaniques-sim`). Rien n'est déployé. Les hauteurs sont
 en blocs, avec 0,6 s par bloc supposé (non vérifié dans le repo).
@@ -27,7 +30,8 @@ en blocs, avec 0,6 s par bloc supposé (non vérifié dans le repo).
 - **Aléa.** Un seul aléa, `acc`, comme avant. Le tirage « gold ou pas » utilise un nouveau tag : `roll(acc, 0, 2)`, la
   valeur du pack un autre : `roll(acc, 0, 3)`. Les tags 0 (rareté) et 1 (carte) par emplacement ne changent pas.
 - **Dernier reçu du tirage sans échec lié au résultat.** La pitié, les burns et la table de taux sont lus et écrits dans
-  `finalize_pack`, sans aucun `require`. Le stockage ajouté est borné et prépayé (entrée de pitié comprise), et le gaz
+  `finalize_pack`, sans aucun `require`. Le stockage ajouté est borné et prépayé (entrée de pitié comprise), le
+  prépayé non utilisé est rendu par un simple virement émis après les cartes (section 12), et le gaz
   reste fixe (120 Tgas ; 48,4 Tgas au pire mesuré, raretés épuisées en cascade, gold pack et valeur compris). La valeur
   ne peut pas déborder : la validation exige que `prix × V_max × multiplicateur_max` tienne sur u128.
 
@@ -83,7 +87,8 @@ recalculent depuis ces 7 o, la table et les raretés des tirages (`draw::split_v
 
 Un pack déjà connu du compte coûte environ 560 o ; le premier achat ajoute les compteurs du compte et l'entrée de pitié.
 Le prépayé est une borne calculée à l'ouverture (`worst_case_pack_storage`) : comptes de 64 caractères, nouveaux blocs de
-liste, premier achat. Comme avant, le surplus n'est pas rendu (un remboursement dépendrait du résultat).
+liste, premier achat. **Depuis la v3 (12/11), le surplus est rendu** au dernier reçu, à partir du stockage mesuré
+(section 12).
 
 ## 2. Compteur de pitié (gold pack ultra rare, sans garantie)
 
@@ -363,6 +368,8 @@ Décision du porteur : la valeur en jetons d'un pack va de 20 % à 200 % du prix
 - Mesures sur testnet.
 - Tables de valeur et multiplicateurs définitifs (calibrage dans `sim/`) ; financement réel de la valeur transmise au
   redeemer.
+- Réserve des adossements qui ne sont pas en NEAR (table sans valeur, mythiques) dans `withdraw_revenue` (section 12.4) ;
+  montant de la réserve minimale (1 NEAR, à revoir pour mainnet).
 - Série v2 d'exemple : deux brûlables factices seulement (une commune, une légendaire) ; la brûlable garantie retombe
   donc presque toujours sur la même commune.
 
@@ -390,3 +397,101 @@ Décision du porteur : 3 mythiques, sans aucune information publique, avant comm
   - le `media` du contenu engagé est construit par `build_series.py` avec l'id réel de la mythique (`media_template`) :
     il n'apparaît qu'à la révélation, jamais dans les métadonnées affichées.
 
+## 12. Stockage rendu, pack bloqué remboursé, retrait des recettes, codes d'erreur (v3, 12/11)
+
+Quatre évolutions sans décision produit. **La disposition borsh change** (`Pack::storage_used`, quatre compteurs dans
+l'état racine, statut `refunded`) : il faut un nouveau compte (comme pour `app2`) ou une migration.
+
+### 12.1 Stockage prépayé rendu au tirage
+
+- `buy_pack` exige toujours le pire cas (`required_deposit` = prix + `storage_per_pack` × 10¹⁹), car le stockage réel
+  n'est connu qu'au tirage.
+- **Mesure.** Chacun des reçus du pack (`buy_pack`, chaque `reveal_step`, le tirage final) écrit son état en attente
+  (`flush_all`) puis lit `env::storage_usage()` avant et après. La différence est imputée au pack
+  (`Pack::storage_used`, cumulée, vue `get_pack.storage_used`). La mesure est exacte : en sandbox,
+  `used_bytes` = variation de `storage_usage` du compte du contrat sur la transaction.
+- **Remboursement.** Le dernier reçu rend `max(0, storage_per_pack − storage_used) × 10¹⁹` à l'acheteur, par un
+  virement. Le contrat ne rend jamais plus que ce qui n'est pas occupé : il reste couvert pour tout ce que le pack écrit.
+  Au-delà du prépayé (graines des relances, environ 90 o par relance), c'est le contrat qui paie, comme avant.
+- **Journal.** `pack_revealed.storage = { "prepaid_bytes", "used_bytes", "refund" }`. Le vérificateur contrôle
+  `refund = max(0, prepaid − used) × 10¹⁹` (`verify.verify_storage`).
+- **Pourquoi ce n'est pas un chemin conditionné au résultat.** Le montant dépend du tirage (cartes scellées, gold pack
+  à plus d'emplacements, premier achat du compte), mais il n'y a ni `require` ni appel qui puisse échouer : un virement
+  sortant d'un montant déjà présent sur le solde. Le seul échec imaginable serait `LackBalanceForState` si le solde
+  tombait sous le stockage occupé ; `withdraw_revenue` l'exclut, car il garde les engagements des packs non tirés et une
+  réserve (12.4). L'ancienne décision (« un remboursement après le tirage serait un chemin conditionné au résultat »)
+  visait un échec possible ; il n'y en a pas.
+
+### 12.2 Stockage rendu au burn
+
+- `on_redeem_complete`, en cas de succès, mesure les octets libérés par le burn (entrées des listes NEP-181 du
+  propriétaire et globale, blocs et compteurs vidés, approbations, propriétaire de l'emplacement remis à `None`) et les
+  rend au propriétaire. Les approbations restent remboursées comme dans le standard ; le complément porte le total aux
+  octets libérés, jamais au-delà. `card_redeemed` ajoute `freed_bytes` et `storage_refund` (total rendu).
+- **Ce qui ne peut pas être libéré : l'emplacement du pack.** `CardSlot` (10 o) et `PackDraw` (31 o) de la carte brûlée
+  restent dans le pack, pour trois raisons : `token_id = pack × 10 + emplacement` (retirer un élément décalerait les
+  autres cartes) ; la part de valeur des autres brûlables du pack se recalcule depuis les raretés de **tous** les
+  emplacements (`draw::split_value`) ; `get_pack` (front, page « Verify this pack ») rend tous les tirages. Le
+  vérificateur, lui, n'en a pas besoin (il ne lit que les événements). Effacer le pack entier quand toutes ses cartes
+  sont brûlées casserait `get_pack` et `get_packs_for_owner` ; c'est rare (une seule brûlable par pack normal) et non fait.
+- Mesuré : 16 o rendus pour un burn ordinaire (deux entrées de 8 o), plus de 100 o quand le burn vide la liste du
+  compte (bloc et compteur), plus les approbations.
+
+### 12.3 Remboursement d'un pack `stuck`
+
+- `refund_stuck_pack(pack_id)` : ouvert à tous, l'argent va toujours à l'acheteur. Exige le statut `stuck` et aucune
+  carte écrite. Rend le prix et le stockage prépayé non utilisé (`storage_per_pack − storage_used`), passe le pack en
+  `refunded`, retire le prix de `revenue`. Événement `pack_refunded` (`price`, `storage_refund`, `total`,
+  `storage_used`, `by`).
+- **Un tiers ne peut ni épuiser les tentatives d'un pack, ni le pousser vers le remboursement** : `retry_reveal` est
+  réservé à l'acheteur du pack (`E_NOT_PACK_OWNER`). Seuls ses relances, après `retry_delay_blocks` blocs sans progrès,
+  comptent ; il ne peut pas relancer une chaîne qui progresse encore, et relancer à l'aveugle une chaîne retardée ne lui
+  apprend rien du tirage. Le remboursement reste ouvert à tous (il ne paie que l'acheteur et n'existe qu'après
+  `Stuck`). L'autre piste (ne compter que les échecs observés, par un callback sur le dernier reçu) coûterait un reçu et
+  du gaz à chaque pack, sans couvrir l'échec d'une étape intermédiaire. La revue parallèle borne en outre
+  `retry_delay_blocks ≥ 20` dans `new` (branche `test/revue-demo`).
+- **Aucun double remboursement** : `refunded` est final (`E_ALREADY_REFUNDED`). **Aucun tirage ensuite** :
+  `reveal_step` ignore tout pack qui n'est pas `pending`, `retry_reveal` exige `pending`.
+- **Pas de tirage gratuit, par construction.** On ne devient `stuck` qu'après `MAX_ATTEMPTS` (10) derniers reçus en
+  échec, et seulement sans carte écrite ; un pack `revealed` ne change plus jamais d'état (`retry_reveal` le refuse,
+  `refund_stuck_pack` aussi). Pour « voir un mauvais tirage puis se faire rembourser », il faudrait faire échouer le
+  dernier reçu selon son résultat. Or ce reçu n'a aucun chemin d'échec qui dépende du tirage : gaz fixe (120 Tgas,
+  50 Tgas au pire mesuré), stockage prépayé, aucun `require` sur les cartes, la valeur ou les compteurs, et le
+  remboursement de stockage ne peut pas manquer de solde (12.1). Un tirage échoué reste recalculable (sa graine est
+  publique), mais son échec n'a pas été choisi par l'acheteur. Testé : `revealed_pack_cannot_be_refunded`,
+  `revealed_pack_can_never_become_stuck`, `stuck_pack_is_refunded_once` (sandbox, 10 vraies tentatives).
+
+### 12.4 Retrait des recettes
+
+- `withdraw_revenue(amount?)` : owner, 1 yoctoNEAR. Retire `amount` (tout le retirable sans argument) vers l'owner.
+  Vue `get_treasury()`. Événement `revenue_withdrawn` (`amount`, `to`, `balance_before`, `committed`,
+  `withdrawable_before`, `withdrawn_total`, `revenue`).
+- `retirable = solde − engagements`, avec
+  `engagements = storage_usage × 10¹⁹ + listing_deposits + pack_escrow + value_reserved + 1 NEAR` :
+  - stockage occupé : tout l'état, quel que soit le payeur (acheteurs, owner, oracle, contrat) ;
+  - `listing_deposits` : dépôts des annonces en cours, rendus aux vendeurs ;
+  - `pack_escrow` : packs `pending` et `stuck`, prix et stockage prépayé entier (le stockage déjà écrit est donc compté
+    deux fois, par prudence ; cela évite de relire la série à chaque étape) ;
+  - `value_reserved` : parts de valeur (yoctoNEAR) des cartes brûlables vivantes d'une série à table de valeur ;
+    augmente au tirage de la somme des parts, baisse au burn de la part de la carte ;
+  - réserve `TREASURY_MIN_RESERVE` = 1 NEAR : stockage payé par le contrat (graines des relances, listes d'un
+    acheteur du marché ou d'un destinataire de transfert) et marge des remboursements.
+- Le reste est fait des recettes (`revenue`) et des excédents (récompenses de gaz du contrat, virements reçus,
+  remboursements revenus d'un compte supprimé). Testé : un yocto au-delà est refusé (`E_WITHDRAW_LIMIT`), le solde après
+  retrait reste au-dessus des engagements, et en sandbox, après un retrait maximal, un pack en attente se tire (avec son
+  remboursement), un nouvel achat passe et une annonce se retire avec son dépôt.
+- **Non couvert** : l'adossement fixe d'une table sans valeur (`asset_id`, `amount` en unités du jeton) et celui des
+  mythiques ne sont pas en NEAR ; le contrat ne peut pas les évaluer et ne les réserve pas (voir section 10).
+
+### 12.5 Marché : prix borné
+
+`list` refuse un prix supérieur à `MAX_LISTING_PRICE` = 10⁹ NEAR (`E_PRICE_TOO_HIGH`) : au-delà, `prix × bps` des
+redevances débordait (panique à l'achat). `compute_payout` (`nft_payout`, `nft_transfer_payout`) refuse aussi un montant
+au-delà de `u128::MAX / 10⁴` (`E_AMOUNT_TOO_LARGE`) au lieu de paniquer sans code.
+
+### 12.6 Codes d'erreur
+
+Chaque `require!` et chaque panique commence par un code stable `E_…: `, suivi du texte d'origine inchangé. Liste
+complète (texte français, proposition anglaise, qui peut la provoquer) : `contract/ERRORS.md`. Le test
+`tests_v3::every_error_has_a_stable_code_listed_in_errors_md` casse si un message n'a pas de code ou si la liste n'est
+pas à jour.
