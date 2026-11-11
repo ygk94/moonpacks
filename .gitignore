@@ -4,3 +4,5 @@ docs/images/
 .DS_Store
 __pycache__/
 *.pyc
+# Vrais noms des mythiques (lus par contract/scripts/build_series.py) : ne jamais committer
+docs/data/secrets/

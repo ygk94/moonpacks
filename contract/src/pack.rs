@@ -83,6 +83,7 @@ impl Contract {
             flags,
             draws: Vec::new(),
             cards: Vec::new(),
+            value: None,
         };
         self.packs.insert(pack_id, pack);
         // Liste paginée par compte, par blocs : (compte, bloc) → pack_ids, et un compteur par compte.
@@ -214,13 +215,13 @@ impl Contract {
     }
 
     /// Tirage final + création des cartes + journal. Aucun chemin d'échec qui dépende du résultat :
-    /// gaz fixe, stockage prépayé (borne du pire cas), aucun `require` sur les cartes, la table de
-    /// taux ou les compteurs (pitié, burns).
+    /// gaz fixe, stockage prépayé (borne du pire cas, gold pack et valeur compris), aucun `require`
+    /// sur les cartes, la table de taux, les compteurs (pitié, burns) ou la valeur (dépassements
+    /// exclus par la validation de la série).
     fn finalize_pack(&mut self, pack_id: u64, mut pack: Pack) {
         let series_id = pack.series_id;
         let owner = pack.owner_id.clone();
         let mut series = self.series.get(series_id).cloned().unwrap_or_else(|| env::panic_str("Série inconnue"));
-        let n = series.table.cards_per_pack;
         let mech = series.table.mechanics.clone();
 
         // Table de taux du pack : pitié (même aléa `acc`, tag 2), rush figé à l'achat.
@@ -254,13 +255,17 @@ impl Contract {
                     resurrect_seq = Some(series.resurrect_seq);
                 }
             }
+            // La brûlable garantie et la répartition de la valeur lisent les brûlables du moment,
+            // résurrections comprises : leur numéro est journalisé.
+            if m.value.is_some() {
+                resurrect_seq = Some(series.resurrect_seq);
+            }
         }
         match mode {
             PackMode::Gold => pack.flags |= FLAG_GOLD,
             PackMode::Rush => pack.flags |= FLAG_MODE_RUSH,
             PackMode::Base => {}
         }
-        let weights = draw::mode_weights(&series.table, mode).clone();
 
         pack.revealed_at_ms = env::block_timestamp_ms();
         pack.status = PackStatus::Revealed;
@@ -275,37 +280,36 @@ impl Contract {
             prior_k: p.prior_k,
             resurrectable: &resurrectable,
         });
-        let mut draws = Vec::with_capacity(n as usize);
-        let mut records = Vec::with_capacity(n as usize);
-        let mut minted_tokens = Vec::with_capacity(n as usize);
-        for slot in 0..n {
-            let d = draw::draw_slot_mech(
-                &weights,
-                &series.draw_cards,
-                &series.table.mythics,
-                &series.minted,
-                &series.mythic_minted,
-                bv.as_ref(),
-                &acc,
-                slot,
-            );
+        // Gold pack : un emplacement par plancher de la table gold. Pack normal : `cards_per_pack`
+        // emplacements, le dernier tiré parmi les brûlables si la série a une table de valeur.
+        let (slot_draws, burnable_slots) = draw::draw_pack_mech(
+            &series.table,
+            mode,
+            &series.draw_cards,
+            &mut series.minted,
+            &mut series.mythic_minted,
+            bv.as_ref(),
+            &acc,
+        );
+        let n = slot_draws.len();
+        let mut draws = Vec::with_capacity(n);
+        let mut records = Vec::with_capacity(n);
+        let mut minted_tokens = Vec::with_capacity(n);
+        for (slot, d) in slot_draws.into_iter().enumerate() {
+            let slot = slot as u8;
             let token_id = self.internal_mint_slot(pack_id, &owner);
-            match d.kind {
-                CardKind::Visible => series.minted[d.index as usize] += 1,
-                CardKind::Mythic => {
-                    let j = d.index as usize;
-                    series.mythic_minted[j] += 1;
-                    if series.revealed_mythics[j].is_none() {
-                        series.sealed_tokens[j].push(token_id.clone());
-                        events::emit(
-                            "mythic_drawn",
-                            json!({
-                                "series_id": series_id, "mythic_index": d.index,
-                                "commitment": series.table.mythics[j].commitment,
-                                "token_id": token_id, "pack_id": pack_id,
-                            }),
-                        );
-                    }
+            if d.kind == CardKind::Mythic {
+                let j = d.index as usize;
+                if series.revealed_mythics[j].is_none() {
+                    series.sealed_tokens[j].push(token_id.clone());
+                    events::emit(
+                        "mythic_drawn",
+                        json!({
+                            "series_id": series_id, "mythic_index": d.index,
+                            "commitment": series.table.mythics[j].commitment,
+                            "token_id": token_id, "pack_id": pack_id,
+                        }),
+                    );
                 }
             }
             draws.push(PackDraw {
@@ -328,8 +332,19 @@ impl Contract {
             });
             minted_tokens.push(token_id);
         }
+        // Valeur du pack : palier tiré dans la table du pack (tag 3), réparti entre les brûlables.
+        let mut value_ev = Value::Null;
+        let pack_value = draw::pack_value(&series.table, mode, &acc, &burnable_slots).map(|v| {
+            let mask = burnable_slots.iter().enumerate().fold(0u16, |m, (i, (_, b))| if *b { m | (1u16 << i) } else { m });
+            value_ev = json!({
+                "roll": v.roll, "tier": v.tier, "bps": v.bps, "total": U128(v.total),
+                "amounts": v.amounts.iter().map(|a| a.map(U128)).collect::<Vec<_>>(),
+            });
+            PackValue { bps: v.bps, mask }
+        });
         if let Some(p) = self.packs.get_mut(&pack_id) {
             p.draws = draws;
+            p.value = pack_value;
         }
 
         Self::emit_mint(&owner, &minted_tokens, pack_id);
@@ -348,7 +363,7 @@ impl Contract {
             // État figé qui a servi au tirage : table de taux, rush (figé à l'achat), pitié, burns.
             ev["mechanics"] = json!({
                 "mode": mode, "rush": rush, "pity": pity_ev, "burn_seq": burn_seq,
-                "resurrect_seq": resurrect_seq,
+                "resurrect_seq": resurrect_seq, "value": value_ev,
             });
         }
         events::emit("pack_revealed", ev);

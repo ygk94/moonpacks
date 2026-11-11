@@ -13,26 +13,94 @@
 //!   venir et pour les exemplaires existants (l'adossement est lu à la demande, jamais copié dans
 //!   les cartes).
 //!
+//! - **Gold pack** : plancher de rareté par emplacement (`GoldParams`), compteur de pitié inchangé.
+//! - **Valeur** : `V` tiré dans la table du pack, réparti entre les brûlables (`ValueParams`) ; le
+//!   dernier emplacement d'un pack normal est tiré parmi les brûlables.
+//!
 //! Tout ce qui influence un tirage est figé et journalisé : `pack_bought.rush`,
-//! `pack_revealed.mechanics` (`mode`, `rush`, `pity`, `burn_seq`) et `card_redeemed.burn_seq`.
+//! `pack_revealed.mechanics` (`mode`, `rush`, `pity`, `burn_seq`, `resurrect_seq`, `value`) et
+//! `card_redeemed.burn_seq`.
 
 use crate::series::check_backing;
 use crate::types::*;
 use crate::*;
 use near_sdk::serde_json::{json, Value};
 
-/// Tables de poids de rareté d'une série : base, or, rush.
+/// Tables de poids de rareté d'une série : base, rush, et poids propres des emplacements du gold
+/// pack (un emplacement sans poids propres prend la base tronquée, déjà couverte par la base).
 pub(crate) fn weight_tables(t: &SeriesTable) -> Vec<&RarityWeights> {
     let mut v = vec![&t.rarity_weights];
     if let Some(m) = &t.mechanics {
-        if let Some(g) = &m.gold_weights {
-            v.push(g);
+        if let Some(g) = &m.gold {
+            v.extend(g.slots.iter().filter_map(|s| s.weights.as_ref()));
         }
         if let Some(r) = &m.rush {
             v.push(&r.weights);
         }
     }
     v
+}
+
+/// Table de valeur (`None` sans la mécanique).
+pub(crate) fn value_params(t: &SeriesTable) -> Option<&ValueParams> {
+    t.mechanics.as_ref().and_then(|m| m.value.as_ref())
+}
+
+/// Une règle « tiré parmi les brûlables » peut s'appliquer : table de valeur (dernier emplacement
+/// d'un pack normal) ou emplacement `burnable` du gold pack.
+pub(crate) fn needs_burnable(t: &SeriesTable) -> bool {
+    t.mechanics.as_ref().is_some_and(|m| {
+        m.value.is_some() || m.gold.as_ref().is_some_and(|g| g.slots.iter().any(|s| s.burnable))
+    })
+}
+
+fn check_tiers(tiers: &[ValueTier], what: &str, min_bps: u32, max_bps: u32) {
+    require!(
+        !tiers.is_empty() && tiers.len() <= MAX_VALUE_TIERS,
+        format!("value.{what} : 1 à {MAX_VALUE_TIERS} paliers")
+    );
+    for (bps, w) in tiers {
+        require!(*w > 0, format!("value.{what} : poids nuls interdits"));
+        require!(
+            *bps >= min_bps && *bps <= max_bps,
+            format!("value.{what} : valeur hors de [{min_bps}, {max_bps}] points de base")
+        );
+    }
+}
+
+fn validate_value(t: &SeriesTable, v: &ValueParams) {
+    check_tiers(&v.normal, "normal", MIN_NORMAL_VALUE_BPS, MAX_NORMAL_VALUE_BPS);
+    check_tiers(&v.gold, "gold", 1, MAX_VALUE_BPS);
+    check_tiers(&v.rush, "rush", 1, MAX_VALUE_BPS);
+    let m = &v.multipliers;
+    require!(m.mythic == 0, "value.multipliers.mythic = 0 (une mythique garde l'adossement de son contenu)");
+    for r in [Rarity::Legendary, Rarity::Epic, Rarity::Rare, Rarity::Common] {
+        let x = m.get(r);
+        require!(x >= 1 && x <= MAX_VALUE_MULT, format!("value.multipliers.{} : 1 à {MAX_VALUE_MULT}", r.as_str()));
+    }
+    // Aucun dépassement au tirage : ⌊prix × V / 10⁴⌋ × multiplicateur tient sur u128.
+    let max_bps = v.normal.iter().chain(&v.gold).chain(&v.rush).map(|x| x.0).max().unwrap_or(0) as u128;
+    let max_mult = [m.legendary, m.epic, m.rare, m.common].into_iter().max().unwrap_or(0) as u128;
+    require!(
+        t.price.0.checked_mul(max_bps).and_then(|x| (x / 10_000).checked_mul(max_mult)).is_some(),
+        "value : prix trop élevé pour ces valeurs et multiplicateurs (dépassement de u128)"
+    );
+}
+
+fn validate_gold(t: &SeriesTable, g: &GoldParams) {
+    require!(
+        !g.slots.is_empty() && g.slots.len() <= MAX_CARDS_PER_PACK as usize,
+        "gold.slots : 1 à 10 emplacements"
+    );
+    for (i, s) in g.slots.iter().enumerate() {
+        let w = crate::draw::gold_slot_weights(&t.rarity_weights, s);
+        check_weights(t, &w, &format!("gold.slots[{i}]"));
+        for r in Rarity::ALL {
+            if r.index() > s.floor.index() {
+                require!(w.get(r) == 0, format!("gold.slots[{i}] : poids sous le plancher {}", s.floor.as_str()));
+            }
+        }
+    }
 }
 
 /// Une rareté est tirable si l'une des tables lui donne un poids.
@@ -53,11 +121,14 @@ fn check_weights(t: &SeriesTable, w: &RarityWeights, what: &str) {
 /// Contrôles des paramètres (dans l'en-tête, donc avant tout chargement de cartes).
 pub(crate) fn validate_mechanics(t: &SeriesTable) {
     let Some(m) = &t.mechanics else { return };
-    if let Some(g) = &m.gold_weights {
-        check_weights(t, g, "gold_weights");
+    if let Some(g) = &m.gold {
+        validate_gold(t, g);
+    }
+    if let Some(v) = &m.value {
+        validate_value(t, v);
     }
     if let Some(p) = &m.pity {
-        require!(m.gold_weights.is_some(), "pity exige gold_weights");
+        require!(m.gold.is_some(), "pity exige gold");
         require!(p.n_max >= 1 && p.n_max <= MAX_PITY_N, "pity.n_max hors bornes (1 à 10 000)");
         require!(p.p0_ppm as u64 <= PPM && p.k_ppm as u64 <= PPM, "pity : probabilités en ppm (≤ 10⁶)");
     }
@@ -74,9 +145,6 @@ pub(crate) fn validate_mechanics(t: &SeriesTable) {
     }
     if let Some(r) = &m.rush {
         check_weights(t, &r.weights, "rush.weights");
-        if let Some(g) = &m.gold_weights {
-            require!(&r.weights != g, "rush.weights : table propre, distincte de la table or");
-        }
         require!(r.ratio_bps >= 10_000, "rush.ratio_bps ≥ 10 000 (×1)");
         require!(r.min_packs >= 1, "rush.min_packs ≥ 1");
         require!(r.max_per_account >= 1, "rush.max_per_account ≥ 1");
@@ -104,6 +172,14 @@ pub(crate) fn resurrectable(t: &SeriesTable) -> &[u32] {
 /// Contrôles de la liste ressuscitable qui portent sur les cartes (à l'ouverture, et à la création
 /// d'une table complète) : chaque index désigne une épique ou une légendaire non adossée.
 pub(crate) fn validate_resurrectable(t: &SeriesTable, cards: &[DrawCard]) {
+    // Brûlable garantie : une carte adossée par la table, illimitée et de poids non nul, existe
+    // toujours ; la retombée parcourt toutes les raretés visibles, elle la trouve donc toujours.
+    if needs_burnable(t) {
+        require!(
+            cards.iter().any(|c| c.backed && c.cap.is_none() && c.weight > 0),
+            "Brûlable garantie : il faut une carte adossée par la table, sans plafond et de poids non nul"
+        );
+    }
     for &i in resurrectable(t) {
         let c = cards.get(i as usize).unwrap_or_else(|| env::panic_str("resurrection.eligible : index de carte inconnu"));
         require!(

@@ -147,15 +147,53 @@ def resurrection_json(r: dict) -> str:
     return _obj([("eligible", "[" + ",".join(_u32(i) for i in r["eligible"]) + "]")])
 
 
+def _bool(b) -> str:
+    if not isinstance(b, bool):
+        raise TypeError(f"booléen attendu, reçu {b!r}")
+    return "true" if b else "false"
+
+
+def gold_slot_json(s: dict) -> str:
+    return _obj(
+        [
+            ("floor", _rarity(s["floor"])),
+            ("weights", _opt(s.get("weights"), rarity_weights_json)),
+            ("burnable", _bool(s["burnable"])),
+        ]
+    )
+
+
+def gold_json(g: dict) -> str:
+    return _obj([("slots", _arr(g["slots"], gold_slot_json))])
+
+
+def _tier(t) -> str:
+    """Palier `(u32, u32)` : un tuple Rust est un tableau JSON."""
+    bps, w = t
+    return "[" + _u32(bps) + "," + _u32(w) + "]"
+
+
+def value_json(v: dict) -> str:
+    return _obj(
+        [
+            ("normal", _arr(v["normal"], _tier)),
+            ("gold", _arr(v["gold"], _tier)),
+            ("rush", _arr(v["rush"], _tier)),
+            ("multipliers", rarity_weights_json(v["multipliers"])),
+        ]
+    )
+
+
 def mechanics_json(m: dict) -> str:
     """`Mechanics` : tous les champs, `null` pour une option absente, dans l'ordre de `types.rs`."""
     return _obj(
         [
-            ("gold_weights", _opt(m.get("gold_weights"), rarity_weights_json)),
+            ("gold", _opt(m.get("gold"), gold_json)),
             ("pity", _opt(m.get("pity"), pity_json)),
             ("burn", _opt(m.get("burn"), burn_json)),
             ("rush", _opt(m.get("rush"), rush_json)),
             ("resurrection", _opt(m.get("resurrection"), resurrection_json)),
+            ("value", _opt(m.get("value"), value_json)),
         ]
     )
 

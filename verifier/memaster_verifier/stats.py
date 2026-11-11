@@ -90,14 +90,20 @@ def series_stats(table: dict, events: list[dict], alpha: float) -> tuple[bool, l
     lines.append(f"{len(events)} boosters, {len(draws)} tirages")
 
     # Série à mécaniques : chaque booster a sa table de taux (base, or, rush). L'attendu est le
-    # mélange des tables effectivement utilisées, booster par booster.
+    # mélange des tables effectivement utilisées, emplacement par emplacement.
     probs = {r: 0.0 for r in core.RARITIES}
+    # Gold pack : les poids de chaque emplacement (plancher compris).
+    ruled = set()
     for ev in events:
         mode = (ev.get("mechanics") or {}).get("mode", "base")
-        w = core.mode_weights(table, mode)
-        tot = max(sum(w[r] for r in core.RARITIES), 1)
-        for r in core.RARITIES:
-            probs[r] += len(ev["draws"]) * w[r] / tot
+        rules = core.slot_rules(table, mode)
+        for d in ev["draws"]:
+            w, _, burnable_only, _ = rules[min(d.get("slot", 0), len(rules) - 1)]
+            if burnable_only:
+                ruled.add(id(d))
+            tot = max(sum(w[r] for r in core.RARITIES), 1)
+            for r in core.RARITIES:
+                probs[r] += w[r] / tot
     probs = {r: (v / len(draws) if draws else 0.0) for r, v in probs.items()} if draws else rarity_probs(table)
     modes = {}
     for ev in events:
@@ -128,7 +134,8 @@ def series_stats(table: dict, events: list[dict], alpha: float) -> tuple[bool, l
         cards = [(i, c) for i, c in enumerate(table["cards"]) if c["rarity"] == r and c["weight"] > 0]
         if len(cards) < 2 or any(c.get("cap") is not None for _, c in cards):
             continue
-        sub = [d for d in draws if d["final_rarity"] == r and d["kind"] == "visible"]
+        # Les emplacements tirés parmi les brûlables suivent d'autres poids : exclus.
+        sub = [d for d in draws if d["final_rarity"] == r and d["kind"] == "visible" and id(d) not in ruled]
         if not sub:
             continue
         w = sum(c["weight"] for _, c in cards)

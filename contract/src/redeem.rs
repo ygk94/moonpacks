@@ -7,6 +7,9 @@
 //!    et c'est lui que `card_redeemed` journalise : un remplacement par l'oracle pendant le burn
 //!    (carte ressuscitée) ne change pas ce qui a été livré.
 //!
+//! Série à table de valeur : `amount` est la part de la valeur tirée pour le pack (yoctoNEAR de
+//! valeur, `draw::split_value`), pas le montant de la table ; le redeemer, abstrait, la convertit.
+//!
 //! Contrat d'interface : le redeemer **panique** s'il ne livre pas ; tout retour sans panique vaut succès.
 
 use crate::types::*;
@@ -88,7 +91,8 @@ impl Contract {
             events::emit("redeem_failed", json!({ "token_id": token_id, "owner_id": owner }));
             return false;
         }
-        let current = self.backing_of(series_id, d.kind, d.index);
+        // Adossement courant de l'exemplaire (part de la valeur du pack comprise).
+        let current = self.token_backing(&token_id);
         self.internal_burn(&token_id, &owner);
         // Rareté pilotée par les burns : compteur de la carte et numéro d'ordre du burn.
         let burn_seq = self.record_burn(series_id, d.kind, d.index);

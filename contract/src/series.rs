@@ -442,7 +442,9 @@ impl Contract {
     /// dépend plus de la taille des métadonnées : une carte ne stocke que sa référence.
     pub(crate) fn worst_case_pack_storage(&self, series_id: u32) -> u64 {
         let s = self.series_ref(series_id);
-        let n = s.table.cards_per_pack as u64;
+        // Un gold pack peut avoir plus d'emplacements qu'un pack normal.
+        let gold_slots = s.table.mechanics.as_ref().and_then(|m| m.gold.as_ref()).map(|g| g.slots.len() as u64);
+        let n = (s.table.cards_per_pack as u64).max(gold_slots.unwrap_or(0));
         let mut bytes = PACK_RECORD_BYTES
             + self.config.reveal_steps as u64 * SEED_RECORD_BYTES
             + n * PER_CARD_BYTES
@@ -458,6 +460,9 @@ impl Contract {
         }
         if s.table.mechanics.as_ref().is_some_and(|m| m.rush.is_some()) {
             bytes += RUSH_ENTRY_BYTES;
+        }
+        if crate::mechanics::value_params(&s.table).is_some() {
+            bytes += PACK_VALUE_BYTES;
         }
         bytes
     }

@@ -170,8 +170,8 @@ pub struct SeriesTable {
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Mechanics {
-    /// Table de taux « or » : poids de rareté d'un gold pack (pitié).
-    pub gold_weights: Option<RarityWeights>,
+    /// Gold pack (pitié) : plancher de rareté par emplacement (`GoldParams`).
+    pub gold: Option<GoldParams>,
     /// Compteur de pitié par compte et par série.
     pub pity: Option<PityParams>,
     /// Rareté pilotée par les burns, renormalisée entre brûlables d'une même rareté.
@@ -180,6 +180,46 @@ pub struct Mechanics {
     pub rush: Option<RushParams>,
     /// Cartes que l'oracle de prix peut ressusciter. Sans ce champ, aucune résurrection.
     pub resurrection: Option<ResurrectionParams>,
+    /// Valeur aléatoire en jetons par pack (`ValueParams`) et brûlable garantie au dernier
+    /// emplacement d'un pack normal.
+    pub value: Option<ValueParams>,
+}
+
+/// Gold pack : un emplacement par entrée (1 à 10, indépendamment de `cards_per_pack`).
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GoldParams {
+    pub slots: Vec<GoldSlot>,
+}
+
+/// Emplacement d'un gold pack : la rareté visée est tirée avec `weights` (ou, sans `weights`, avec
+/// les poids de base tronqués sous `floor`), jamais sous le plancher `floor`. Retombée
+/// (`draw::fallback_order`) : vers le bas jusqu'au plancher, puis vers le haut, puis sous le
+/// plancher en dernier recours. `burnable` : l'emplacement est tiré parmi les brûlables.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GoldSlot {
+    pub floor: Rarity,
+    /// Poids propres de l'emplacement (nuls sous le plancher) ; `None` = poids de base tronqués.
+    pub weights: Option<RarityWeights>,
+    pub burnable: bool,
+}
+
+/// Palier d'une table de valeur : (valeur en points de base du prix, poids).
+pub type ValueTier = (u32, u32);
+
+/// Valeur en jetons d'un pack : `V` (points de base du prix) tirée dans la table du pack
+/// (`normal`, `gold` ou `rush`) par `roll(acc, 0, 3)`, puis `⌊prix × V / 10⁴⌋` yoctoNEAR répartis
+/// entre les brûlables du pack au prorata de `multipliers` (par rareté ; mythique à 0 : une
+/// mythique garde l'adossement de son contenu), arrondis vers le bas, le reste à la carte au plus
+/// fort multiplicateur (premier emplacement en cas d'égalité).
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ValueParams {
+    pub normal: Vec<ValueTier>,
+    pub gold: Vec<ValueTier>,
+    pub rush: Vec<ValueTier>,
+    pub multipliers: RarityWeights,
 }
 
 /// Ensemble des cartes ressuscitables, engagé dans la table hachée : index de cartes visibles
@@ -234,8 +274,8 @@ pub struct RushParams {
     /// Packs rush au plus par compte et par rush. Au-delà, le pack est normal (figé à l'achat,
     /// journalisé dans `pack_bought.rush.capped`).
     pub max_per_account: u32,
-    /// Table de taux « rush », distincte de la table or (couverture ≤ 80 %, contrôlée hors chaîne
-    /// par `scripts/build_series.py`).
+    /// Table de taux « rush » (poids renforcés ; couverture ≤ 80 %, contrôlée hors chaîne par
+    /// `scripts/build_series.py`).
     pub weights: RarityWeights,
 }
 
@@ -458,6 +498,18 @@ pub struct Pack {
     pub draws: Vec<PackDraw>,
     /// Cartes du pack, emplacement par emplacement (`token_id = pack_id × 10 + emplacement`).
     pub cards: Vec<CardSlot>,
+    /// Valeur tirée (série à table de valeur) : les montants se recalculent depuis `bps`, le masque
+    /// des brûlables et les raretés des tirages (`draw::split_value`), 7 o au lieu de 16 par carte.
+    pub value: Option<PackValue>,
+}
+
+/// Valeur d'un pack : `bps` (points de base du prix) et `mask` (bit `i` = l'emplacement `i` est
+/// une brûlable au tirage, qui reçoit une part de la valeur).
+#[near(serializers = [borsh])]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PackValue {
+    pub bps: u32,
+    pub mask: u16,
 }
 
 impl Pack {

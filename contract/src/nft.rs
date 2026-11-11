@@ -90,8 +90,33 @@ impl Contract {
 
     pub(crate) fn token_backing(&self, token_id: &str) -> Option<Backing> {
         let (_, slot, pack) = self.live(token_id)?;
+        self.slot_backing(pack, slot)
+    }
+
+    /// Adossement d'un exemplaire. Série à table de valeur : l'actif est celui de la carte (table ou
+    /// oracle) et le montant est la part de la valeur tirée pour ce pack (`draw::split_value`),
+    /// recalculée depuis `Pack::value`. Cas spéciaux, adossement fixe : une mythique (son contenu
+    /// révélé) et une carte devenue brûlable après son tirage (montant de l'oracle).
+    pub(crate) fn slot_backing(&self, pack: &Pack, slot: usize) -> Option<Backing> {
         let d = pack.draws[slot];
-        self.backing_of(pack.series_id, d.kind, d.index)
+        let mut b = self.backing_of(pack.series_id, d.kind, d.index)?;
+        if let Some(amount) = self.slot_value(pack, slot) {
+            b.amount = U128(amount);
+        }
+        Some(b)
+    }
+
+    /// Part de la valeur du pack attribuée à l'emplacement `slot` (`None` s'il n'en a pas).
+    pub(crate) fn slot_value(&self, pack: &Pack, slot: usize) -> Option<u128> {
+        let pv = pack.value?;
+        if pv.mask & (1u16 << slot) == 0 {
+            return None;
+        }
+        let s = self.series_ref(pack.series_id);
+        let v = crate::mechanics::value_params(&s.table)?;
+        let slots: Vec<(Rarity, bool)> =
+            pack.draws.iter().enumerate().map(|(i, d)| (d.final_rarity, pv.mask & (1u16 << i) != 0)).collect();
+        draw::split_value(draw::value_total(s.table.price.0, pv.bps), &slots, &v.multipliers)[slot]
     }
 
     /// Métadonnées NEP-177 reconstruites depuis la table.

@@ -5,6 +5,16 @@ Usage (depuis contract/) :
     python3 scripts/build_series.py scripts/serie-exemple.json
         [--catalogue ../docs/data/catalogue-v2.json] [--out scripts/out/<slug>]
         [--secrets scripts/secrets/<slug>.json] [--series-id 0] [--new-secrets]
+        [--mythiques ../docs/data/secrets/mythiques.json] [--tables-valeur fichier.json]
+
+Vrais noms des mythiques : lus dans docs/data/secrets/mythiques.json (ignoré par git, --mythiques),
+au format {"<id catalogue>": {"id": …, "nom": …, …}} (ou une liste d'objets portant "catalogue_id").
+Si ce fichier manque, le script se replie sur le champ "secret" du catalogue s'il existe encore,
+et s'arrête avec un message clair sinon.
+
+Tables de valeur (mechanics.value, voir docs/mecaniques-spec.md) : dans les paramètres
+("mechanics": {"value": …}) ou dans --tables-valeur, qui les remplace, au format
+{"normale": [[bps, poids], …], "gold": […], "rush": […], "multiplicateurs": {"commune": x, …}}.
 
 Bibliothèque standard uniquement. Produit, dans --out (aucun secret) :
     create_series_batched.json  {"table": …} : en-tête, mythiques et 1er lot de cartes
@@ -33,8 +43,9 @@ Exemple (near-cli-rs) :
         file-args scripts/out/<slug>/append_series_cards.01.json prepaid-gas '300 Tgas' \
         attached-deposit '<deposits[nom] en yoctoNEAR> yoctonear' sign-as <owner> network-config testnet sign-with-keychain send
 
-Mécaniques (`"mechanics"` dans les paramètres, voir docs/mecaniques-spec.md) : table or et table rush
-données en poids ou en multiplicateurs des poids de base (la commune compense), pitié, plancher des
+Mécaniques (`"mechanics"` dans les paramètres, voir docs/mecaniques-spec.md) : gold pack à plancher de
+rareté par emplacement (`gold.slots`), table rush
+donnée en poids ou en multiplicateurs des poids de base (la commune compense), pitié, plancher des
 burns (plancher et a priori K), paramètres du rush, cartes ressuscitables (`resurrection` : liste de
 card_id, ou règle `dead_epic_legendary` = épiques et légendaires mortes du catalogue, non adossées). Le contrat ne connaît pas la valeur des cartes : c'est ce script qui
 contrôle la couverture (`coverage_check`, valeurs moyennes par rareté en multiples du prix) et refuse
@@ -80,6 +91,13 @@ CHUNK_MARGIN = 128
 
 RARITY_FR = {"mythique": "mythic", "légendaire": "legendary", "épique": "epic", "rare": "rare",
              "commune": "common"}
+# Bornes de la table de valeur (src/lib.rs).
+MAX_VALUE_TIERS = 32
+MIN_NORMAL_VALUE_BPS = 2_000
+MAX_NORMAL_VALUE_BPS = 20_000
+MAX_VALUE_BPS = 1_000_000
+MAX_VALUE_MULT = 1_000_000
+DEFAULT_MYTHICS = os.path.join(REPO, "docs", "data", "secrets", "mythiques.json")
 VISIBLE = ("legendary", "epic", "rare", "common")
 
 
@@ -170,7 +188,52 @@ def mythic_commitments(entries, secrets_path, new_secrets):
     return public
 
 
-def build(params, catalogue, secrets_path, new_secrets):
+def rarity_key(r):
+    """Rareté en anglais (forme du contrat) depuis le français ou l'anglais."""
+    r2 = RARITY_FR.get(r, r)
+    if r2 not in canon.RARITY_NAMES:
+        raise SystemExit(f"rareté inconnue : {r!r}")
+    return r2
+
+
+def load_mythic_secrets(path, catalogue):
+    """Vrais noms des mythiques, par id du catalogue : `path` (docs/data/secrets/mythiques.json), ou
+    repli sur le champ `secret` du catalogue s'il existe encore. Erreur claire sinon."""
+    mythic_ids = [c["id"] for c in catalogue if c.get("section") == "catalogue" and RARITY_FR.get(c["rarete"]) == "mythic"]
+    if not mythic_ids:
+        return {}
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict) and isinstance(data.get("mythiques"), list):
+            data = data["mythiques"]
+        if isinstance(data, list):
+            by_id = {}
+            for e in data:
+                key = e.get("catalogue_id") or e.get("id_catalogue")
+                if key is None:
+                    raise SystemExit(f"{path} : chaque mythique doit porter \"catalogue_id\" (id du catalogue)")
+                by_id[key] = e.get("secret", e)
+            data = by_id
+        missing = [i for i in mythic_ids if i not in data]
+        if missing:
+            raise SystemExit(f"{path} : mythiques absentes {missing} (attendu : {{\"<id catalogue>\": {{\"id\": …, \"nom\": …}}}})")
+        for i in mythic_ids:
+            if not data[i].get("id") or not data[i].get("nom"):
+                raise SystemExit(f"{path} : {i} sans \"id\" ni \"nom\"")
+        return {i: data[i] for i in mythic_ids}
+    secrets = {c["id"]: c.get("secret") for c in catalogue if c["id"] in mythic_ids}
+    if all(secrets.values()):
+        print(f"attention : {os.path.relpath(path, REPO)} introuvable, vrais noms des mythiques lus dans le "
+              "champ \"secret\" du catalogue (repli, à retirer quand le fichier sera en place)", file=sys.stderr)
+        return secrets
+    raise SystemExit(
+        f"Vrais noms des mythiques introuvables : {path} n'existe pas (fichier secret, ignoré par git, au format "
+        "{\"<id catalogue>\": {\"id\": …, \"nom\": …}}) et le catalogue n'a plus de champ \"secret\" "
+        f"pour {[i for i, v in secrets.items() if not v]}. Récupérer le fichier auprès du porteur, ou passer --mythiques.")
+
+
+def build(params, catalogue, secrets_path, new_secrets, mythic_secrets=None):
     cards_src = [c for c in catalogue if c.get("section") == "catalogue"]
     ids = [c["id"] for c in cards_src]
     if len(set(ids)) != len(ids):
@@ -189,7 +252,9 @@ def build(params, catalogue, secrets_path, new_secrets):
     for c in cards_src:
         rarity = RARITY_FR[c["rarete"]]
         if rarity == "mythic":
-            s = c["secret"]
+            s = (mythic_secrets or {}).get(c["id"]) or c.get("secret")
+            if not s:
+                raise SystemExit(f"vrai nom de la mythique {c['id']} introuvable (load_mythic_secrets)")
             m = params.get("mythic", {})
             mythic_entries.append({
                 "card_id": s["id"],
@@ -286,14 +351,85 @@ def resurrectable_indices(spec, cards, etat):
     return out
 
 
+def gold_slots(spec, base):
+    """Gold pack : un emplacement par entrée, `floor` (plancher), `weights` (poids propres, nuls sous
+    le plancher ; absents = poids de base tronqués), `burnable` (tiré parmi les brûlables)."""
+    slots = []
+    if not 1 <= len(spec.get("slots", [])) <= 10:
+        raise SystemExit("mechanics.gold.slots : 1 à 10 emplacements")
+    for i, x in enumerate(spec["slots"]):
+        floor = rarity_key(x["floor"])
+        f = canon.RARITY_NAMES.index(floor)
+        w = None
+        if x.get("weights") is not None:
+            w = {r: 0 for r in canon.RARITY_NAMES}
+            for k, v in x["weights"].items():
+                w[rarity_key(k)] = int(v)
+            if any(w[r] for r in canon.RARITY_NAMES[f + 1:]):
+                raise SystemExit(f"gold.slots[{i}] : poids sous le plancher {floor}")
+        eff = w or {r: (base[r] if canon.RARITY_NAMES.index(r) <= f else 0) for r in canon.RARITY_NAMES}
+        if sum(eff.values()) == 0:
+            raise SystemExit(f"gold.slots[{i}] : aucun poids au-dessus du plancher {floor}")
+        slots.append({"floor": floor, "weights": w, "burnable": bool(x.get("burnable", False))})
+    return {"slots": slots}
+
+
+def value_tables(spec, price):
+    """Tables de valeur au format {"normale": [[bps, poids], …], "gold": […], "rush": […],
+    "multiplicateurs": {"commune": x, …}} (clés anglaises acceptées). Mêmes contrôles que le contrat.
+    Multiplicateurs : entiers gardés tels quels ; s'il y a des décimales, tous sont multipliés par
+    1 000 et arrondis (seuls leurs rapports comptent). Mythique : 0 (adossement de son contenu)."""
+    def tiers(key, alt, lo, hi):
+        t = spec.get(key, spec.get(alt))
+        if not isinstance(t, list) or not 1 <= len(t) <= MAX_VALUE_TIERS:
+            raise SystemExit(f"tables de valeur : « {key} » doit avoir 1 à {MAX_VALUE_TIERS} paliers [bps, poids]")
+        out = []
+        for bps, w in t:
+            bps, w = int(bps), int(w)
+            if w <= 0 or not lo <= bps <= hi:
+                raise SystemExit(f"tables de valeur : palier {key} [{bps}, {w}] hors bornes ([{lo}, {hi}] pb, poids > 0)")
+            out.append([bps, w])
+        return out
+    v = {
+        "normal": tiers("normale", "normal", MIN_NORMAL_VALUE_BPS, MAX_NORMAL_VALUE_BPS),
+        "gold": tiers("gold", "or", 1, MAX_VALUE_BPS),
+        "rush": tiers("rush", "rush", 1, MAX_VALUE_BPS),
+    }
+    raw = spec.get("multiplicateurs", spec.get("multipliers"))
+    if not isinstance(raw, dict):
+        raise SystemExit("tables de valeur : « multiplicateurs » manquant")
+    mult = {r: 0.0 for r in canon.RARITY_NAMES}
+    for k, x in raw.items():
+        mult[rarity_key(k)] = float(x)
+    if mult["mythic"]:
+        raise SystemExit("tables de valeur : multiplicateur mythique = 0 (une mythique garde l'adossement de son contenu)")
+    scale = 1 if all(float(x).is_integer() for x in mult.values()) else 1000
+    v["multipliers"] = {r: int(round(mult[r] * scale)) for r in canon.RARITY_NAMES}
+    for r in ("legendary", "epic", "rare", "common"):
+        if not 1 <= v["multipliers"][r] <= MAX_VALUE_MULT:
+            raise SystemExit(f"tables de valeur : multiplicateur {r} hors de [1, {MAX_VALUE_MULT}]")
+    max_bps = max(b for t in (v["normal"], v["gold"], v["rush"]) for b, _ in t)
+    if int(price) * max_bps // 10_000 * max(v["multipliers"].values()) >= 1 << 128:
+        raise SystemExit("tables de valeur : prix trop élevé (dépassement de u128 au tirage)")
+    return v
+
+
+def mean_value(tiers):
+    """Valeur moyenne d'une table, en multiples du prix."""
+    return sum(b * w for b, w in tiers) / sum(w for _, w in tiers) / 10_000
+
+
 def build_mechanics(params, table, etat=None):
     """Mécaniques de la table (hachées avec elle). Contrôle hors chaîne de la couverture : le contrat
-    n'a pas la valeur des cartes, c'est ce script qui refuse une table rush trop généreuse."""
+    ne sait pas ce que vaut une carte de collection, c'est ce script qui refuse une table rush trop
+    généreuse."""
     m = params["mechanics"]
     base = table["rarity_weights"]
-    out = {"gold_weights": None, "pity": None, "burn": None, "rush": None, "resurrection": None}
+    out = {"gold": None, "pity": None, "burn": None, "rush": None, "resurrection": None, "value": None}
     if m.get("gold_weights") or m.get("gold_multipliers"):
-        out["gold_weights"] = m.get("gold_weights") or scaled_weights(base, m["gold_multipliers"])
+        raise SystemExit("gold_weights / gold_multipliers retirés : le gold pack se décrit par mechanics.gold.slots (plancher par emplacement)")
+    if m.get("gold"):
+        out["gold"] = gold_slots(m["gold"], base)
     if m.get("pity"):
         out["pity"] = {k: int(m["pity"][k]) for k in ("p0_ppm", "k_ppm", "n_max")}
     if m.get("burn"):
@@ -307,21 +443,38 @@ def build_mechanics(params, table, etat=None):
         out["rush"]["weights"] = weights
     if m.get("resurrection"):
         out["resurrection"] = {"eligible": resurrectable_indices(m["resurrection"], table["cards"], etat or {})}
+    if m.get("value"):
+        out["value"] = value_tables(m["value"], table["price"])
+    if out["value"] or (out["gold"] and any(s["burnable"] for s in out["gold"]["slots"])):
+        # Brûlable garantie : même règle que le contrat (refusé à l'ouverture sinon).
+        if not any(c["backing"] and c["cap"] is None and c["weight"] > 0 for c in table["cards"]):
+            raise SystemExit("brûlable garantie : il faut une carte adossée, sans plafond et de poids non nul "
+                             "(par exemple une commune ou une rare brûlable illimitée)")
     coverage = None
     chk = m.get("coverage_check")
-    if chk:
+    if out["value"]:
+        # Valeur tirée par pack : la couverture est la valeur moyenne de chaque table.
+        v = out["value"]
+        coverage = {"base": mean_value(v["normal"]), "gold": mean_value(v["gold"]), "rush": mean_value(v["rush"]),
+                    "source": "tables de valeur (valeur moyenne en multiples du prix)"}
+        max_rush = float((chk or {}).get("max_rush", 0.8))
+        if out["rush"] and coverage["rush"] > max_rush + 1e-9:
+            raise SystemExit(f"table de valeur rush refusée : moyenne {coverage['rush']:.3f} > plafond {max_rush} "
+                             "(acheter pendant un rush serait à espérance positive)")
+    elif chk:
         n = table["cards_per_pack"]
         coverage = {"base": table_coverage(base, n, chk["rarity_value"])}
-        if out["gold_weights"]:
-            coverage["gold"] = table_coverage(out["gold_weights"], n, chk["rarity_value"])
+        if out["gold"]:
+            coverage["gold"] = sum(
+                table_coverage(core.gold_slot_weights(base, s), 1, chk["rarity_value"]) for s in out["gold"]["slots"])
         if out["rush"]:
             coverage["rush"] = table_coverage(out["rush"]["weights"], n, chk["rarity_value"])
             if coverage["rush"] > float(chk["max_rush"]) + 1e-9:
                 raise SystemExit(
                     f"table rush refusée : couverture {coverage['rush']:.3f} > plafond {chk['max_rush']} "
                     "(acheter pendant un rush serait à espérance positive)")
-    elif out["rush"]:
-        raise SystemExit("mechanics.rush exige mechanics.coverage_check (contrôle de la couverture hors chaîne)")
+    if out["rush"] and coverage is None:
+        raise SystemExit("mechanics.rush exige mechanics.value ou mechanics.coverage_check (contrôle de la couverture hors chaîne)")
     return out, coverage
 
 
@@ -334,12 +487,22 @@ def main(argv=None):
     ap.add_argument("--series-id", type=int, default=0,
                     help="identifiant renvoyé par create_series (get_series_count avant la création)")
     ap.add_argument("--new-secrets", action="store_true", help="tire de nouveaux sels (change le hash)")
+    ap.add_argument("--mythiques", default=DEFAULT_MYTHICS,
+                    help="vrais noms des mythiques (fichier secret, ignoré par git)")
+    ap.add_argument("--tables-valeur", help="tables de valeur (remplacent mechanics.value des paramètres)")
     a = ap.parse_args(argv)
 
     with open(a.params, encoding="utf-8") as f:
         params = json.load(f)
     with open(a.catalogue, encoding="utf-8") as f:
         catalogue = json.load(f)
+    if a.tables_valeur:
+        with open(a.tables_valeur, encoding="utf-8") as f:
+            tv = json.load(f)
+        if not params.get("mechanics"):
+            raise SystemExit("--tables-valeur exige des mécaniques dans les paramètres")
+        params["mechanics"]["value"] = tv
+    mythic_secrets = load_mythic_secrets(a.mythiques, catalogue)
     slug = params.get("slug", "serie")
     out = a.out or os.path.join(HERE, "out", slug)
     secrets_path = a.secrets or os.path.join(HERE, "secrets", f"{slug}.json")
@@ -348,7 +511,7 @@ def main(argv=None):
     if os.path.commonpath([os.path.abspath(out), os.path.join(HERE, "secrets")]) == os.path.join(HERE, "secrets"):
         raise SystemExit("--out ne doit pas être sous scripts/secrets/")
 
-    table, renamed, coverage = build(params, catalogue, secrets_path, a.new_secrets)
+    table, renamed, coverage = build(params, catalogue, secrets_path, a.new_secrets, mythic_secrets)
 
     # Hash : vérificateur Python (canon.py reproduit serde_json::to_vec).
     table_bytes = canon.table_json_bytes(table)
@@ -414,10 +577,12 @@ def main(argv=None):
     write_json(os.path.join(out, "manifest.json"), manifest)
 
     # Garde-fou : aucun vrai nom de mythique (titre exact, en chaîne JSON) dans les sorties publiques.
+    names = [json.dumps(x["nom"], ensure_ascii=False).encode("utf-8") for x in mythic_secrets.values()]
     if os.path.exists(secrets_path):
         with open(secrets_path, encoding="utf-8") as f:
-            names = [json.dumps(p["content"]["title"], ensure_ascii=False).encode("utf-8")
-                     for p in json.load(f)]
+            names += [json.dumps(p["content"]["title"], ensure_ascii=False).encode("utf-8")
+                      for p in json.load(f)]
+    if names:
         for name in os.listdir(out):
             with open(os.path.join(out, name), "rb") as f:
                 data = f.read()

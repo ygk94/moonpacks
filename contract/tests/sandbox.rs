@@ -240,18 +240,66 @@ fn verify_pack_event(ev: &Value, owner: &str, table: &SeriesTable) {
         assert_eq!(hex::encode(acc), s["acc"].as_str().unwrap());
     }
     assert_eq!(hex::encode(acc), ev["acc"].as_str().unwrap());
-    // Table de taux du pack (série à mécaniques : base, or ou rush, journalisée).
+    // Table de taux du pack (série à mécaniques : base, or ou rush, journalisée). Gold pack : les
+    // poids de chaque emplacement (plancher), un emplacement par entrée de `mechanics.gold`.
+    let mech = table.mechanics.as_ref();
+    let gold = mech.and_then(|m| m.gold.as_ref()).filter(|_| ev["mechanics"]["mode"] == "gold");
     let w = match ev["mechanics"]["mode"].as_str() {
-        Some("gold") => table.mechanics.as_ref().and_then(|m| m.gold_weights.clone()).unwrap(),
-        Some("rush") => table.mechanics.as_ref().and_then(|m| m.rush.as_ref()).map(|r| r.weights.clone()).unwrap(),
+        Some("rush") => mech.and_then(|m| m.rush.as_ref()).map(|r| r.weights.clone()).unwrap(),
         _ => table.rarity_weights.clone(),
     };
-    let total: u128 = [w.mythic, w.legendary, w.epic, w.rare, w.common].iter().map(|x| *x as u128).sum();
+    let n = gold.map(|g| g.slots.len()).unwrap_or(table.cards_per_pack as usize);
+    assert_eq!(ev["draws"].as_array().unwrap().len(), n, "nombre d'emplacements");
     for d in ev["draws"].as_array().unwrap() {
         let slot = d["slot"].as_u64().unwrap() as u8;
+        let w = gold.map(|g| memaster::draw::gold_slot_weights(&table.rarity_weights, &g.slots[slot as usize])).unwrap_or(w.clone());
+        let total: u128 = [w.mythic, w.legendary, w.epic, w.rare, w.common].iter().map(|x| *x as u128).sum();
         let h = sha(&[&acc, &[slot, 0]]);
         let roll = u128::from_be_bytes(h[..16].try_into().unwrap()) % total;
         assert_eq!(roll.to_string(), d["rarity_roll"].as_str().unwrap(), "rarity_roll recalculé");
+    }
+    // Valeur du pack : palier (tag 3), total ⌊prix × V / 10⁴⌋, réparti sans perte entre des brûlables.
+    if let Some(v) = mech.and_then(|m| m.value.as_ref()) {
+        let mode = match ev["mechanics"]["mode"].as_str() {
+            Some("gold") => PackMode::Gold,
+            Some("rush") => PackMode::Rush,
+            _ => PackMode::Base,
+        };
+        let (roll, tier, bps) = memaster::draw::value_tier(memaster::draw::value_table(v, mode), &acc);
+        let e = &ev["mechanics"]["value"];
+        assert_eq!((e["roll"].as_u64(), e["tier"].as_u64(), e["bps"].as_u64()), (Some(roll), Some(tier as u64), Some(bps as u64)), "palier de valeur");
+        let total = table.price.0 / 10_000 * bps as u128 + table.price.0 % 10_000 * bps as u128 / 10_000;
+        assert_eq!(e["total"].as_str().unwrap(), total.to_string());
+        let amounts: Vec<u128> = e["amounts"].as_array().unwrap().iter().filter_map(|a| a.as_str()).map(|a| a.parse().unwrap()).collect();
+        assert!(!amounts.is_empty(), "au moins une brûlable par pack");
+        assert_eq!(amounts.iter().sum::<u128>(), total, "aucun yocto perdu");
+    } else {
+        assert!(ev["mechanics"]["value"].is_null());
+    }
+}
+
+/// Gold pack de la décision du 11/11 : 1-2 rare ou mieux (le 2 parmi les brûlables), 3-4 épique ou
+/// mieux, 5 légendaire 80 % ou mythique 20 % (`mythic` : poids mythique, 0 sans mythique).
+fn gold_v2(mythic: u32) -> GoldParams {
+    let s = |floor, burnable| GoldSlot { floor, weights: None, burnable };
+    GoldParams {
+        slots: vec![
+            s(Rarity::Rare, false),
+            s(Rarity::Rare, true),
+            s(Rarity::Epic, false),
+            s(Rarity::Epic, false),
+            GoldSlot { floor: Rarity::Legendary, weights: Some(weights(mythic, 80, 0, 0, 0)), burnable: false },
+        ],
+    }
+}
+
+/// Tables de valeur provisoires de `scripts/serie-exemple.json` (normale 20 à 200 %, moyenne 75 %).
+fn value_v2() -> ValueParams {
+    ValueParams {
+        normal: vec![(2_000, 15), (3_000, 13), (4_000, 10), (5_000, 10), (6_000, 10), (8_000, 10), (10_000, 10), (12_000, 8), (15_000, 5), (20_000, 9)],
+        gold: vec![(10_000, 30), (15_000, 25), (20_000, 20), (30_000, 13), (50_000, 8), (80_000, 4)],
+        rush: vec![(2_000, 13), (3_000, 12), (4_000, 10), (5_000, 10), (6_000, 10), (8_000, 10), (10_000, 10), (12_000, 9), (15_000, 7), (20_000, 9)],
+        multipliers: weights(0, 20, 5, 2, 1),
     }
 }
 
@@ -1225,14 +1273,17 @@ async fn catalogue_v2_batched_load_and_packs() -> Result<()> {
     let prepaid = sv["storage_per_pack"].as_u64().unwrap();
     let mut jsonl = String::new();
     let (mut worst_total, mut worst_buy, mut worst_final, mut worst_used) = (0u64, 0u64, 0u64, 0u64);
-    for i in 0..12 {
-        let who = if i % 2 == 0 { &env.alice } else { &env.bob };
+    let mut modes = std::collections::BTreeMap::<String, u32>::new();
+    // alice achète les 20 premiers : la pitié garantit au moins un gold pack (N = 20).
+    for i in 0..22 {
+        let who = if i < 20 || i % 2 == 0 { &env.alice } else { &env.bob };
         let b = env.worker.view_account(env.contract.id()).await?;
         let r = buy(&env, who, sid).await?;
         assert!(r.is_success(), "{:?}", r.failures());
         let a = env.worker.view_account(env.contract.id()).await?;
         let ev = revealed(&r);
         verify_pack_event(&ev, who.id().as_str(), &full);
+        *modes.entry(ev["mechanics"]["mode"].as_str().unwrap().to_string()).or_default() += 1;
         let outs = r.receipt_outcomes();
         worst_buy = worst_buy.max(outs[0].gas_burnt.as_gas());
         worst_final = worst_final.max(
@@ -1245,8 +1296,9 @@ async fn catalogue_v2_batched_load_and_packs() -> Result<()> {
             jsonl.push('\n');
         }
     }
+    assert!(modes.contains_key("gold"), "aucun gold pack en 20 packs d'alice : {modes:?}");
     println!(
-        "  12 boosters à {} Tgas : gaz total max {:.2} Tgas, buy_pack max {:.2} Tgas (budget 20), dernier reçu max {:.2} Tgas (budget 120), stockage max {} o / prépayé {} o",
+        "  22 boosters ({modes:?}) à {} Tgas : gaz total max {:.2} Tgas, buy_pack max {:.2} Tgas (budget 20), dernier reçu max {:.2} Tgas (budget 120), stockage max {} o / prépayé {} o",
         sv["min_gas"].as_str().unwrap().parse::<u64>()? / 1_000_000_000_000,
         tgas(worst_total),
         tgas(worst_buy),
@@ -1261,7 +1313,7 @@ async fn catalogue_v2_batched_load_and_packs() -> Result<()> {
     let (ok, txt) = run_verifier(&["pack", "--event", events_path.to_str().unwrap(), "--table", out.join("table.json").to_str().unwrap()]);
     assert!(ok, "vérificateur pack : {txt}");
     assert!(!txt.contains("NON CONFORME"), "{txt}");
-    println!("  vérificateur Python : 12 boosters rejoués depuis l'ouverture (mécaniques de serie-exemple.json), VÉRIFIÉ");
+    println!("  vérificateur Python : 22 boosters rejoués depuis l'ouverture (mécaniques de serie-exemple.json), VÉRIFIÉ");
     std::fs::remove_dir_all(&dir).ok();
     Ok(())
 }
@@ -1292,10 +1344,14 @@ async fn max_size_series_fits() -> Result<()> {
     let mut t = table("Taille max", NEAR / 10, weights(1, 1, 1, 1, 1), cards, mythics, &env.owner);
     t.cards_per_pack = 10;
     // Pire cas des mécaniques : toutes actives (pitié garantie un pack sur deux, burns, rush).
+    // Gold pack de 10 emplacements (le maximum) : le gold pack v2 deux fois.
+    let mut gold = gold_v2(20);
+    gold.slots.extend(gold.slots.clone());
     t.mechanics = Some(Mechanics {
-        gold_weights: Some(weights(4, 4, 3, 2, 1)),
+        gold: Some(gold),
         pity: Some(PityParams { p0_ppm: 20_000, k_ppm: 2_000, n_max: 2 }),
         burn: Some(BurnParams { floor_bps: 2_500, prior_k: 20 }),
+        value: Some(value_v2()),
         rush: Some(RushParams {
             ratio_bps: 25_000,
             min_packs: 50,
@@ -1534,7 +1590,8 @@ async fn mechanics_end_to_end() -> Result<()> {
         &env.owner,
     );
     t.mechanics = Some(Mechanics {
-        gold_weights: Some(weights(0, 80, 300, 300, 320)),
+        gold: Some(gold_v2(0)),
+        value: Some(value_v2()),
         pity: Some(PityParams { p0_ppm: 100_000, k_ppm: 50_000, n_max: 3 }),
         // A priori petit : sur une vingtaine de boosters, les burns doivent se voir dans les tirages.
         burn: Some(BurnParams { floor_bps: 2_500, prior_k: 2 }),
@@ -1559,6 +1616,7 @@ async fn mechanics_end_to_end() -> Result<()> {
     let mut held: Vec<(String, usize, Account)> = vec![]; // (token_id, index, propriétaire)
     let (mut max_used, mut max_last, mut modes) = (0u64, 0u64, std::collections::BTreeMap::<String, u32>::new());
     let buyers = [env.alice.clone(), env.bob.clone(), env.carol.clone()];
+    let mut drawn_value = std::collections::HashMap::<String, String>::new();
     let mut k = 0usize;
     macro_rules! buy_one {
         () => {{
@@ -1574,8 +1632,11 @@ async fn mechanics_end_to_end() -> Result<()> {
             let ev = revealed(&r);
             verify_pack_event(&ev, who.id().as_str(), &t);
             *modes.entry(ev["mechanics"]["mode"].as_str().unwrap().to_string()).or_default() += 1;
-            for d in ev["draws"].as_array().unwrap() {
+            for (slot, d) in ev["draws"].as_array().unwrap().iter().enumerate() {
                 held.push((d["token_id"].as_str().unwrap().to_string(), d["index"].as_u64().unwrap() as usize, who.clone()));
+                if let Some(a) = ev["mechanics"]["value"]["amounts"][slot].as_str() {
+                    drawn_value.insert(d["token_id"].as_str().unwrap().to_string(), a.to_string());
+                }
             }
             lines.extend(series_event_lines(&r));
             ev
@@ -1603,6 +1664,9 @@ async fn mechanics_end_to_end() -> Result<()> {
         assert!(r.is_success(), "{:?}", r.failures());
         let cb = r.receipt_outcomes().iter().filter(|o| o.logs.iter().any(|l| l.contains("card_redeemed"))).map(|o| o.gas_burnt.as_gas()).max().unwrap();
         burn_gas = burn_gas.max(cb);
+        // Le redeemer reçoit la part de la valeur tirée pour cet exemplaire.
+        let red = events(&r.logs(), "card_redeemed");
+        assert_eq!(red[0]["amount"].as_str(), drawn_value.get(tid).map(|s| s.as_str()), "montant = part de la valeur du pack");
         lines.extend(series_event_lines(&r));
     }
     let sv = series_view(&env, sid).await?;
@@ -1640,9 +1704,10 @@ async fn mechanics_end_to_end() -> Result<()> {
     std::fs::create_dir_all(&dir)?;
     std::fs::write(dir.join("events.jsonl"), lines.join("\n"))?;
     std::fs::write(dir.join("table.json"), serde_json::to_vec(&t)?)?;
-    let (ok, txt) = run_verifier(&["pack", "--event", dir.join("events.jsonl").to_str().unwrap(), "--table", dir.join("table.json").to_str().unwrap()]);
+    let (ok, txt) = run_verifier(&["pack", "-v", "--event", dir.join("events.jsonl").to_str().unwrap(), "--table", dir.join("table.json").to_str().unwrap()]);
     assert!(ok && !txt.contains("NON CONFORME"), "vérificateur : {txt}");
     assert!(txt.contains("burns ") && txt.contains("résurrections 1"), "{txt}");
+    assert!(txt.contains("valeur :") && txt.contains("parmi les brûlables"), "{txt}");
     println!("  vérificateur Python : {} événements rejoués, VÉRIFIÉ", lines.len());
     // Vecteurs du vérificateur (verifier/tests/vectors/sandbox_mech_vectors.json), sur demande.
     if let Ok(out) = std::env::var("MECH_VECTORS_OUT") {
@@ -1654,6 +1719,103 @@ async fn mechanics_end_to_end() -> Result<()> {
         });
         std::fs::write(out, serde_json::to_string_pretty(&doc)? + "\n")?;
     }
+    std::fs::remove_dir_all(&dir).ok();
+    Ok(())
+}
+
+/// Valeur aléatoire et gold pack (décisions du 11/11) : gold pack de 5 cartes à planchers (pitié
+/// N = 2, un pack sur deux), brûlable garantie au dernier emplacement d'un pack normal, valeur tirée
+/// dans la table du pack et répartie entre les brûlables, transmise telle quelle au redeemer factice,
+/// et rejeu complet par le vérificateur Python. Mesures de gaz et de stockage imprimées.
+#[tokio::test]
+async fn value_and_gold_pack_end_to_end() -> Result<()> {
+    let env = setup().await?;
+    let content = MythicContent { title: "Secret".into(), media: None, reference: None, backing: None };
+    let mut myth = mythic_secret("m-secret", &[9; 32], &content);
+    myth.cap = 100;
+    let mut t = table(
+        "Valeur",
+        NEAR / 10 + 3, // prix non multiple de 10⁴ : arrondi des yocto
+        weights(0, 20, 100, 200, 680),
+        vec![
+            card("leg", Rarity::Legendary, 1, None, true),
+            card("epic_a", Rarity::Epic, 1, None, true),
+            card("epic_b", Rarity::Epic, 1, None, false),
+            card("rare_a", Rarity::Rare, 1, None, true),
+            card("rare_b", Rarity::Rare, 3, None, false),
+            card("com_a", Rarity::Common, 1, None, true),
+            card("com_b", Rarity::Common, 30, None, false),
+        ],
+        vec![myth],
+        &env.owner,
+    );
+    t.mechanics = Some(Mechanics {
+        gold: Some(gold_v2(20)),
+        pity: Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 2 }),
+        burn: None,
+        rush: None,
+        resurrection: None,
+        value: Some(value_v2()),
+    });
+    let sid = open_series(&env, &t).await?;
+    let prepaid = series_view(&env, sid).await?["storage_per_pack"].as_u64().unwrap();
+    let (mut lines, mut max_used, mut max_last) = (vec![], 0u64, 0u64);
+    let mut targets: Vec<(String, String, String)> = vec![]; // (token_id, montant, mode)
+    let mut golds = 0;
+    for _ in 0..10 {
+        let b = env.worker.view_account(env.contract.id()).await?;
+        let r = buy(&env, &env.alice, sid).await?;
+        assert!(r.is_success(), "{:?}", r.failures());
+        let a = env.worker.view_account(env.contract.id()).await?;
+        max_used = max_used.max(a.storage_usage - b.storage_usage);
+        let last = r.receipt_outcomes().iter().filter(|o| o.logs.iter().any(|l| l.contains("pack_revealed"))).map(|o| o.gas_burnt.as_gas()).max().unwrap();
+        max_last = max_last.max(last);
+        let ev = revealed(&r);
+        verify_pack_event(&ev, env.alice.id().as_str(), &t);
+        let mode = ev["mechanics"]["mode"].as_str().unwrap().to_string();
+        let draws = ev["draws"].as_array().unwrap();
+        let rank = |d: &Value| ["mythic", "legendary", "epic", "rare", "common"].iter().position(|r| d["final_rarity"] == *r).unwrap();
+        if mode == "gold" {
+            golds += 1;
+            assert_eq!(draws.len(), 5);
+            assert!(rank(&draws[0]) <= 3 && rank(&draws[1]) <= 3 && rank(&draws[2]) <= 2 && rank(&draws[3]) <= 2 && rank(&draws[4]) <= 1, "{draws:?}");
+            assert!(!ev["mechanics"]["value"]["amounts"][1].is_null(), "emplacement 2 parmi les brûlables");
+        } else {
+            assert!(!ev["mechanics"]["value"]["amounts"][4].is_null(), "dernier emplacement brûlable");
+        }
+        for (slot, d) in draws.iter().enumerate() {
+            if let Some(a) = ev["mechanics"]["value"]["amounts"][slot].as_str() {
+                if !targets.iter().any(|x| x.2 == mode) {
+                    targets.push((d["token_id"].as_str().unwrap().to_string(), a.to_string(), mode.clone()));
+                }
+            }
+        }
+        lines.extend(series_event_lines(&r));
+    }
+    assert_eq!(golds, 5, "pitié N = 2 : un pack sur deux");
+    // Burn : le redeemer reçoit la part tirée (yoctoNEAR de valeur), pas le montant de la table.
+    for (i, (tid, amount, mode)) in targets.iter().enumerate() {
+        let b: Backing = env.contract.view("get_backing").args_json(json!({ "token_id": tid })).await?.json()?;
+        assert_eq!(&b.amount.0.to_string(), amount);
+        let r = env.alice.call(env.contract.id(), "redeem").args_json(json!({ "token_id": tid })).deposit(NearToken::from_yoctonear(1)).gas(Gas::from_tgas(100)).transact().await?;
+        assert!(r.is_success(), "{:?}", r.failures());
+        let red: Value = env.redeemer.view("get_redemptions").await?.json()?;
+        assert_eq!(red[i]["amount"].as_str(), Some(amount.as_str()), "pack {mode}");
+        println!("  burn d'une brûlable d'un pack {mode} : le redeemer reçoit {amount} yocto de valeur ({:?})", b.asset_id);
+        lines.extend(series_event_lines(&r));
+    }
+    println!(
+        "\n=== VALEUR ET GOLD PACK : 10 boosters ({golds} gold), dernier reçu {:.2} Tgas au plus, stockage {} o au plus / prépayé {} o ===",
+        tgas(max_last), max_used, prepaid
+    );
+    assert!(max_used <= prepaid);
+    let dir = std::path::PathBuf::from(format!("{}/target/near-test/value-{}", env!("CARGO_MANIFEST_DIR"), std::process::id()));
+    std::fs::create_dir_all(&dir)?;
+    std::fs::write(dir.join("events.jsonl"), lines.join("\n"))?;
+    std::fs::write(dir.join("table.json"), serde_json::to_vec(&t)?)?;
+    let (ok, txt) = run_verifier(&["pack", "-v", "--event", dir.join("events.jsonl").to_str().unwrap(), "--table", dir.join("table.json").to_str().unwrap()]);
+    assert!(ok && !txt.contains("NON CONFORME"), "vérificateur : {txt}");
+    assert!(txt.contains("table gold") && txt.contains("répartition entre"), "{txt}");
     std::fs::remove_dir_all(&dir).ok();
     Ok(())
 }
@@ -1680,8 +1842,14 @@ async fn worst_case_cascade_with_burns_fits() -> Result<()> {
         .collect();
     let mut t = table("Cascade", NEAR / 10, weights(0, 9_997, 1, 1, 1), cards, vec![], &env.owner);
     t.cards_per_pack = 10;
+    // Gold pack de 10 emplacements visant la légendaire (plancher légendaire) : chaque emplacement
+    // remonte vers la mythique (aucune), puis descend sous le plancher jusqu'à la commune ; deux
+    // d'entre eux parmi les brûlables. Table de valeur : brûlable garantie au dernier emplacement
+    // d'un pack normal (même cascade, restreinte aux brûlables).
+    let leg = |burnable| GoldSlot { floor: Rarity::Legendary, weights: Some(weights(0, 1, 0, 0, 0)), burnable };
     t.mechanics = Some(Mechanics {
-        gold_weights: Some(weights(0, 9_996, 2, 1, 1)),
+        gold: Some(GoldParams { slots: (0..10).map(|i| leg(i % 5 == 1)).collect() }),
+        value: Some(value_v2()),
         pity: Some(PityParams { p0_ppm: 20_000, k_ppm: 2_000, n_max: 2 }),
         burn: Some(BurnParams { floor_bps: 2_500, prior_k: 20 }),
         rush: Some(RushParams {
