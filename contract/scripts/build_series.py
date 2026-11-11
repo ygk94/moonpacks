@@ -6,6 +6,7 @@ Usage (depuis contract/) :
         [--catalogue ../docs/data/catalogue-v2.json] [--out scripts/out/<slug>]
         [--secrets scripts/secrets/<slug>.json] [--series-id 0] [--new-secrets]
         [--mythiques ../docs/data/secrets/mythiques.json] [--tables-valeur fichier.json]
+        [--media-base ipfs://<CID>] [--sels scripts/secrets/<autre slug>.json]
 
 Vrais noms des mythiques : lus dans docs/data/secrets/mythiques.json (ignoré par git, --mythiques),
 au format {"<id catalogue>": {"id": …, "nom": …, …}} (ou une liste d'objets portant "catalogue_id").
@@ -50,6 +51,17 @@ burns (plancher et a priori K), paramètres du rush, cartes ressuscitables (`res
 card_id, ou règle `dead_epic_legendary` = épiques et légendaires mortes du catalogue, non adossées). Le contrat ne connaît pas la valeur des cartes : c'est ce script qui
 contrôle la couverture (`coverage_check`, valeurs moyennes par rareté en multiples du prix) et refuse
 une table rush au-delà de `max_rush` (80 %). Les couvertures calculées vont dans manifest.json.
+
+Visuels (`media`) : `media_template` des paramètres (« {id} » = card_id de la table), ou --media-base BASE, qui le
+remplace par BASE/{id}.svg (BASE = ipfs://<CID> du dossier préparé par scripts/ipfs_media.py). Les mythiques ont
+toutes le même visuel « ? » : `mythic_media` des paramètres, ou BASE/mythique.svg avec --media-base. Leur `media`
+n'est jamais construit à partir de leur vrai id (un fichier nommé d'après lui le trahirait). Sans `mythic_media`,
+l'ancien comportement (`media_template` appliqué au vrai id) est gardé pour ne pas changer les tables existantes.
+
+Sels existants (--sels FICHIER) : réutilise, par card_id, les sels d'un fichier de secrets existant (par exemple
+scripts/secrets/serie-v2.json) au lieu d'en tirer de nouveaux, et réécrit le fichier de secrets de la série avec le
+contenu courant (titre, media, adossement). L'engagement sha256(card_id ‖ sel) ne change pas ; le content_hash suit le
+contenu. Incompatible avec --new-secrets.
 
 Les cartes visibles sont triées par card_id (ordre exigé par le chargement par lots).
 Un card_id du catalogue de plus de 64 octets (limite du contrat) est raccourci de façon déterministe :
@@ -158,11 +170,33 @@ def write_secret(path, obj):
     os.chmod(path, 0o600)
 
 
-def mythic_commitments(entries, secrets_path, new_secrets):
+def reseal_from(entries, sels_path, secrets_path):
+    """Fichier de secrets de la série à partir des sels d'un autre fichier (même card_id), sans aléa neuf."""
+    with open(sels_path, encoding="utf-8") as f:
+        sels = {p["card_id"]: p["sel"] for p in json.load(f)}
+    private = []
+    for i, e in enumerate(entries):
+        if e["card_id"] not in sels:
+            raise SystemExit(f"--sels {sels_path} : pas de sel pour la mythique {i}")
+        sel = bytes.fromhex(sels[e["card_id"]])
+        if len(sel) != 32:
+            raise SystemExit("sel de 32 octets attendu")
+        content = gen_mythics.canonical_content(e["content"])
+        private.append({"mythic_index": i, "card_id": e["card_id"], "sel": sel.hex(), "content": content,
+                        "commitment": hashlib.sha256(e["card_id"].encode("utf-8") + sel).hexdigest(),
+                        "content_hash": hashlib.sha256(gen_mythics.content_json(content) + sel).hexdigest()})
+    write_secret(secrets_path, private)
+
+
+def mythic_commitments(entries, secrets_path, new_secrets, sels_path=None):
     """Engagements publics des mythiques, via gen_mythics.py. Réutilise les sels existants."""
     input_path = secrets_path[: -len(".json")] + ".mythics-input.json"
     write_secret(input_path, entries)
-    if new_secrets or not os.path.exists(secrets_path):
+    if sels_path:
+        if new_secrets:
+            raise SystemExit("--sels et --new-secrets sont incompatibles")
+        reseal_from(entries, sels_path, secrets_path)
+    elif new_secrets or not os.path.exists(secrets_path):
         public_tmp = secrets_path[: -len(".json")] + ".public.json"
         subprocess.run([sys.executable, os.path.join(HERE, "gen_mythics.py"), input_path, public_tmp,
                         secrets_path], check=True, stdout=subprocess.DEVNULL)
@@ -239,7 +273,7 @@ def load_mythic_secrets(path, catalogue):
         f"pour {[i for i, v in secrets.items() if not v]}. Récupérer le fichier auprès du porteur, ou passer --mythiques.")
 
 
-def build(params, catalogue, secrets_path, new_secrets, mythic_secrets=None):
+def build(params, catalogue, secrets_path, new_secrets, mythic_secrets=None, sels_path=None):
     cards_src = [c for c in catalogue if c.get("section") == "catalogue"]
     ids = [c["id"] for c in cards_src]
     if len(set(ids)) != len(ids):
@@ -253,6 +287,8 @@ def build(params, catalogue, secrets_path, new_secrets, mythic_secrets=None):
         burn[b["card_id"]] = backing_of(b)
     overrides = params.get("card_overrides", {})
     media_t, ref_t = params.get("media_template"), params.get("reference_template")
+    mythic_media = params.get("mythic_media")
+    check_len(mythic_media, MAX_URL_LEN, "mythic_media")
 
     cards, mythic_entries, renamed, etat = [], [], {}, {}
     for c in cards_src:
@@ -266,7 +302,7 @@ def build(params, catalogue, secrets_path, new_secrets, mythic_secrets=None):
                 "card_id": s["id"],
                 "weight": int(m.get("weight", 1)),
                 "cap": int(m.get("cap", 1)),
-                "content": {"title": s["nom"], "media": fmt(media_t, s["id"]),
+                "content": {"title": s["nom"], "media": mythic_media if mythic_media else fmt(media_t, s["id"]),
                             "reference": fmt(ref_t, s["id"]), "backing": burn.get(c["id"])},
             })
             continue
@@ -296,7 +332,7 @@ def build(params, catalogue, secrets_path, new_secrets, mythic_secrets=None):
     # qu'il garantit leur unicité sans relire la table. L'ordre de la table n'a pas d'autre effet.
     cards.sort(key=lambda c: c["card_id"].encode("utf-8"))
 
-    mythics = mythic_commitments(mythic_entries, secrets_path, new_secrets) if mythic_entries else []
+    mythics = mythic_commitments(mythic_entries, secrets_path, new_secrets, sels_path) if mythic_entries else []
     table = {
         "name": params["name"],
         "price": str(int(params["price_yocto"])),
@@ -529,12 +565,19 @@ def main(argv=None):
     ap.add_argument("--mythiques", default=DEFAULT_MYTHICS,
                     help="vrais noms des mythiques (fichier secret, ignoré par git)")
     ap.add_argument("--tables-valeur", help="tables de valeur (remplacent mechanics.value des paramètres)")
+    ap.add_argument("--media-base", help="base des visuels (ex. ipfs://<CID>) : media = BASE/{id}.svg, "
+                                         "mythiques BASE/mythique.svg (remplace media_template et mythic_media)")
+    ap.add_argument("--sels", help="réutilise les sels de ce fichier de secrets (par card_id) au lieu d'en tirer")
     a = ap.parse_args(argv)
 
     with open(a.params, encoding="utf-8") as f:
         params = json.load(f)
     with open(a.catalogue, encoding="utf-8") as f:
         catalogue = json.load(f)
+    if a.media_base:
+        base = a.media_base.rstrip("/")
+        params["media_template"] = base + "/{id}.svg"
+        params["mythic_media"] = base + "/mythique.svg"
     if a.tables_valeur:
         with open(a.tables_valeur, encoding="utf-8") as f:
             tv = json.load(f)
@@ -550,7 +593,7 @@ def main(argv=None):
     if os.path.commonpath([os.path.abspath(out), os.path.join(HERE, "secrets")]) == os.path.join(HERE, "secrets"):
         raise SystemExit("--out ne doit pas être sous scripts/secrets/")
 
-    table, renamed, coverage = build(params, catalogue, secrets_path, a.new_secrets, mythic_secrets)
+    table, renamed, coverage = build(params, catalogue, secrets_path, a.new_secrets, mythic_secrets, a.sels)
 
     # Hash : vérificateur Python (canon.py reproduit serde_json::to_vec).
     table_bytes = canon.table_json_bytes(table)
@@ -607,6 +650,8 @@ def main(argv=None):
         "deposits": deposits,
         "deposit_total_near": f"{sum(int(d) for d in deposits.values()) / 10 ** 24:.3f}",
         "renamed_ids": renamed,
+        "media_template": params.get("media_template"),
+        "mythic_media": params.get("mythic_media"),
         "mechanics": table.get("mechanics"),
         "resurrectable": [table["cards"][i]["card_id"] for i in
                           ((table.get("mechanics") or {}).get("resurrection") or {}).get("eligible", [])],

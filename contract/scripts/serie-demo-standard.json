@@ -1,0 +1,469 @@
+{
+  "_doc": "Série de démo Memaster Standard : pack à 0.50 $ = 0.1381 NEAR au cours de 3.62 $/NEAR (CoinGecko /simple/price, 2026-11-11 23:05 UTC (1Click wNEAR : 3,60 $ à 23:02 UTC)). Généré par scripts/series_demo.py : ne pas éditer à la main. Mécaniques de serie-exemple.json, tables de valeur de sim/resultats/serie5/tables-valeur.json, brûlables de docs/data/intents-brulables-demo.json. Testnet seulement.",
+  "slug": "serie-demo-standard",
+  "name": "Memaster Standard",
+  "price_yocto": "138100000000000000000000",
+  "cards_per_pack": 5,
+  "rarity_weights": {
+    "mythic": 5,
+    "legendary": 40000,
+    "epic": 360000,
+    "rare": 1600000,
+    "common": 17999995
+  },
+  "card_weights": {
+    "legendary": 1,
+    "epic": 1,
+    "rare": 1,
+    "common": 1
+  },
+  "caps": {
+    "legendary": 50,
+    "epic": null,
+    "rare": null,
+    "common": null
+  },
+  "card_overrides": {},
+  "mythic": {
+    "weight": 1,
+    "cap": 10
+  },
+  "media_template": "ipfs://TODO/{id}.svg",
+  "reference_template": null,
+  "burnables": [
+    {
+      "card_id": "black-dragon-blackdragon",
+      "asset_id": "nep141:blackdragon.tkn.near",
+      "amount": "76840325802981404641155678500000"
+    },
+    {
+      "card_id": "book-of-meme-bome",
+      "asset_id": "nep141:sol-57d087fd8c460f612f8701f5499ad8b2eec5ab68.omft.near",
+      "amount": "828033916"
+    },
+    {
+      "card_id": "cash-cat-cashcat",
+      "asset_id": "nep141:hood-0x020bfc650a365f8bb26819deaabf3e21291018b4.omft.near",
+      "amount": "8839700864522744550"
+    },
+    {
+      "card_id": "dogwifhat-wif",
+      "asset_id": "nep141:sol-b9c68f94ec8fd160137af8cdfe5e61cd68e2afba.omft.near",
+      "amount": "3206484"
+    },
+    {
+      "card_id": "jambo-meme-cooking-jambo",
+      "asset_id": "nep141:jambo-1679.meme-cooking.near",
+      "amount": "2592076026743627912924"
+    },
+    {
+      "card_id": "nearkat-nearkat",
+      "asset_id": "nep141:kat.token0.near",
+      "amount": "5820044232336165754859"
+    },
+    {
+      "card_id": "pudgy-penguins-pengu",
+      "asset_id": "nep141:sol-0xaad74c68eecfc9f8c5bdcea614f6167048c795ef.omdep.near",
+      "amount": "79779171"
+    },
+    {
+      "card_id": "spx6900-spx",
+      "asset_id": "nep141:eth-0xe0f63a424a4439cbe457d80e4f4b51ad25b2c56c.omft.near",
+      "amount": "137744082"
+    },
+    {
+      "card_id": "turbo-turbo",
+      "asset_id": "nep141:eth-0xa35923162c49cf95e6bf26623385eb431ad920d3.omft.near",
+      "amount": "732632936246281887848"
+    }
+  ],
+  "royalties": [],
+  "mechanics": {
+    "_doc": "Paramètres par défaut de docs/mecaniques-spec.md. Hauteurs en blocs, 0,6 s par bloc supposé (non vérifié).",
+    "gold": {
+      "_doc": "Gold pack (pitié, ultra rare, sans garantie) : 5 cartes, aucune commune. Plancher de rareté par emplacement : 1 et 2 rare ou mieux (poids de base tronqués), 3 et 4 épique ou mieux, 5 légendaire 99 % ou mythique 1 %. Rareté épuisée : vers le bas jusqu'au plancher, puis vers le haut, puis sous le plancher. L'emplacement 2 est tiré parmi les brûlables (la valeur du pack y est adossée).",
+      "slots": [
+        {
+          "floor": "rare",
+          "burnable": false
+        },
+        {
+          "floor": "rare",
+          "burnable": true
+        },
+        {
+          "floor": "épique",
+          "burnable": false
+        },
+        {
+          "floor": "épique",
+          "burnable": false
+        },
+        {
+          "floor": "légendaire",
+          "weights": {
+            "légendaire": 99,
+            "mythique": 1
+          },
+          "burnable": false
+        }
+      ]
+    },
+    "pity": {
+      "_doc": "Probabilité d'un gold pack par compte, en ppb (10⁹) : min(p_max_ppb, p0_ppb + k_ppb × n), n = packs consécutifs sans gold pack. 1 sur 50 000 au départ, 1 sur 25 000 au plus, plafond atteint en 1 000 packs ((40 000 − 20 000) / 20). Aucun gold pack garanti (n_max absent) ; n repart à 0 seulement après un gold pack (pas après un pack rush).",
+      "p0_ppb": 20000,
+      "k_ppb": 20,
+      "p_max_ppb": 40000,
+      "n_max": null
+    },
+    "burn": {
+      "_doc": "prior_k : a priori K du lissage, de l'ordre des émissions attendues par épique ou légendaire de cette table (5 à 35 en un mois entre 20 et 100 packs/h).",
+      "floor_bps": 2500,
+      "prior_k": 20
+    },
+    "rush": {
+      "ratio_bps": 25000,
+      "min_packs": 100,
+      "window_blocks": 6000,
+      "baseline_blocks": 144000,
+      "bucket_blocks": 1500,
+      "duration_blocks": 3000,
+      "cooldown_blocks": 36000,
+      "max_per_account": 3,
+      "multipliers": {
+        "mythic": 1,
+        "legendary": 1.51,
+        "epic": 1.34,
+        "rare": 1.17
+      },
+      "_doc_multipliers": "Poids rush = poids de base × multiplicateur (la commune compense). Mythique × 1 : 1 mythique pour 1 000 000 de packs rush, comme en table de base."
+    },
+    "resurrection": {
+      "_doc": "Cartes que l'oracle de prix pourra ressusciter, engagées dans la table hachée : épiques et légendaires « mort… » du catalogue, non adossées (200 au plus).",
+      "rule": "dead_epic_legendary"
+    },
+    "value": {
+      "normale": [
+        [
+          2000,
+          40032
+        ],
+        [
+          2500,
+          38882
+        ],
+        [
+          3000,
+          49899
+        ],
+        [
+          3500,
+          57307
+        ],
+        [
+          4000,
+          61229
+        ],
+        [
+          4500,
+          62280
+        ],
+        [
+          5000,
+          61193
+        ],
+        [
+          5500,
+          58640
+        ],
+        [
+          6000,
+          55170
+        ],
+        [
+          6500,
+          51196
+        ],
+        [
+          7000,
+          47018
+        ],
+        [
+          7500,
+          42843
+        ],
+        [
+          8000,
+          38805
+        ],
+        [
+          8500,
+          34988
+        ],
+        [
+          9000,
+          31438
+        ],
+        [
+          9500,
+          28176
+        ],
+        [
+          10000,
+          36372
+        ],
+        [
+          11000,
+          40371
+        ],
+        [
+          12000,
+          32102
+        ],
+        [
+          13000,
+          25524
+        ],
+        [
+          14000,
+          20317
+        ],
+        [
+          15000,
+          16205
+        ],
+        [
+          16000,
+          12959
+        ],
+        [
+          17000,
+          10395
+        ],
+        [
+          18000,
+          8365
+        ],
+        [
+          19000,
+          6755
+        ],
+        [
+          20000,
+          31539
+        ]
+      ],
+      "gold": [
+        [
+          10000,
+          79610
+        ],
+        [
+          11000,
+          39430
+        ],
+        [
+          12000,
+          46739
+        ],
+        [
+          13000,
+          52419
+        ],
+        [
+          14000,
+          56249
+        ],
+        [
+          15000,
+          58241
+        ],
+        [
+          16000,
+          58567
+        ],
+        [
+          17000,
+          57495
+        ],
+        [
+          18000,
+          55324
+        ],
+        [
+          19000,
+          52352
+        ],
+        [
+          20000,
+          81627
+        ],
+        [
+          22500,
+          98315
+        ],
+        [
+          25000,
+          102984
+        ],
+        [
+          30000,
+          81729
+        ],
+        [
+          35000,
+          40720
+        ],
+        [
+          40000,
+          19715
+        ],
+        [
+          45000,
+          9470
+        ],
+        [
+          50000,
+          9014
+        ]
+      ],
+      "rush": [
+        [
+          2000,
+          40032
+        ],
+        [
+          2500,
+          38882
+        ],
+        [
+          3000,
+          49899
+        ],
+        [
+          3500,
+          57307
+        ],
+        [
+          4000,
+          61229
+        ],
+        [
+          4500,
+          62280
+        ],
+        [
+          5000,
+          61193
+        ],
+        [
+          5500,
+          58640
+        ],
+        [
+          6000,
+          55170
+        ],
+        [
+          6500,
+          51196
+        ],
+        [
+          7000,
+          47018
+        ],
+        [
+          7500,
+          42843
+        ],
+        [
+          8000,
+          38805
+        ],
+        [
+          8500,
+          34988
+        ],
+        [
+          9000,
+          31438
+        ],
+        [
+          9500,
+          28176
+        ],
+        [
+          10000,
+          36372
+        ],
+        [
+          11000,
+          40371
+        ],
+        [
+          12000,
+          32102
+        ],
+        [
+          13000,
+          25524
+        ],
+        [
+          14000,
+          20317
+        ],
+        [
+          15000,
+          16205
+        ],
+        [
+          16000,
+          12959
+        ],
+        [
+          17000,
+          10395
+        ],
+        [
+          18000,
+          8365
+        ],
+        [
+          19000,
+          6755
+        ],
+        [
+          20000,
+          31539
+        ]
+      ],
+      "multiplicateurs": {
+        "common": 1,
+        "rare": 2,
+        "epic": 3,
+        "legendary": 6,
+        "mythic": 0
+      },
+      "_doc": "Tables de valeur de sim/resultats/serie5/tables-valeur.json (format de la sim converti)."
+    },
+    "coverage_check": {
+      "_doc": "Avec une table de valeur, la couverture est la valeur moyenne de chaque table (max_rush s'applique à la table rush) ; rarity_value ne sert qu'aux séries sans table de valeur.",
+      "rarity_value": {
+        "common": 0,
+        "rare": 0.18,
+        "epic": 4.0,
+        "legendary": 10,
+        "mythic": 55
+      },
+      "max_rush": 0.8
+    }
+  },
+  "batch_size": 200,
+  "_doc_rarity_weights": "Total 2·10⁷ : légendaire, épique, rare et commune gardent les proportions d'avant (20 / 180 / 800 / 8 998 sur 10⁴). Mythique 5 : 5 / 2·10⁷ par emplacement, sur les 4 premiers (le 5e est tiré parmi les brûlables, jamais mythique), soit 1 mythique pour 1 000 000 de packs normaux (table rush : même poids mythique).",
+  "prix_usd": "0.50",
+  "cours_near_usd": "3.62",
+  "cours_source": "CoinGecko /simple/price, 2026-11-11 23:05 UTC (1Click wNEAR : 3,60 $ à 23:02 UTC)",
+  "mythic_media": "ipfs://TODO/mythique.svg",
+  "brulables_appoint": true,
+  "_doc_burnables": "9 brûlables reliées par adresse de contrat à un actif NEAR Intents coté (devis dry) : black-dragon-blackdragon (commune, appoint), book-of-meme-bome (légendaire), cash-cat-cashcat (épique), dogwifhat-wif (légendaire), jambo-meme-cooking-jambo (commune, appoint), nearkat-nearkat (commune, appoint), pudgy-penguins-pengu (légendaire), spx6900-spx (légendaire), turbo-turbo (légendaire). amount = quantité indicative du jeton valant le prix du pack (non lue avec une table de valeur)."
+}
