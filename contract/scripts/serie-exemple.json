@@ -62,7 +62,9 @@
       "n_max": 20
     },
     "burn": {
-      "floor_bps": 2500
+      "_doc": "prior_k : a priori K du lissage, de l'ordre des émissions attendues par épique ou légendaire de cette table (5 à 35 en un mois entre 20 et 100 packs/h).",
+      "floor_bps": 2500,
+      "prior_k": 20
     },
     "rush": {
       "ratio_bps": 25000,

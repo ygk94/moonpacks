@@ -475,7 +475,7 @@ class SeriesReplay:
                 missing = self._advance(em.get("burn_seq"), em.get("resurrect_seq"))
                 if not missing:
                     mech.update(
-                        burn=core.Burn(list(self.burned), list(self.backed), self.mech["burn"]["floor_bps"]),
+                        burn=core.Burn(list(self.burned), list(self.backed), self.mech["burn"]["floor_bps"], self.mech["burn"]["prior_k"]),
                         burn_seq=self.burn_seq,
                         resurrect_seq=self.resurrect_seq,
                     )

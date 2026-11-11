@@ -124,7 +124,7 @@ def pity_json(p: dict) -> str:
 
 
 def burn_json(b: dict) -> str:
-    return _obj([("floor_bps", _u32(b["floor_bps"]))])
+    return _obj([("floor_bps", _u32(b["floor_bps"])), ("prior_k", _u32(b["prior_k"]))])
 
 
 def rush_json(r: dict) -> str:

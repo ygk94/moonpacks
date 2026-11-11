@@ -125,20 +125,22 @@ TAG_GOLD = 2
 @dataclass(frozen=True)
 class Burn:
     """État des burns pour un tirage : ``burned[i]``, ``backed[i]`` (adossée par la table ou
-    ressuscitée), plancher en points de base."""
+    ressuscitée), plancher en points de base, a priori ``K``."""
 
     burned: list
     backed: list
     floor_bps: int
+    prior_k: int = 0
 
 
-def raw_burn_weight(w: int, minted: int, burned: int, cap, floor_bps: int) -> int:
+def raw_burn_weight(w: int, minted: int, burned: int, cap, floor_bps: int, prior_k: int = 0) -> int:
+    """``max(⌊w × (e − b + K) / (e + K)⌋, ⌊w × plancher⌋, 1)`` ; ``w`` si ``e = 0`` ; 0 si épuisée."""
     if w == 0 or (cap is not None and minted >= cap):
         return 0
     if minted == 0:
         return w
-    circ = max(minted - burned, 0)
-    return max(w * circ // minted, max(w * floor_bps // 10_000, 1))
+    circ = max(minted - burned, 0) + prior_k
+    return max(w * circ // (minted + prior_k), max(w * floor_bps // 10_000, 1))
 
 
 def burn_factors(table: dict, minted: list[int], burn: Burn, rarity: str) -> tuple[int, int]:
@@ -146,7 +148,7 @@ def burn_factors(table: dict, minted: list[int], burn: Burn, rarity: str) -> tup
     for i, (c, n) in enumerate(zip(table["cards"], minted)):
         if c["rarity"] != rarity or not burn.backed[i]:
             continue
-        e += raw_burn_weight(c["weight"], n, burn.burned[i], c.get("cap"), burn.floor_bps)
+        e += raw_burn_weight(c["weight"], n, burn.burned[i], c.get("cap"), burn.floor_bps, burn.prior_k)
         b += _available(c["weight"], n, c.get("cap"))
     return e, b
 
@@ -155,7 +157,7 @@ def in_rarity_weight(table: dict, i: int, minted: int, burn: Burn, f: tuple[int,
     c = table["cards"][i]
     e, b = f
     if burn.backed[i]:
-        return 0 if e == 0 else raw_burn_weight(c["weight"], minted, burn.burned[i], c.get("cap"), burn.floor_bps) * b
+        return 0 if e == 0 else raw_burn_weight(c["weight"], minted, burn.burned[i], c.get("cap"), burn.floor_bps, burn.prior_k) * b
     a = _available(c["weight"], minted, c.get("cap"))
     return a if e == 0 else a * e
 

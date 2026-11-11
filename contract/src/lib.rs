@@ -110,6 +110,8 @@ pub const GLOBAL_CHUNK: u32 = 64;
 pub const MAX_RUSH_BUCKETS: u64 = 96;
 /// Bornes du compteur de pitié.
 pub const MAX_PITY_N: u32 = 10_000;
+/// Borne de l'a priori des burns (`BurnParams::prior_k`).
+pub const MAX_BURN_PRIOR_K: u32 = 1_000_000;
 pub const PPM: u64 = 1_000_000;
 
 #[derive(BorshStorageKey)]

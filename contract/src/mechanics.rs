@@ -63,6 +63,7 @@ pub(crate) fn validate_mechanics(t: &SeriesTable) {
     }
     if let Some(b) = &m.burn {
         require!(b.floor_bps <= 10_000, "burn.floor_bps ≤ 10 000");
+        require!(b.prior_k <= MAX_BURN_PRIOR_K, "burn.prior_k ≤ 1 000 000");
     }
     if let Some(r) = &m.rush {
         check_weights(t, &r.weights, "rush.weights");

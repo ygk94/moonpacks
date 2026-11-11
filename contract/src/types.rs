@@ -192,13 +192,16 @@ pub struct PityParams {
 }
 
 /// Rareté pilotée par les burns : poids brut d'une brûlable
-/// `max(⌊poids × en_circulation / émises⌋, ⌊poids × floor_bps / 10⁴⌋, 1)`, puis renormalisation
-/// entre les brûlables de la rareté (leur part totale dans la rareté ne bouge pas).
+/// `max(⌊poids × (émises − brûlées + K) / (émises + K)⌋, ⌊poids × floor_bps / 10⁴⌋, 1)`, puis
+/// renormalisation entre les brûlables de la rareté (leur part totale dans la rareté ne bouge pas).
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BurnParams {
     /// Plancher en points de base du poids de base (2 500 = 25 %).
     pub floor_bps: u32,
+    /// A priori `K` (lissage) : tout se passe comme si chaque carte avait `K` exemplaires de plus,
+    /// émis et jamais brûlés. De l'ordre des émissions attendues par carte (20 par défaut).
+    pub prior_k: u32,
 }
 
 /// Gold rush à palier relatif : un achat déclenche un rush si, dans la fenêtre courte

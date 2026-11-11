@@ -191,7 +191,7 @@ mod tests {
         t.mechanics = Some(Mechanics {
             gold_weights: Some(g.clone()),
             pity: Some(PityParams { p0_ppm: 20_000, k_ppm: 10_000, n_max: 30 }),
-            burn: Some(BurnParams { floor_bps: 2_500 }),
+            burn: Some(BurnParams { floor_bps: 2_500, prior_k: 20 }),
             rush: Some(RushParams {
                 ratio_bps: 25_000,
                 min_packs: 50,
@@ -207,7 +207,7 @@ mod tests {
         assert!(json.ends_with(concat!(
             r#""royalties":[{"account_id":"r.near","bps":10}],"#,
             r#""mechanics":{"gold_weights":{"mythic":2,"legendary":4,"epic":6,"rare":8,"common":10},"#,
-            r#""pity":{"p0_ppm":20000,"k_ppm":10000,"n_max":30},"burn":{"floor_bps":2500},"#,
+            r#""pity":{"p0_ppm":20000,"k_ppm":10000,"n_max":30},"burn":{"floor_bps":2500,"prior_k":20},"#,
             r#""rush":{"ratio_bps":25000,"min_packs":50,"window_blocks":6000,"baseline_blocks":144000,"#,
             r#""bucket_blocks":1500,"duration_blocks":3000,"cooldown_blocks":36000,"#,
             r#""weights":{"mythic":3,"legendary":30,"epic":241,"rare":936,"common":8790}}}}"#,

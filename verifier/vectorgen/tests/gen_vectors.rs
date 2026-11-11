@@ -318,7 +318,10 @@ fn mech_vectors() {
                 k_ppm: rng.below(100_000) as u32,
                 n_max: 1 + rng.below(30) as u32,
             }),
-            burn: rng.chance(3, 4).then(|| BurnParams { floor_bps: rng.below(10_001) as u32 }),
+            burn: rng.chance(3, 4).then(|| BurnParams {
+                floor_bps: rng.below(10_001) as u32,
+                prior_k: if rng.chance(1, 4) { 0 } else { rng.below(40) as u32 },
+            }),
             rush: rng.chance(1, 2).then(|| rand_rush(&mut rng)),
         };
         table.mechanics = Some(mech.clone());
@@ -353,7 +356,7 @@ fn mech_vectors() {
         let mut mythic_minted: Vec<u32> =
             table.mythics.iter().map(|m| (m.cap as u64).saturating_sub(rng.below(3)) as u32).collect();
         let (minted_before, mythic_before) = (minted.clone(), mythic_minted.clone());
-        let bv = mech.burn.as_ref().map(|b| draw::BurnView { burned: &burned, floor_bps: b.floor_bps });
+        let bv = mech.burn.as_ref().map(|b| draw::BurnView { burned: &burned, floor_bps: b.floor_bps, prior_k: b.prior_k });
         let mut draws = Vec::new();
         for slot in 0..table.cards_per_pack {
             let d = draw::draw_slot_mech(&weights, &cards, &table.mythics, &minted, &mythic_minted, bv.as_ref(), &acc, slot);

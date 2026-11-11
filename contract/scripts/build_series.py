@@ -268,7 +268,7 @@ def build_mechanics(params, table):
     if m.get("pity"):
         out["pity"] = {k: int(m["pity"][k]) for k in ("p0_ppm", "k_ppm", "n_max")}
     if m.get("burn"):
-        out["burn"] = {"floor_bps": int(m["burn"]["floor_bps"])}
+        out["burn"] = {"floor_bps": int(m["burn"]["floor_bps"]), "prior_k": int(m["burn"]["prior_k"])}
     if m.get("rush"):
         r = m["rush"]
         weights = r.get("weights") or scaled_weights(base, r["multipliers"])

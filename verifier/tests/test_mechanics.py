@@ -57,7 +57,7 @@ class MechVectors(unittest.TestCase):
         burns = 0
         for c in MECH["cases"]:
             t, m = c["table"], c["table"]["mechanics"]
-            burn = core.Burn(c["burned"], c["backed"], m["burn"]["floor_bps"]) if m["burn"] else None
+            burn = core.Burn(c["burned"], c["backed"], m["burn"]["floor_bps"], m["burn"]["prior_k"]) if m["burn"] else None
             burns += burn is not None and any(c["burned"])
             mm, mmm = list(c["minted"]), list(c["mythic_minted"])
             got = core.draw_pack(t, mm, mmm, bytes.fromhex(c["acc"]), core.mode_weights(t, c["mode"]), burn)
@@ -83,7 +83,7 @@ class MechVectors(unittest.TestCase):
             t, m = c["table"], c["table"]["mechanics"]
             if not m["burn"]:
                 continue
-            burn = core.Burn(c["burned"], c["backed"], m["burn"]["floor_bps"])
+            burn = core.Burn(c["burned"], c["backed"], m["burn"]["floor_bps"], m["burn"]["prior_k"])
             for r in ("legendary", "epic", "rare", "common"):
                 f = core.burn_factors(t, c["minted"], burn, r)
                 idx = [i for i, x in enumerate(t["cards"]) if x["rarity"] == r]
@@ -92,6 +92,25 @@ class MechVectors(unittest.TestCase):
                 wb, wt = sum(ws[i] for i in idx if c["backed"][i]), sum(ws.values())
                 bb, bt = sum(base[i] for i in idx if c["backed"][i]), sum(base.values())
                 self.assertEqual(wb * bt, bb * wt)
+
+
+class ReviewFixes(unittest.TestCase):
+    """Correctifs de la revue de sécurité, recalculés en Python comme dans le contrat."""
+
+    def test_early_burns_are_smoothed_by_prior(self):
+        # 10 épiques brûlables de poids 100 ; les 9 premières émises une fois et brûlées.
+        t = {"cards": [{"rarity": "epic", "weight": 100, "cap": None} for _ in range(10)]}
+        minted = [1] * 9 + [0]
+        share = {}
+        for k in (0, 20):
+            burn = core.Burn([1] * 9 + [0], [True] * 10, 2_500, k)
+            f = core.burn_factors(t, minted, burn, "epic")
+            ws = [core.in_rarity_weight(t, i, minted[i], burn, f) for i in range(10)]
+            share[k] = ws[9] / sum(ws)
+        self.assertAlmostEqual(share[0], 100 / 325)  # sans lissage : 30,8 %
+        self.assertLess(share[20], 0.11)
+        self.assertEqual(core.raw_burn_weight(100, 1, 1, None, 2_500, 20), 95)
+        self.assertEqual(core.raw_burn_weight(100, 60, 60, None, 2_500, 20), 25)
 
 
 class SandboxMechanics(unittest.TestCase):

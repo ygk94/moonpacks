@@ -214,7 +214,7 @@ impl Contract {
         let rush = pack.flags & FLAG_RUSH != 0;
         let mut mode = PackMode::Base;
         let mut pity_ev = Value::Null;
-        let mut burned: Option<(Vec<u32>, u32)> = None;
+        let mut burned: Option<(Vec<u32>, BurnParams)> = None;
         let mut burn_seq = None;
         let mut resurrect_seq = None;
         if let Some(m) = &mech {
@@ -236,7 +236,7 @@ impl Contract {
             }
             if let Some(bp) = &m.burn {
                 if let Some(b) = self.series_burns.get(&series_id) {
-                    burned = Some((b.burned.clone(), bp.floor_bps));
+                    burned = Some((b.burned.clone(), bp.clone()));
                     burn_seq = Some(b.seq);
                     resurrect_seq = Some(series.resurrect_seq);
                 }
@@ -255,7 +255,7 @@ impl Contract {
         let seeds_ev = Self::seeds_json(pack_id, &pack, &series.table_hash.unwrap_or([0; 32]));
         self.packs.insert(pack_id, pack);
 
-        let bv = burned.as_ref().map(|(b, f)| draw::BurnView { burned: b, floor_bps: *f });
+        let bv = burned.as_ref().map(|(b, p)| draw::BurnView { burned: b, floor_bps: p.floor_bps, prior_k: p.prior_k });
         let mut draws = Vec::with_capacity(n as usize);
         let mut records = Vec::with_capacity(n as usize);
         let mut minted_tokens = Vec::with_capacity(n as usize);

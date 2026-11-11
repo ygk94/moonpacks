@@ -105,7 +105,7 @@ fn gold() -> RarityWeights {
 }
 
 fn mech(pity: Option<PityParams>, burn: bool, rush: Option<RushParams>) -> Mechanics {
-    Mechanics { gold_weights: Some(gold()), pity, burn: burn.then_some(BurnParams { floor_bps: 2_500 }), rush }
+    Mechanics { gold_weights: Some(gold()), pity, burn: burn.then_some(BurnParams { floor_bps: 2_500, prior_k: PRIOR_K }), rush }
 }
 
 fn contract_with(t: SeriesTable) -> Contract {
@@ -210,10 +210,12 @@ fn series_without_pity_has_no_counter() {
 // ----------------------------------------------------------------- burns
 
 const FLOOR: u32 = 2_500;
+/// A priori des tests : celui de `serie-exemple.json`.
+const PRIOR_K: u32 = 20;
 
 #[test]
 fn raw_burn_weight_rounding_and_floor() {
-    let f = |w, m, b, cap| draw::raw_burn_weight(w, m, b, cap, FLOOR);
+    let f = |w, m, b, cap| draw::raw_burn_weight(w, m, b, cap, FLOOR, 0);
     assert_eq!(f(100, 0, 0, None), 100, "aucune émise : poids de base");
     assert_eq!(f(100, 10, 0, None), 100);
     assert_eq!(f(100, 10, 5, None), 50);
@@ -224,8 +226,16 @@ fn raw_burn_weight_rounding_and_floor() {
     assert_eq!(f(100, 5, 0, Some(5)), 0, "épuisée par son plafond : 0");
     assert_eq!(f(100, 5, 5, Some(5)), 0, "épuisée même toutes brûlées");
     assert_eq!(f(0, 5, 0, None), 0);
-    assert_eq!(draw::raw_burn_weight(100, 10, 10, None, 0), 1, "plancher nul : 1");
+    assert_eq!(draw::raw_burn_weight(100, 10, 10, None, 0, 0), 1, "plancher nul : 1");
     assert_eq!(f(u32::MAX, u32::MAX, 1, None), u32::MAX as u64 - 1);
+    // A priori K : brut = ⌊w × (e − b + K) / (e + K)⌋.
+    let k = |m, b| draw::raw_burn_weight(100, m, b, None, FLOOR, PRIOR_K);
+    assert_eq!(k(0, 0), 100);
+    assert_eq!(k(1, 1), 95, "une carte émise une fois et brûlée : 20/21");
+    assert_eq!(k(20, 20), 50);
+    assert_eq!(k(60, 60), 25, "plancher atteint à e = b = 3K");
+    assert_eq!(k(1_000, 1_000), 25, "plancher gardé");
+    assert_eq!(draw::raw_burn_weight(u32::MAX, u32::MAX, u32::MAX, None, 0, MAX_BURN_PRIOR_K), 1_000_000 * (u32::MAX as u64) / (u32::MAX as u64 + 1_000_000), "u128, sans débordement");
 }
 
 /// La part des brûlables dans leur rareté ne bouge pas, quels que soient les burns : le poids perdu
@@ -249,10 +259,10 @@ fn renormalization_keeps_burnable_share_exact() {
             .collect();
         let minted: Vec<u32> = (0..n).map(|_| rnd(30) as u32).collect();
         let burned: Vec<u32> = minted.iter().map(|m| if *m == 0 { 0 } else { rnd(*m as u64 + 1) as u32 }).collect();
-        let bv = draw::BurnView { burned: &burned, floor_bps: FLOOR };
+        let bv = draw::BurnView { burned: &burned, floor_bps: FLOOR, prior_k: (rnd(3) * 10) as u32 };
         let f = draw::burn_factors(&cards, &minted, &bv, Rarity::Common);
         let ws: Vec<u128> =
-            (0..n).map(|i| draw::in_rarity_weight(&cards[i], minted[i], burned[i], FLOOR, f)).collect();
+            (0..n).map(|i| draw::in_rarity_weight(&cards[i], minted[i], burned[i], &bv, f)).collect();
         let base: Vec<u128> = (0..n)
             .map(|i| draw::available_weight_compact(&cards[i..=i], &[], &minted[i..=i], &[], Rarity::Common) as u128)
             .collect();
@@ -284,12 +294,17 @@ fn burn(c: &mut Contract, who: AccountId, tid: &str) -> bool {
 }
 
 fn burn_mech() -> Mechanics {
-    Mechanics { gold_weights: None, pity: None, burn: Some(BurnParams { floor_bps: FLOOR }), rush: None }
+    burn_mech_k(PRIOR_K)
+}
+
+fn burn_mech_k(prior_k: u32) -> Mechanics {
+    Mechanics { gold_weights: None, pity: None, burn: Some(BurnParams { floor_bps: FLOOR, prior_k }), rush: None }
 }
 
 #[test]
 fn burns_shift_weight_between_burnables_of_the_rarity() {
-    let mut c = contract_with(table(Some(burn_mech())));
+    // Sans a priori (K = 0) : le plancher est atteint dès que toutes les com_a sont brûlées.
+    let mut c = contract_with(table(Some(burn_mech_k(0))));
     for k in 0..12u8 {
         buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
     }
@@ -312,7 +327,7 @@ fn burns_shift_weight_between_burnables_of_the_rarity() {
     // Les tirages suivants = tirage de référence avec les compteurs de burn.
     let s = c.series_ref(0).clone();
     let (mut minted, burned) = (s.minted.clone(), c.get_series(0).burned);
-    let bv = draw::BurnView { burned: &burned, floor_bps: FLOOR };
+    let bv = draw::BurnView { burned: &burned, floor_bps: FLOOR, prior_k: 0 };
     let id = buy_reveal(&mut c, alice(), 99, 300);
     let p = pack(&c, id);
     let acc: [u8; 32] = hex_decode(p["acc"].as_str().unwrap()).unwrap().try_into().unwrap();
@@ -346,7 +361,7 @@ fn exhausted_card_stays_at_zero_after_burns() {
     let mut t = table(Some(Mechanics {
         gold_weights: Some(gold()),
         pity: Some(PityParams { p0_ppm: 0, k_ppm: 0, n_max: 1 }),
-        burn: Some(BurnParams { floor_bps: FLOOR }),
+        burn: Some(BurnParams { floor_bps: FLOOR, prior_k: PRIOR_K }),
         rush: None,
     }));
     t.cards[0].cap = Some(1);
@@ -590,7 +605,7 @@ fn invalid_mechanics_are_rejected() {
     same.weights = gold();
     rejects(mech(None, false, Some(same)), "distincte de la table or");
     rejects(Mechanics { gold_weights: Some(w(1, 0, 0, 0, 0)), pity: None, burn: None, rush: None }, "engagement");
-    rejects(Mechanics { gold_weights: None, pity: None, burn: Some(BurnParams { floor_bps: 10_001 }), rush: None }, "floor_bps");
+    rejects(Mechanics { gold_weights: None, pity: None, burn: Some(BurnParams { floor_bps: 10_001, prior_k: 0 }), rush: None }, "floor_bps");
     // Table or qui donne du poids à une rareté sans carte : refusée à l'ouverture.
     let mut t = table(Some(Mechanics { gold_weights: Some(w(0, 1, 0, 0, 0)), pity: None, burn: None, rush: None }));
     t.rarity_weights = w(0, 0, 9, 30, 960);
@@ -679,4 +694,30 @@ fn token_ids_are_canonical() {
     assert!(c.nft_token("010".into()).is_none(), "forme non canonique refusée");
     assert!(c.nft_token("15".into()).is_none());
     assert!(c.nft_token("10".into()).is_some());
+}
+
+// ----------------------------------------------------------------- revue de sécurité
+
+/// Revue, point 1 : burns en début de série. 10 épiques brûlables de même poids ; un joueur brûle
+/// les 9 bon marché, chacune émise une fois (e = 1, b = 1). Sans lissage, elles tombaient toutes au
+/// plancher et la 10ᵉ passait de 10 % à 30,8 % des épiques brûlables. Avec l'a priori K, une
+/// carte émise une fois et brûlée garde presque tout son poids.
+#[test]
+fn early_burns_are_smoothed_by_prior() {
+    let mut t = table(Some(burn_mech()));
+    t.rarity_weights = w(0, 0, 100, 0, 900);
+    t.cards = (0..10).map(|i| card(&format!("e{i}"), Rarity::Epic, 100, None, true)).collect();
+    t.cards.push(card("com", Rarity::Common, 1, None, false));
+    let mut c = contract_with(t);
+    for i in 0..9 {
+        c.series.get_mut(0).unwrap().minted[i] = 1;
+        c.series_burns.get_mut(&0).unwrap().burned[i] = 1;
+    }
+    let rates = c.get_rates(0, None, None);
+    let epics = rates["rarities"][2]["cards"].as_array().unwrap();
+    let ew: Vec<u128> = epics.iter().map(|x| x["effective_weight"].as_str().unwrap().parse().unwrap()).collect();
+    let total: u128 = ew.iter().sum();
+    let share_ppm = ew[9] * 1_000_000 / total;
+    assert!(share_ppm < 110_000, "part de la 10ᵉ épique : {share_ppm} ppm (10 % sans burn)");
+    assert!(share_ppm > 100_000, "elle gagne quand même un peu : {share_ppm} ppm");
 }

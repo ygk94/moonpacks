@@ -1291,7 +1291,7 @@ async fn max_size_series_fits() -> Result<()> {
     t.mechanics = Some(Mechanics {
         gold_weights: Some(weights(4, 4, 3, 2, 1)),
         pity: Some(PityParams { p0_ppm: 20_000, k_ppm: 2_000, n_max: 2 }),
-        burn: Some(BurnParams { floor_bps: 2_500 }),
+        burn: Some(BurnParams { floor_bps: 2_500, prior_k: 20 }),
         rush: Some(RushParams {
             ratio_bps: 25_000,
             min_packs: 50,
@@ -1524,7 +1524,8 @@ async fn mechanics_end_to_end() -> Result<()> {
     t.mechanics = Some(Mechanics {
         gold_weights: Some(weights(0, 80, 300, 300, 320)),
         pity: Some(PityParams { p0_ppm: 100_000, k_ppm: 50_000, n_max: 3 }),
-        burn: Some(BurnParams { floor_bps: 2_500 }),
+        // A priori petit : sur une vingtaine de boosters, les burns doivent se voir dans les tirages.
+        burn: Some(BurnParams { floor_bps: 2_500, prior_k: 2 }),
         rush: Some(RushParams {
             ratio_bps: 15_000,
             min_packs: 2,

@@ -13,7 +13,7 @@
 //! - la table de poids de rareté du pack (base, or, rush) est choisie avant les emplacements ;
 //!   pitié : `gold_roll = u128_be(sha256(acc || 0x00 || 0x02)[0..16]) mod 10⁶` ;
 //! - rareté pilotée par les burns : le tirage de rareté ne change pas ; dans la rareté, les
-//!   brûlables prennent un poids brut `max(⌊w × circ / émises⌋, ⌊w × plancher⌋, 1)` renormalisé pour
+//!   brûlables prennent un poids brut `max(⌊w × (e − b + K) / (e + K)⌋, ⌊w × plancher⌋, 1)` renormalisé pour
 //!   que leur part totale reste celle de leurs poids de base (`in_rarity_weight`) ;
 //! - gold rush : palier relatif sur fenêtre glissante par seaux (`rush_on_buy`), figé à l'achat.
 
@@ -140,24 +140,29 @@ pub fn draw_slot_compact(
     draw_slot_mech(weights, cards, mythics, minted, mythic_minted, None, acc, slot)
 }
 
-/// Compteurs de burn d'une série et plancher (rareté pilotée par les burns).
+/// Compteurs de burn d'une série, plancher et a priori (rareté pilotée par les burns).
 #[derive(Clone, Copy, Debug)]
 pub struct BurnView<'a> {
     pub burned: &'a [u32],
     pub floor_bps: u32,
+    /// A priori `K` : `K` exemplaires fictifs émis et jamais brûlés, ajoutés à chaque carte.
+    pub prior_k: u32,
 }
 
 /// Poids brut d'une brûlable : 0 si épuisée (plafond) ou de poids nul ; `w` si aucune émise ;
-/// sinon `max(⌊w × (émises − brûlées) / émises⌋, ⌊w × floor_bps / 10⁴⌋, 1)` (calcul en u128).
-pub fn raw_burn_weight(weight: u32, minted: u32, burned: u32, cap: Option<u32>, floor_bps: u32) -> u64 {
+/// sinon `max(⌊w × (e − b + K) / (e + K)⌋, ⌊w × floor_bps / 10⁴⌋, 1)` (calcul en u128), avec
+/// `e` émises, `b` brûlées et `K` l'a priori (lissage : quelques burns en début de série ne
+/// font presque rien bouger).
+pub fn raw_burn_weight(weight: u32, minted: u32, burned: u32, cap: Option<u32>, floor_bps: u32, prior_k: u32) -> u64 {
     if weight == 0 || cap.is_some_and(|c| minted >= c) {
         return 0;
     }
     if minted == 0 {
         return weight as u64;
     }
-    let circ = minted.saturating_sub(burned) as u128;
-    let ratio = (weight as u128 * circ / minted as u128) as u64;
+    let k = prior_k as u128;
+    let circ = minted.saturating_sub(burned) as u128 + k;
+    let ratio = (weight as u128 * circ / (minted as u128 + k)) as u64;
     let floor = ((weight as u128 * floor_bps as u128 / 10_000) as u64).max(1);
     ratio.max(floor)
 }
@@ -172,7 +177,7 @@ pub fn burn_factors(cards: &[DrawCard], minted: &[u32], bv: &BurnView, rarity: R
         if c.rarity != rarity || !c.backed {
             continue;
         }
-        e += raw_burn_weight(c.weight, *n, bv.burned.get(i).copied().unwrap_or(0), c.cap, bv.floor_bps) as u128;
+        e += raw_burn_weight(c.weight, *n, bv.burned.get(i).copied().unwrap_or(0), c.cap, bv.floor_bps, bv.prior_k) as u128;
         b += available(c.weight, *n, c.cap) as u128;
     }
     (e, b)
@@ -180,13 +185,13 @@ pub fn burn_factors(cards: &[DrawCard], minted: &[u32], bv: &BurnView, rarity: R
 
 /// Poids d'une carte visible dans sa rareté (rareté pilotée par les burns), avec les facteurs
 /// `(E, B)` de `burn_factors`.
-pub fn in_rarity_weight(c: &DrawCard, minted: u32, burned: u32, floor_bps: u32, f: (u128, u128)) -> u128 {
+pub fn in_rarity_weight(c: &DrawCard, minted: u32, burned: u32, bv: &BurnView, f: (u128, u128)) -> u128 {
     let (e, b) = f;
     if c.backed {
         if e == 0 {
             0
         } else {
-            raw_burn_weight(c.weight, minted, burned, c.cap, floor_bps) as u128 * b
+            raw_burn_weight(c.weight, minted, burned, c.cap, bv.floor_bps, bv.prior_k) as u128 * b
         }
     } else {
         let a = available(c.weight, minted, c.cap) as u128;
@@ -215,7 +220,7 @@ pub fn available_weight_mech(
                 .zip(minted)
                 .enumerate()
                 .filter(|(_, (c, _))| c.rarity == rarity)
-                .map(|(i, (c, n))| in_rarity_weight(c, *n, bv.burned.get(i).copied().unwrap_or(0), bv.floor_bps, f))
+                .map(|(i, (c, n))| in_rarity_weight(c, *n, bv.burned.get(i).copied().unwrap_or(0), bv, f))
                 .sum()
         }
         _ => available_weight_compact(cards, mythics, minted, mythic_minted, rarity) as u128,
@@ -287,7 +292,7 @@ pub fn draw_slot_mech(
                 continue;
             }
             c += match (bv, f) {
-                (Some(bv), Some(f)) => in_rarity_weight(card, *n, bv.burned.get(i).copied().unwrap_or(0), bv.floor_bps, f),
+                (Some(bv), Some(f)) => in_rarity_weight(card, *n, bv.burned.get(i).copied().unwrap_or(0), bv, f),
                 _ => available(card.weight, *n, card.cap) as u128,
             };
             if card_roll < c {
