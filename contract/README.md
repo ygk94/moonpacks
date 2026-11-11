@@ -122,7 +122,8 @@ ultra rare sans garantie, mythique 1 sur 10⁶, valeur aléatoire par pack, myth
    (`mode`, `rush`, `pity`, `burn_seq`, `resurrect_seq`, `value`). Ce reçu ne contient aucun `require` qui dépende du résultat.
 4. Une étape périmée (mauvaise tentative, mauvais ordre, pack déjà révélé) est ignorée sans panique.
 5. `retry_reveal(pack_id)` est ouvert à tous, seulement si le pack est `Pending` sans aucune carte écrite et après
-   `retry_delay_blocks` blocs sans progrès (100 par défaut). La tentative est incrémentée, ce qui rend les anciennes
+   `retry_delay_blocks` blocs sans progrès (100 par défaut, 20 au moins : en dessous, un tiers pourrait relancer un tirage
+   encore en cours et faire passer le pack d'un autre en `Stuck`). La tentative est incrémentée, ce qui rend les anciennes
    étapes caduques. `acc` continue d'accumuler. Sont journalisées les graines de tous les reçus **réussis** : celle
    d'un dernier reçu échoué ne l'est pas, puisque son état est annulé.
 6. **Un tirage échoué peut être connu.** La graine d'un dernier reçu échoué vaut `hash(action_hash || random_value)`,

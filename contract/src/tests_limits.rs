@@ -406,3 +406,43 @@ fn borderline_valid_tables_are_accepted() {
     let total: u128 = v["total"].as_str().unwrap().parse().unwrap();
     assert_eq!(total, draw::value_total(max_price, 30_000), "p = 10⁹ ppb : gold pack, table gold");
 }
+
+// ----------------------------------------------------------------- retry_reveal : délai minimal
+
+#[test]
+fn retry_delay_below_minimum_is_rejected() {
+    // Avant la revue, `new` acceptait 0 : n'importe qui pouvait alors relancer le tirage d'un pack
+    // encore en cours, dès l'achat, et le faire passer en `Stuck` (sans remboursement) en 10 appels.
+    for d in [0u64, 1, MIN_RETRY_DELAY_BLOCKS - 1] {
+        set(owner(), 0, 10, [0; 32]);
+        let r = std::panic::catch_unwind(|| Contract::new(owner(), None, None, None, Some(d), None));
+        let e = r.err().unwrap_or_else(|| panic!("retry_delay_blocks = {d} accepté"));
+        assert!(e.downcast_ref::<String>().unwrap().contains("retry_delay_blocks"));
+    }
+    set(owner(), 0, 10, [0; 32]);
+    let c = Contract::new(owner(), None, None, None, Some(MIN_RETRY_DELAY_BLOCKS), None);
+    assert_eq!(c.config.retry_delay_blocks, MIN_RETRY_DELAY_BLOCKS);
+}
+
+#[test]
+fn third_party_cannot_stall_a_progressing_pack() {
+    // Délai minimal : tant que la chaîne de reçus progresse (un reçu par bloc), une relance par un
+    // tiers est refusée ; le pack se révèle normalement.
+    set(owner(), 0, 10, [0; 32]);
+    let mut c = Contract::new(owner(), None, None, None, Some(MIN_RETRY_DELAY_BLOCKS), None);
+    let id = c.create_series(base_table());
+    c.open_series(id);
+    let dep = c.get_series(0).required_deposit.0;
+    set(alice(), dep, 100, [0; 32]);
+    let p = c.buy_pack(0).0 as u64;
+    let carol = accounts(3);
+    for step in 1..=3u8 {
+        set(carol.clone(), 0, 100 + step as u64, [0; 32]);
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.retry_reveal(p)));
+        assert!(r.is_err(), "relance acceptée au bloc {}", 100 + step as u64);
+        set(contract_id(), 0, 100 + step as u64, [step; 32]);
+        c.reveal_step(p, 0, step);
+    }
+    assert_eq!(c.get_pack(p).unwrap()["status"], "revealed");
+    assert_eq!(c.get_pack(p).unwrap()["attempt"], 0);
+}

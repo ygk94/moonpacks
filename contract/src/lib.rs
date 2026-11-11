@@ -73,6 +73,10 @@ pub const MAX_TITLE_LEN: usize = 64;
 pub const MAX_URL_LEN: usize = 256;
 pub const MAX_ASSET_ID_LEN: usize = 128;
 pub const MAX_ATTEMPTS: u32 = 10;
+/// Délai minimal de `retry_reveal` (blocs sans progrès). En dessous, n'importe qui peut relancer un
+/// tirage encore en cours (reçus retardés par la congestion) et, en 10 appels, faire passer le pack
+/// d'un autre en `Stuck`, sans remboursement.
+pub const MIN_RETRY_DELAY_BLOCKS: u64 = 20;
 pub const MIN_REVEAL_STEPS: u8 = 2;
 pub const MAX_REVEAL_STEPS: u8 = 6;
 
@@ -228,6 +232,11 @@ impl Contract {
             (MIN_REVEAL_STEPS..=MAX_REVEAL_STEPS).contains(&reveal_steps),
             "reveal_steps hors bornes"
         );
+        let retry_delay_blocks = retry_delay_blocks.unwrap_or(100);
+        require!(
+            retry_delay_blocks >= MIN_RETRY_DELAY_BLOCKS,
+            format!("retry_delay_blocks ≥ {MIN_RETRY_DELAY_BLOCKS} (sinon un tiers peut bloquer un pack en Stuck)")
+        );
         Self {
             owner_id,
             redeemer_id,
@@ -235,7 +244,7 @@ impl Contract {
             price_oracle_pending: None,
             config: Config {
                 reveal_steps,
-                retry_delay_blocks: retry_delay_blocks.unwrap_or(100),
+                retry_delay_blocks,
                 oracle_delay_blocks: oracle_delay_blocks.unwrap_or(DEFAULT_ORACLE_DELAY_BLOCKS),
             },
             metadata,
