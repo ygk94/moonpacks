@@ -127,7 +127,12 @@ def fmt(template, cid):
 def backing_of(b):
     if b is None:
         return None
-    amount = int(b["amount"])
+    a = b.get("amount")
+    # Entier exact seulement : un nombre JSON comme 1e24 devient un flottant (999999999999999983222784
+    # une fois converti) et une chaîne « 1e24 » ferait planter int().
+    if isinstance(a, bool) or not (isinstance(a, int) or (isinstance(a, str) and a.isdigit())):
+        raise SystemExit(f"amount invalide pour {b.get('card_id')} : entier ou chaîne de chiffres attendu")
+    amount = int(a)
     if amount <= 0 or amount >= 1 << 128:
         raise SystemExit(f"amount invalide pour {b.get('card_id')}")
     check_len(b["asset_id"], MAX_ASSET_ID_LEN, "asset_id")
@@ -165,8 +170,10 @@ def mythic_commitments(entries, secrets_path, new_secrets):
     write_secret(input_path, entries)
     if new_secrets or not os.path.exists(secrets_path):
         public_tmp = secrets_path[: -len(".json")] + ".public.json"
-        subprocess.run([sys.executable, os.path.join(HERE, "gen_mythics.py"), input_path, public_tmp,
-                        secrets_path], check=True, stdout=subprocess.DEVNULL)
+        r = subprocess.run([sys.executable, os.path.join(HERE, "gen_mythics.py"), input_path, public_tmp,
+                            secrets_path], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        if r.returncode != 0:
+            raise SystemExit(f"gen_mythics.py : {r.stderr.strip()}")
         os.remove(public_tmp)
     with open(secrets_path, encoding="utf-8") as f:
         private = json.load(f)
@@ -548,8 +555,14 @@ def main(argv=None):
     secrets_path = a.secrets or os.path.join(HERE, "secrets", f"{slug}.json")
     if not secrets_path.endswith(".json"):
         raise SystemExit("--secrets doit finir par .json")
-    if os.path.commonpath([os.path.abspath(out), os.path.join(HERE, "secrets")]) == os.path.join(HERE, "secrets"):
-        raise SystemExit("--out ne doit pas être sous scripts/secrets/")
+    def under(p, d):
+        p, d = os.path.abspath(p), os.path.abspath(d)
+        return os.path.commonpath([p, d]) == d
+    sec_dir = os.path.dirname(os.path.abspath(secrets_path))
+    if under(out, os.path.join(HERE, "secrets")) or under(out, sec_dir):
+        raise SystemExit("--out ne doit pas être sous le dossier des secrets")
+    if under(secrets_path, out):
+        raise SystemExit("--secrets ne doit pas être sous --out (sortie publique)")
 
     table, renamed, coverage = build(params, catalogue, secrets_path, a.new_secrets, mythic_secrets)
     # Mêmes règles que le contrat (validate_table, à l'ouverture) et préimages révélables : une table

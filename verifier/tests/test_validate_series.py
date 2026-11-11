@@ -257,14 +257,38 @@ class OutDirAndSecrets(Base):
         # Mythique dont le card_id ou le titre dépasse les bornes de reveal_mythic : jamais révélable.
         names = fake_secrets.fake_mythics()
         first = next(iter(names))
-        for field, value, msg in (("id", "y" * 90, "card_id : longueur invalide"), ("nom", "N" * 120, "titre : longueur invalide")):
+        for field, value, msg in (("id", "y" * 90, "card_id de 1 à 64 octets"), ("nom", "N" * 120, "titre de 1 à 64 octets")):
             with self.subTest(msg=msg), tempfile.TemporaryDirectory() as d:
                 n = copy.deepcopy(names)
                 n[first][field] = value
                 r, *_ = build(d, names=n)
                 self.assertNotEqual(r.returncode, 0, f"acceptée : {msg}")
                 self.assertIn(msg, r.stderr)
+                self.assertNotIn("Traceback", r.stderr)
+                self.assertNotIn(value, r.stderr, "le secret n'est pas recopié")
 
+
+    def test_build_series_input_errors_are_clear(self):
+        """Montant en nombre flottant (1e24) ou en notation scientifique, secrets sous la sortie publique."""
+        base = json.loads((CONTRACT / "scripts" / "serie-exemple.json").read_text(encoding="utf-8"))
+        for amount in (1e24, "1e24", True, "-5"):
+            with self.subTest(amount=amount), tempfile.TemporaryDirectory() as d:
+                p = copy.deepcopy(base)
+                p["burnables"][0]["amount"] = amount
+                r, *_ = build(d, p, reuse=self.sec)
+                self.assertNotEqual(r.returncode, 0)
+                self.assertIn("amount invalide", r.stderr)
+                self.assertNotIn("Traceback", r.stderr)
+        with tempfile.TemporaryDirectory() as d:
+            names = fake_secrets.write_fake_mythics(d)
+            r = subprocess.run(
+                [sys.executable, "-I", str(CONTRACT / "scripts" / "build_series.py"), str(CONTRACT / "scripts" / "serie-exemple.json"),
+                 "--mythiques", str(names), "--out", str(Path(d) / "out"), "--secrets", str(Path(d) / "out" / "s" / "s.json")],
+                capture_output=True, text=True,
+            )
+            self.assertNotEqual(r.returncode, 0)
+            self.assertIn("--secrets ne doit pas être sous --out", r.stderr)
+            self.assertFalse((Path(d) / "out" / "s" / "s.json").exists(), "aucune préimage écrite dans la sortie publique")
 
 class Leaks(Base):
     def scan(self, files, secrets=None):
