@@ -128,12 +128,21 @@ class MythiquesScellees(unittest.TestCase):
                 self.assertNotIn("secret", contenu.lower(), nom)
                 if motif:
                     self.assertIsNone(motif.search(contenu), nom)
+            with open(os.path.join(d, "dos-mythique.json"), "rb") as f:
+                dos_json = f.read()
             for c in mythiques:
-                with open(os.path.join(d, c.nom_fichier + ".json"), encoding="utf-8") as f:
-                    meta = json.load(f)
+                with open(os.path.join(d, c.nom_fichier + ".json"), "rb") as f:
+                    octets = f.read()
+                # Les 3 mythiques sont indiscernables : même JSON, octet pour octet, que le dos.
+                self.assertEqual(octets, dos_json, c.cle)
+                meta = json.loads(octets)
+                self.assertEqual((meta["title"], meta["description"]), ("?", "?"))
                 self.assertEqual(meta["media"], "dos-mythique.svg")
                 self.assertIsNone(meta["reference"])
-                self.assertEqual(json.loads(meta["extra"])["identifiant"], c.cle)
+                extra = json.loads(meta["extra"])
+                self.assertEqual(sorted(extra), ["non_affiliation", "rarete"])
+                self.assertNotIn(c.cle, octets.decode())
+                self.assertNotIn(c.numero, meta["title"] + meta["description"] + meta["extra"])
 
     def test_le_lecteur_ne_touche_pas_au_champ_secret(self):
         # Le code du générateur ne référence « secret » qu'à un seul endroit : le filtre qui le jette.

@@ -42,8 +42,9 @@ PNG et JSON, plus une planche.
 - Champs lus : liste blanche `CHAMPS_LUS` de `catalogue_v2.py` ; `drapeau` n'est pas lu (rien sur la carte).
   Le JSON public n'a plus de champ `secret` : les vrais noms des mythiques sont dans `docs/data/secrets/mythiques.json`
   (ignoré par git), que ce générateur ne lit jamais. Un ancien JSON qui aurait encore `secret` le voit jeté au décodage.
-- Mythiques : toujours scellées. Pas de recto : `mythique-m1.json` pointe vers `dos-mythique.svg`, sans
-  `reference`, avec seulement l'`id` et le N° dans `extra`. Si `docs/data/secrets/mythiques.json` existe, un test vérifie
+- Mythiques : toujours anonymes, avant comme après la révélation. Pas de recto : titre « ? », description « ? »,
+  image `dos-mythique.svg` (le dos « ? » commun) ; `mythique-m1.json`, `-m2`, `-m3` sont identiques octet pour octet à
+  `dos-mythique.json` (ni id, ni N°, ni référence). Si `docs/data/secrets/mythiques.json` existe, un test vérifie
   qu'aucun vrai nom, ticker, id CoinGecko ou adresse n'apparaît dans leurs sorties.
 - État : « mort… » donne le style cimetière, « en déclin… », « actif », sinon « à vérifier ».
 - Chaîne : `chaine_normalisee`. Année du pic : première année du `pic`, sinon du `lancement`.
