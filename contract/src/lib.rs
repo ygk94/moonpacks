@@ -26,6 +26,7 @@ mod nft;
 mod pack;
 mod redeem;
 mod series;
+mod treasury;
 pub mod types;
 mod views;
 
@@ -35,6 +36,8 @@ mod tests;
 mod tests_batch;
 #[cfg(test)]
 mod tests_mech;
+#[cfg(test)]
+mod tests_v3;
 
 use types::*;
 
@@ -108,6 +111,11 @@ pub const MYTHIC_DESCRIPTION: &str = "?";
 pub const MYTHIC_MEDIA: &str = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20500%20700'%3E%3Crect%20width='500'%20height='700'%20rx='24'%20fill='%230b0507'/%3E%3Ctext%20x='250'%20y='470'%20font-size='360'%20font-family='serif'%20font-weight='700'%20fill='%23ffcf4a'%20text-anchor='middle'%3E%3F%3C/text%3E%3C/svg%3E";
 /// Dépôt d'une annonce de marché.
 pub const LISTING_DEPOSIT: NearToken = NearToken::from_millinear(5);
+/// Réserve minimale gardée sur le contrat par `withdraw_revenue`, au-delà des engagements : elle
+/// couvre le stockage que le contrat paie lui-même (graines des relances, listes d'un acheteur du
+/// marché ou d'un destinataire de transfert, environ 120 o au premier) et garantit que les
+/// remboursements du tirage final ne manquent jamais de solde (`LackBalanceForState`).
+pub const TREASURY_MIN_RESERVE: NearToken = NearToken::from_near(1);
 
 /// Cartes par bloc de la liste d'un propriétaire.
 pub const OWNER_CHUNK: u32 = 32;
@@ -193,8 +201,18 @@ pub struct Contract {
     rush_accounts: LookupMap<(AccountId, u32), (u64, u32)>,
     listings: IterableMap<TokenId, Listing>,
     next_pack_id: u64,
-    /// Total encaissé en prix de boosters (yoctoNEAR). Aucun retrait pour l'instant.
+    /// Total encaissé en prix de boosters (yoctoNEAR), net des packs `Stuck` remboursés.
     revenue: u128,
+    /// Engagements envers les acheteurs des packs non tirés (`Pending`, `Stuck`) : prix et stockage
+    /// prépayé pas encore utilisé. Ni retirable, ni compté dans le stockage occupé.
+    pack_escrow: u128,
+    /// Dépôts des annonces en cours (rendus au vendeur au retrait ou à la vente).
+    listing_deposits: u128,
+    /// Valeur tirée (yoctoNEAR) des cartes brûlables vivantes d'une série à table de valeur : ce qui
+    /// adosse les cartes non brûlées. Diminue à chaque burn réussi de la part de la carte.
+    value_reserved: u128,
+    /// Total retiré par l'owner (`withdraw_revenue`).
+    withdrawn: u128,
 }
 
 #[near]
@@ -252,6 +270,10 @@ impl Contract {
             listings: IterableMap::new(StorageKey::Listings),
             next_pack_id: 0,
             revenue: 0,
+            pack_escrow: 0,
+            listing_deposits: 0,
+            value_reserved: 0,
+            withdrawn: 0,
         }
     }
 
@@ -425,6 +447,36 @@ impl Contract {
             extra: Some(extra.to_string()),
             ..Default::default()
         }
+    }
+
+    /// Écrit tout l'état en attente : `env::storage_usage()` reflète alors exactement ce reçu.
+    pub(crate) fn flush_all(&mut self) {
+        self.series.flush();
+        self.series_cards.flush();
+        self.series_burns.flush();
+        self.resurrected.flush();
+        self.packs.flush();
+        self.owner_packs.flush();
+        self.pack_count_by_owner.flush();
+        self.owner_tokens.flush();
+        self.owner_token_count.flush();
+        self.all_tokens.flush();
+        self.approvals.flush();
+        self.pity.flush();
+        self.rush_accounts.flush();
+        self.listings.flush();
+    }
+
+    /// Octets ajoutés depuis `start` (après `flush_all`).
+    pub(crate) fn storage_added_since(&mut self, start: u64) -> u64 {
+        self.flush_all();
+        env::storage_usage().saturating_sub(start)
+    }
+
+    /// Octets libérés depuis `start` (après `flush_all`).
+    pub(crate) fn storage_freed_since(&mut self, start: u64) -> u64 {
+        self.flush_all();
+        start.saturating_sub(env::storage_usage())
     }
 
     pub(crate) fn refund(to: &AccountId, amount: u128) {

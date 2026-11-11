@@ -310,6 +310,8 @@ impl Contract {
             // Prix et stockage de la série (figés à l'ouverture) : plus stockés par pack.
             "price_paid": s.table.price,
             "storage_prepaid": U128(env::storage_byte_cost().as_yoctonear() * s.storage_per_pack as u128),
+            // Stockage mesuré du pack (octets) ; au tirage, `storage_prepaid` moins ce montant est rendu.
+            "storage_used": p.storage_used,
             "bought_at_height": p.bought_at_height,
             "status": p.status,
             "attempt": p.attempt,

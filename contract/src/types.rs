@@ -400,8 +400,12 @@ pub struct Series {
 pub enum PackStatus {
     Pending,
     Revealed,
-    /// `MAX_ATTEMPTS` tentatives échouées : plus de relance, pas de remboursement.
+    /// `MAX_ATTEMPTS` tentatives échouées : plus de relance ni de tirage. Remboursable une fois
+    /// (`refund_stuck_pack`).
     Stuck,
+    /// Pack `Stuck` remboursé (prix et stockage non utilisé rendus à l'acheteur). État final : aucun
+    /// tirage, aucune relance, aucun second remboursement.
+    Refunded,
 }
 
 /// Graine journalisée d'une étape réussie. `acc` après l'étape n'est pas stocké : il se recalcule
@@ -508,6 +512,10 @@ pub struct Pack {
     /// Valeur tirée (série à table de valeur) : les montants se recalculent depuis `bps`, le masque
     /// des brûlables et les raretés des tirages (`draw::split_value`), 7 o au lieu de 16 par carte.
     pub value: Option<PackValue>,
+    /// Stockage mesuré de ce pack, en octets, cumulé reçu par reçu (`buy_pack`, chaque
+    /// `reveal_step`, tirage final). Le stockage prépayé non utilisé (`storage_per_pack` moins ce
+    /// montant) est rendu à l'acheteur au tirage final, ou avec le prix par `refund_stuck_pack`.
+    pub storage_used: u32,
 }
 
 /// Valeur d'un pack : `bps` (points de base du prix) et `mask` (bit `i` = l'emplacement `i` est

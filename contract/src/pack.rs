@@ -1,9 +1,15 @@
 //! Achat d'un booster et tirage sur k reçus privés chaînés.
 //!
-//! `buy_pack` encaisse définitivement (aucune annulation, aucun remboursement hors excédent
-//! de dépôt) et programme `reveal_step(pack_id, attempt, 1)`. Chaque étape mélange
+//! `buy_pack` encaisse le prix (aucune annulation ; seul un pack `Stuck` est remboursable, par
+//! `refund_stuck_pack`) et programme `reveal_step(pack_id, attempt, 1)`. Chaque étape mélange
 //! `env::random_seed()` dans `acc`, puis programme la suivante à gaz fixe. La dernière tire,
-//! crée les cartes par mint direct (jamais de `*_transfer_call`) et journalise `pack_revealed`.
+//! crée les cartes par mint direct (jamais de `*_transfer_call`), rend le stockage prépayé non
+//! utilisé et journalise `pack_revealed`.
+//!
+//! **Stockage mesuré.** Chaque reçu (`buy_pack`, chaque étape, tirage final) écrit son état
+//! (`flush_all`) et mesure `env::storage_usage()` avant et après : le cumul est `Pack::storage_used`.
+//! Le dernier reçu rend `storage_per_pack − storage_used` (octets × 10¹⁹ yoctoNEAR) à l'acheteur,
+//! jamais plus : le contrat reste couvert pour tout ce que le pack occupe.
 
 use crate::draw;
 use crate::types::*;
@@ -18,6 +24,7 @@ impl Contract {
     /// L'excédent de dépôt est rendu ; le reste est acquis, sans annulation possible.
     #[payable]
     pub fn buy_pack(&mut self, series_id: u32) -> U128 {
+        let start = env::storage_usage();
         let buyer = env::predecessor_account_id();
         let min_gas = self.min_entry_gas();
         require!(env::prepaid_gas() >= min_gas, format!("Gaz insuffisant : {} requis", min_gas));
@@ -84,6 +91,7 @@ impl Contract {
             draws: Vec::new(),
             cards: Vec::new(),
             value: None,
+            storage_used: 0,
         };
         self.packs.insert(pack_id, pack);
         // Liste paginée par compte, par blocs : (compte, bloc) → pack_ids, et un compteur par compte.
@@ -96,6 +104,11 @@ impl Contract {
         }
         self.pack_count_by_owner.insert(buyer.clone(), rank + 1);
         self.revenue += price;
+        // Engagement envers l'acheteur jusqu'au tirage : prix (rendu si le pack finit `Stuck`) et
+        // stockage prépayé ; le stockage réellement écrit en est déduit reçu par reçu.
+        self.pack_escrow += price + storage;
+        let added = self.storage_added_since(start);
+        self.charge_pack_storage(pack_id, added);
 
         let mut ev = json!({
             "pack_id": pack_id, "series_id": series_id, "owner_id": buyer,
@@ -114,6 +127,7 @@ impl Contract {
     /// Ne panique jamais sur un résultat ; une étape périmée est simplement ignorée.
     #[private]
     pub fn reveal_step(&mut self, pack_id: u64, attempt: u32, step: u8) {
+        let start = env::storage_usage();
         let Some(mut pack) = self.packs.get(&pack_id).cloned() else {
             env::log_str("reveal_step: pack inconnu");
             return;
@@ -138,6 +152,8 @@ impl Contract {
                 }),
             );
             self.packs.insert(pack_id, pack);
+            let added = self.storage_added_since(start);
+            self.charge_pack_storage(pack_id, added);
             self.schedule_step(pack_id, attempt, step + 1);
             return;
         }
@@ -147,7 +163,7 @@ impl Contract {
             env::panic_str("test-hooks: échec simulé du dernier reçu");
         }
 
-        self.finalize_pack(pack_id, pack);
+        self.finalize_pack(pack_id, pack, start);
     }
 
     /// Relance le tirage d'un booster resté `Pending` (aucune carte écrite) après
@@ -162,7 +178,7 @@ impl Contract {
     /// Un échec relève du protocole ou d'un bug, et la relance repart de nouvelles graines.
     ///
     /// Après `MAX_ATTEMPTS` tentatives, l'appel fait passer le pack en `Stuck` (événement
-    /// `pack_stuck`). Il n'y a volontairement pas de remboursement : le tirage échoué a pu être connu.
+    /// `pack_stuck`) : plus aucun tirage possible, le pack devient remboursable (`refund_stuck_pack`).
     pub fn retry_reveal(&mut self, pack_id: u64) {
         let min_gas = self.min_entry_gas();
         require!(env::prepaid_gas() >= min_gas, format!("Gaz insuffisant : {} requis", min_gas));
@@ -198,9 +214,62 @@ impl Contract {
         );
         self.schedule_step(pack_id, attempt, 1);
     }
+
+    /// Rembourse un pack `Stuck` à son acheteur : le prix et le stockage prépayé non utilisé
+    /// (`storage_per_pack − storage_used`). Ouvert à tous (les fonds vont toujours à l'acheteur).
+    /// Le pack passe en `Refunded` : plus aucun tirage, aucune relance, aucun second remboursement.
+    ///
+    /// **Pas de tirage gratuit, par construction.** Un pack n'est `Stuck` qu'après `MAX_ATTEMPTS`
+    /// derniers reçus en échec, et seulement s'il n'a **aucune carte écrite** : un pack tiré
+    /// (`Revealed`) ne peut plus changer d'état. Or le dernier reçu n'a aucun chemin d'échec qui
+    /// dépende du tirage (gaz fixe, stockage prépayé, aucun `require` sur le résultat, solde gardé
+    /// par la réserve de `withdraw_revenue`) : personne ne peut faire échouer les seuls mauvais
+    /// tirages. Voir un tirage (réussi), puis demander le remboursement, est donc impossible.
+    /// Renvoie le montant rendu (yoctoNEAR).
+    pub fn refund_stuck_pack(&mut self, pack_id: u64) -> U128 {
+        let cost = env::storage_byte_cost().as_yoctonear();
+        let pack = self.packs.get(&pack_id).unwrap_or_else(|| env::panic_str("Pack inconnu"));
+        require!(pack.status != PackStatus::Refunded, "Pack déjà remboursé");
+        require!(pack.status == PackStatus::Stuck, "Seul un pack bloqué (stuck) est remboursable");
+        require!(pack.cards.is_empty(), "Tirage déjà écrit : remboursement interdit");
+        let (owner, series_id, storage_used) = (pack.owner_id.clone(), pack.series_id, pack.storage_used);
+        let s = self.series_ref(series_id);
+        let price = s.table.price.0;
+        let storage_refund = cost * s.storage_per_pack.saturating_sub(storage_used as u64) as u128;
+        let total = price + storage_refund;
+        self.packs.get_mut(&pack_id).unwrap().status = PackStatus::Refunded;
+        self.pack_escrow = self.pack_escrow.saturating_sub(total);
+        self.revenue = self.revenue.saturating_sub(price);
+        events::emit(
+            "pack_refunded",
+            json!({
+                "pack_id": pack_id, "owner_id": owner, "price": U128(price),
+                "storage_refund": U128(storage_refund), "total": U128(total),
+                "storage_used": storage_used,
+                "by": env::predecessor_account_id(), "block_height": env::block_height(),
+            }),
+        );
+        Self::refund(&owner, total);
+        U128(total)
+    }
 }
 
 impl Contract {
+    /// Impute `added` octets au pack : `storage_used` augmente et l'engagement `pack_escrow` baisse
+    /// d'autant (dans la limite du prépayé restant : au-delà, c'est le contrat qui paie, comme les
+    /// graines des relances).
+    fn charge_pack_storage(&mut self, pack_id: u64, added: u64) {
+        let Some(pack) = self.packs.get(&pack_id) else { return };
+        let prepaid = self.series_ref(pack.series_id).storage_per_pack;
+        let before = prepaid.saturating_sub(pack.storage_used as u64);
+        let used = (pack.storage_used as u64).saturating_add(added).min(u32::MAX as u64) as u32;
+        let after = prepaid.saturating_sub(used as u64);
+        let cost = env::storage_byte_cost().as_yoctonear();
+        self.pack_escrow = self.pack_escrow.saturating_sub(cost * (before - after) as u128);
+        // Même taille borsh : la réécriture du pack ne change pas le stockage mesuré.
+        self.packs.get_mut(&pack_id).unwrap().storage_used = used;
+    }
+
     fn schedule_step(&self, pack_id: u64, attempt: u32, step: u8) {
         Promise::new(env::current_account_id())
             .function_call(
@@ -218,11 +287,12 @@ impl Contract {
     /// gaz fixe, stockage prépayé (borne du pire cas, gold pack et valeur compris), aucun `require`
     /// sur les cartes, la table de taux, les compteurs (pitié, burns) ou la valeur (dépassements
     /// exclus par la validation de la série).
-    fn finalize_pack(&mut self, pack_id: u64, mut pack: Pack) {
+    fn finalize_pack(&mut self, pack_id: u64, mut pack: Pack, start: u64) {
         let series_id = pack.series_id;
         let owner = pack.owner_id.clone();
         let mut series = self.series.get(series_id).cloned().unwrap_or_else(|| env::panic_str("Série inconnue"));
         let mech = series.table.mechanics.clone();
+        let (price, series_storage_per_pack) = (series.table.price.0, series.storage_per_pack);
 
         // Table de taux du pack : pitié (même aléa `acc`, tag 2), rush figé à l'achat.
         let rush = pack.flags & FLAG_RUSH != 0;
@@ -334,7 +404,9 @@ impl Contract {
         }
         // Valeur du pack : palier tiré dans la table du pack (tag 3), réparti entre les brûlables.
         let mut value_ev = Value::Null;
+        let mut value_backing = 0u128;
         let pack_value = draw::pack_value(&series.table, mode, &acc, &burnable_slots).map(|v| {
+            value_backing = v.amounts.iter().flatten().sum();
             let mask = burnable_slots.iter().enumerate().fold(0u16, |m, (i, (_, b))| if *b { m | (1u16 << i) } else { m });
             value_ev = json!({
                 "roll": v.roll, "tier": v.tier, "bps": v.bps, "total": U128(v.total),
@@ -346,6 +418,8 @@ impl Contract {
             p.draws = draws;
             p.value = pack_value;
         }
+        // Valeur tirée : elle adosse les brûlables du pack tant qu'elles ne sont pas brûlées.
+        self.value_reserved += value_backing;
 
         Self::emit_mint(&owner, &minted_tokens, pack_id);
         let mut ev = json!({
@@ -366,10 +440,24 @@ impl Contract {
                 "resurrect_seq": resurrect_seq, "value": value_ev,
             });
         }
-        events::emit("pack_revealed", ev);
         if let Some(slot) = self.series.get_mut(series_id) {
             *slot = series;
         }
+        // Stockage réellement écrit par ce reçu, puis remboursement du prépayé non utilisé. Le
+        // montant dépend du tirage (cartes scellées, gold pack, premier achat), mais ce n'est
+        // qu'un virement sortant : il ne peut pas faire échouer ce reçu (le solde est couvert par
+        // `pack_escrow`, que `withdraw_revenue` ne touche jamais).
+        let added = self.storage_added_since(start);
+        self.charge_pack_storage(pack_id, added);
+        let prepaid = series_storage_per_pack;
+        let used = self.packs.get(&pack_id).map(|p| p.storage_used).unwrap_or(0);
+        let refund = env::storage_byte_cost().as_yoctonear() * prepaid.saturating_sub(used as u64) as u128;
+        self.pack_escrow = self.pack_escrow.saturating_sub(price + refund);
+        ev["storage"] = json!({
+            "prepaid_bytes": prepaid, "used_bytes": used, "refund": U128(refund),
+        });
+        events::emit("pack_revealed", ev);
+        Self::refund(&owner, refund);
     }
 
     /// Graines journalisées, avec `acc` recalculé après chaque étape depuis `initial_acc`.

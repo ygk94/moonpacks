@@ -21,6 +21,7 @@ impl Contract {
         let need = LISTING_DEPOSIT.as_yoctonear();
         require!(deposit >= need, format!("Dépôt d'annonce : {} yoctoNEAR requis", need));
         self.listings.insert(token_id.clone(), Listing { seller_id: seller.clone(), price, deposit: U128(need) });
+        self.listing_deposits += need;
         events::emit("card_listed", json!({ "token_id": token_id, "seller_id": seller, "price": price }));
         Self::refund(&seller, deposit - need);
     }
@@ -49,6 +50,7 @@ impl Contract {
         require!(deposit >= l.price.0, "Dépôt inférieur au prix");
 
         self.listings.remove(&token_id);
+        self.listing_deposits = self.listing_deposits.saturating_sub(l.deposit.0);
         let removed = self.take_approvals(&token_id);
         crate::nft::refund_approvals(&owner, Some(&removed));
         self.internal_transfer_unguarded(&token_id, &owner, &buyer);
@@ -81,6 +83,7 @@ impl Contract {
     /// Retire l'annonce et rend le dépôt au vendeur.
     pub(crate) fn remove_listing(&mut self, token_id: &TokenId, reason: &str) {
         if let Some(l) = self.listings.remove(token_id) {
+            self.listing_deposits = self.listing_deposits.saturating_sub(l.deposit.0);
             Self::refund(&l.seller_id, l.deposit.0);
             events::emit(
                 "card_delisted",

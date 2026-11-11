@@ -402,6 +402,7 @@ fn mint_sealed(c: &mut Contract) -> String {
             }],
             cards: vec![],
             value: None,
+            storage_used: 0,
         },
     );
     c.internal_mint_slot(pid, &alice())

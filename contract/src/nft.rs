@@ -34,14 +34,18 @@ fn approval_bytes(a: &AccountId) -> u64 {
     a.as_str().len() as u64 + 4 + 8
 }
 
-/// Rend au propriétaire le stockage de ses approbations effacées, comme le standard.
-pub(crate) fn refund_approvals(owner: &AccountId, approvals: Option<&HashMap<AccountId, u64>>) {
+/// Rend au propriétaire le stockage de ses approbations effacées, comme le standard. Renvoie le
+/// montant rendu (yoctoNEAR).
+pub(crate) fn refund_approvals(owner: &AccountId, approvals: Option<&HashMap<AccountId, u64>>) -> u128 {
     if let Some(a) = approvals {
         let bytes: u64 = a.keys().map(approval_bytes).sum();
         if bytes > 0 {
-            Contract::refund(owner, env::storage_byte_cost().as_yoctonear() * bytes as u128);
+            let amount = env::storage_byte_cost().as_yoctonear() * bytes as u128;
+            Contract::refund(owner, amount);
+            return amount;
         }
     }
+    0
 }
 
 fn pack_slot(tid: u64) -> (u64, usize) {
@@ -322,7 +326,8 @@ impl Contract {
     }
 
     /// Brûle une carte : retirée des listes, emplacement marqué `Burned`, approbations rendues.
-    pub(crate) fn internal_burn(&mut self, token_id: &TokenId, owner: &AccountId) {
+    /// Renvoie le montant déjà rendu pour les approbations (yoctoNEAR).
+    pub(crate) fn internal_burn(&mut self, token_id: &TokenId, owner: &AccountId) -> u128 {
         let tid = parse_token_id(token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
         let (owner_pos, global_pos) = {
             let s = self.slot_mut(tid);
@@ -337,11 +342,13 @@ impl Contract {
         let slot = self.slot_mut(tid);
         slot.state = CardState::Burned;
         slot.owner = None;
+        let mut refunded = 0;
         if let Some(a) = self.approvals.remove(&tid) {
             let a: HashMap<AccountId, u64> = a.accounts.into_iter().collect();
-            refund_approvals(owner, Some(&a));
+            refunded = refund_approvals(owner, Some(&a));
         }
         NftBurn { owner_id: owner, token_ids: &[token_id], authorized_id: None, memo: Some("redeem") }.emit();
+        refunded
     }
 
     pub(crate) fn emit_mint(owner: &AccountId, token_ids: &[TokenId], pack_id: u64) {
