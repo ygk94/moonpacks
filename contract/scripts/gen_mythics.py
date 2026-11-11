@@ -41,6 +41,25 @@ def canonical_content(c):
     }
 
 
+def check_revealable(i, card_id, c):
+    """Bornes de `reveal_mythic` (src/mythic.rs) : une mythique engagée hors bornes ne pourrait
+    jamais être révélée, et la table ouverte est figée."""
+    def size(s):
+        return len(s.encode("utf-8")) if isinstance(s, str) else -1
+    if not 1 <= size(card_id) <= 64:
+        raise SystemExit(f"mythique {i} : card_id de 1 à 64 octets")
+    if not 1 <= size(c.get("title")) <= 64:
+        raise SystemExit(f"mythique {i} : titre de 1 à 64 octets")
+    for k in ("media", "reference"):
+        if c.get(k) is not None and not 0 <= size(c[k]) <= 256:
+            raise SystemExit(f"mythique {i} : {k} de 256 octets au plus")
+    b = c.get("backing")
+    if b is not None:
+        a = str(b.get("amount", ""))
+        if not 1 <= size(b.get("asset_id")) <= 128 or not a.isdigit() or int(a) == 0 or int(a) >= 1 << 128:
+            raise SystemExit(f"mythique {i} : adossement invalide (asset_id de 1 à 128 octets, amount entier > 0)")
+
+
 def content_json(c):
     return json.dumps(canonical_content(c), separators=(",", ":"), ensure_ascii=False).encode("utf-8")
 
@@ -57,10 +76,11 @@ def main(argv):
     for i, e in enumerate(entries):
         card_id = e["card_id"]
         if card_id in seen:
-            raise SystemExit(f"card_id en double : {card_id}")
+            raise SystemExit(f"mythique {i} : card_id en double")
         seen.add(card_id)
         if not (1 <= int(e["cap"]) <= 100):
-            raise SystemExit(f"cap hors bornes pour {card_id}")
+            raise SystemExit(f"mythique {i} : cap hors bornes (1 à 100)")
+        check_revealable(i, card_id, e["content"])
         sel = secrets.token_bytes(32)
         content = canonical_content(e["content"])
         commitment = hashlib.sha256(card_id.encode("utf-8") + sel).hexdigest()
@@ -73,6 +93,8 @@ def main(argv):
         raise SystemExit("engagement en double")
     os.makedirs(os.path.dirname(os.path.abspath(secrets_path)), exist_ok=True)
     fd = os.open(secrets_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    # O_CREAT ne change pas le mode d'un fichier existant (0644 resterait 0644).
+    os.fchmod(fd, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(private, f, ensure_ascii=False, indent=2)
     with open(public_path, "w", encoding="utf-8") as f:
