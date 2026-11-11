@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { estimateTokens, type TokenEstimate } from "../lib/backing";
 import { waitBurnOutcome } from "../lib/burn";
+import { burnStorageRefund } from "../lib/pack";
 import { loadCatalog, STATE_LABEL, type CatalogEntry } from "../lib/catalog";
 import { formatNearExact, formatQty, formatUsd, parseNear, RARITY_LABEL, yoctoToNumber } from "../lib/format";
 import { coinUsd, nearUsd } from "../lib/prices";
@@ -76,9 +77,13 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
       const out = await call("redeem", { token_id: card.token_id }, { deposit: "1", gas: "100000000000000" });
       const events = eventsOf(out);
       if (findEvent(events, "card_redeemed")) {
+        // v3 : le stockage libéré par le burn est rendu (`card_redeemed.storage_refund`).
+        const storage = burnStorageRefund(events);
         setBurn({
           kind: "done",
-          text: `Card burned. ${est?.qty != null ? `About ${formatQty(est.qty)} ${est.ticker}` : "The tokens"} were sent to your account.`,
+          text:
+            `Card burned. ${est?.qty != null ? `About ${formatQty(est.qty)} ${est.ticker}` : "The tokens"} were sent to your account.` +
+            (storage != null && storage > 0n ? ` The freed storage deposit (${formatNearExact(storage)} NEAR) was returned too.` : ""),
         });
       } else if (findEvent(events, "redeem_failed")) {
         setBurn({ kind: "failed", text: "The token delivery failed, so your card was restored. You can try again later." });

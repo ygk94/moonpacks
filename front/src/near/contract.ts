@@ -1,7 +1,7 @@
 // Lectures typées du contrat Memaster (toutes des `view` gratuites).
 
 import { SERIES_ID } from "../config";
-import { view } from "./rpc";
+import { RpcError, view } from "./rpc";
 import type {
   Backing,
   CardDef,
@@ -93,6 +93,24 @@ export function getCardDefs(seriesId = SERIES_ID): Promise<CardDef[]> {
     cardDefs.catch(() => (cardDefs = null));
   }
   return cardDefs;
+}
+
+/**
+ * Contrat v3 (stockage non utilisé rendu à l'ouverture et au burn, `refund_stuck_pack`) : reconnu à sa vue
+ * `get_treasury`, absente d'app2. Sans réponse du réseau, on ne promet rien (`false`) et on réessaiera.
+ */
+let v3: Promise<boolean> | null = null;
+export function isV3Contract(): Promise<boolean> {
+  if (!v3) {
+    v3 = view<unknown>("get_treasury").then(
+      () => true,
+      (e) => {
+        if (!(e instanceof RpcError)) v3 = null;
+        return false;
+      },
+    );
+  }
+  return v3;
 }
 
 /** `token_id = pack_id × 10 + emplacement`. */

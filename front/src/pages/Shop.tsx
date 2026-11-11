@@ -5,18 +5,13 @@ import { useEffect, useState } from "react";
 import { ConnectButton } from "../components/Header";
 import { PackArt } from "../components/PackArt";
 import { BLOCK_TIME_S } from "../config";
-import { formatDuration, formatNear, formatNearExact, formatUsd, yoctoToNumber } from "../lib/format";
+import { formatDuration, formatNearExact, formatUsd, yoctoToNumber } from "../lib/format";
 import { nearUsd } from "../lib/prices";
 import { useAsync } from "../lib/useAsync";
-import { getPackCount, getRushState, getSeries, getSeriesCount } from "../near/contract";
+import { storageDepositNote } from "../lib/pack";
+import { getPackCount, getRushState, getSeries, getSeriesCount, isV3Contract } from "../near/contract";
 import type { RushState, SeriesView } from "../near/types";
 import { useWallet } from "../near/wallet";
-
-// Stockage effectivement consommé (mesuré sur testnet) : environ 1 034 o au premier pack d'un compte, 602 o
-// ensuite (docs/testnet.md). Le contrat demande le pire cas et ne garde que ce qui sert.
-const STORAGE_FIRST_PACK = 1034n;
-const STORAGE_NEXT_PACK = 602n;
-const BYTE_COST = 10n ** 19n; // 1 octet = 10¹⁹ yoctoNEAR
 
 export function Shop({ onBuy }: { onBuy: (s: SeriesView) => void }) {
   const { accountId } = useWallet();
@@ -27,6 +22,7 @@ export function Shop({ onBuy }: { onBuy: (s: SeriesView) => void }) {
   }, []);
   const usd = useAsync(() => nearUsd(), []);
   const packs = useAsync(() => (accountId ? getPackCount(accountId) : Promise.resolve(null)), [accountId]);
+  const v3 = useAsync(() => isV3Contract(), []);
 
   return (
     <div className="page shop">
@@ -55,6 +51,7 @@ export function Shop({ onBuy }: { onBuy: (s: SeriesView) => void }) {
             usd={usd.data ?? null}
             firstPack={packs.data == null ? null : packs.data === 0}
             connected={!!accountId}
+            storageReturned={v3.data === true}
             onBuy={() => onBuy(s)}
           />
         ))}
@@ -69,21 +66,18 @@ function PackOffer({
   usd,
   firstPack,
   connected,
+  storageReturned,
   onBuy,
 }: {
   series: SeriesView;
   usd: number | null;
   firstPack: boolean | null;
   connected: boolean;
+  storageReturned: boolean;
   onBuy: () => void;
 }) {
   const [confirm, setConfirm] = useState(false);
   const storageMax = BigInt(series.required_deposit) - BigInt(series.price);
-  const used = (bytes: bigint) => formatNear(bytes * BYTE_COST, 3);
-  const usedText =
-    firstPack == null
-      ? `about ${used(STORAGE_NEXT_PACK)} NEAR is actually used, ${used(STORAGE_FIRST_PACK)} NEAR for the first pack of an account`
-      : `about ${used(firstPack ? STORAGE_FIRST_PACK : STORAGE_NEXT_PACK)} NEAR is actually used${firstPack ? " for the first pack of an account" : ""}`;
   const price = yoctoToNumber(series.price);
   return (
     <article className="offer">
@@ -96,15 +90,16 @@ function PackOffer({
           {usd != null && <span className="offer__usd">≈ {formatUsd(price * usd)}</span>}
         </div>
         <p className="small muted">
-          + storage deposit: {formatNearExact(storageMax)} NEAR is attached to pay for the cards' on-chain storage (
-          {usedText}).
+          {storageDepositNote(storageMax, firstPack, storageReturned)}
         </p>
         {!connected ? (
           <ConnectButton />
         ) : confirm ? (
           <div className="confirm">
             <p>
-              You will pay <strong>{formatNearExact(series.price)} NEAR</strong> plus the storage deposit. The cards are drawn
+              You will pay <strong>{formatNearExact(series.price)} NEAR</strong> plus the storage deposit of{" "}
+              {formatNearExact(storageMax)} NEAR
+              {storageReturned ? " (its unused part comes back when the pack is opened)" : ""}. The cards are drawn
               on-chain; the purchase cannot be cancelled once signed.
             </p>
             <div className="row">

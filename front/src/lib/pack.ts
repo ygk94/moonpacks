@@ -2,6 +2,7 @@
 // stockage rendu à l'ouverture et au burn. Fonctions pures, testées dans pack.test.ts.
 
 import { findEvent } from "../near/events";
+import { formatNear, formatNearExact } from "./format";
 import type { MemasterEvent, PackView } from "../near/types";
 
 /** 1 octet de stockage = 10¹⁹ yoctoNEAR. */
@@ -71,4 +72,25 @@ export function revealStorageRefund(data: Record<string, unknown> | undefined): 
 /** Stockage rendu au burn : `card_redeemed.storage_refund` (yoctoNEAR), ou `null`. */
 export function burnStorageRefund(events: MemasterEvent[]): bigint | null {
   return asYocto(findEvent(events, "card_redeemed")?.storage_refund);
+}
+
+// Stockage effectivement consommé (mesuré sur testnet) : environ 1 034 o au premier pack d'un compte, 602 o
+// ensuite (docs/testnet.md ; +4 o en v3). Le contrat demande le pire cas.
+export const STORAGE_FIRST_PACK = 1034n;
+export const STORAGE_NEXT_PACK = 602n;
+
+/**
+ * Texte du dépôt de stockage avant l'achat. Le dépôt joint reste le pire cas (`required_deposit − price`) ; en v3,
+ * l'excédent est rendu à l'ouverture, en app2 il reste au contrat.
+ */
+export function storageDepositNote(attached: bigint, firstPack: boolean | null, v3: boolean): string {
+  const used = (bytes: bigint) => formatNear(bytes * BYTE_COST, 3);
+  const estimate =
+    firstPack == null
+      ? `about ${used(STORAGE_NEXT_PACK)} NEAR is actually used, ${used(STORAGE_FIRST_PACK)} NEAR for the first pack of an account`
+      : `about ${used(firstPack ? STORAGE_FIRST_PACK : STORAGE_NEXT_PACK)} NEAR is actually used${firstPack ? " for the first pack of an account" : ""}`;
+  const head = `+ storage deposit: ${formatNearExact(attached)} NEAR is attached to pay for the cards' on-chain storage in the worst case`;
+  return v3
+    ? `${head}. The unused part is returned to you when the pack is opened (${estimate}).`
+    : `${head} (${estimate}).`;
 }

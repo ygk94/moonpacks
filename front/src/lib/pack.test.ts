@@ -8,6 +8,7 @@ import {
   refundAmount,
   refundedTotal,
   revealStorageRefund,
+  storageDepositNote,
   unusedStorage,
 } from "./pack";
 
@@ -95,5 +96,23 @@ describe("storage returned", () => {
     );
     expect(burnStorageRefund([ev("card_redeemed", { token_id: "70" })])).toBeNull();
     expect(burnStorageRefund([])).toBeNull();
+  });
+});
+
+describe("storage deposit before buying", () => {
+  const attached = 1605n * 10n ** 19n;
+  it("keeps the worst case and says the unused part is returned at opening (v3)", () => {
+    const t = storageDepositNote(attached, true, true);
+    expect(t).toMatch(/^\+ storage deposit: 0\.01605 NEAR is attached/);
+    expect(t).toMatch(/worst case/);
+    expect(t).toMatch(/unused part is returned to you when the pack is opened/);
+    expect(t).toMatch(/0\.01 NEAR is actually used for the first pack/);
+    expect(t).not.toMatch(/not returned/i);
+  });
+  it("promises nothing on app2", () => {
+    const t = storageDepositNote(attached, false, false);
+    expect(t).not.toMatch(/returned/);
+    expect(t).toMatch(/about 0\.006 NEAR is actually used\)/);
+    expect(storageDepositNote(attached, null, false)).toMatch(/0\.006 NEAR is actually used, 0\.01 NEAR for the first pack/);
   });
 });

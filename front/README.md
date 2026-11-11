@@ -111,8 +111,11 @@ La liste complète des décisions, des tests et du travail restants est dans `do
    une quantité de jetons (`docs/mecaniques-spec.md`). Le front l'estime avec `amount × cours NEAR / cours du coin`.
    Il faudra lire la vraie quantité quand le redeemer achètera les jetons.
 2. **Dépôt de stockage.** Le contrat demande le pire cas, 0,016 NEAR par pack (`required_deposit − price`). La
-   consigne parle d'environ 0,006 NEAR, et 0,01 NEAR au premier pack. Le front affiche les deux : le montant joint et
-   l'estimation de ce qui est réellement consommé.
+   consigne parle d'environ 0,006 NEAR, et 0,01 NEAR au premier pack. Le front affiche le montant joint et
+   l'estimation de ce qui est réellement consommé. Contrat v3 (reconnu à sa vue `get_treasury`) : la boutique précise
+   que l'excédent est rendu à l'ouverture ; le récapitulatif de l'ouverture affiche le montant rendu
+   (`pack_revealed.storage.refund`, sinon `get_pack` : prépayé − `storage_used`), et le burn le stockage libéré
+   rendu (`card_redeemed.storage_refund`). Sur `app2`, rien de cela n'est promis.
 3. **Prix des packs.** Le contrat n'a qu'une série, à 0,1 NEAR. Les packs à 0,20 $ et 0,50 $ demandent de nouvelles
    séries côté contrat. La boutique affiche déjà toutes les séries ouvertes.
 4. **Trending.** Il vient de l'indexeur (ventes et annonces sur 24 h, plus les dernières ventes), et à défaut des
