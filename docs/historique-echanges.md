@@ -87,12 +87,40 @@ Il n'a pas encore tourné : le bac à sable de l'agent bloque le réseau. À lan
 **Demande.** Créer un dépôt pour le projet (nom provisoire **Memaster**), y mettre tous les échanges,
 puis un sujet mesh pour le projet, afin de reprendre le travail sur une autre machine et de le partager à un collègue.
 
+## 11/11 : couverture NEAR Intents et plan
+
+**Demande.** Pas de sujet mesh pour l'instant. Lancer `/v0/tokens`, ajouter ou retirer des cartes en gardant une bonne
+quantité, puis établir le plan de tout ce qu'il reste à faire.
+
+**Résultats (`intents-couverture.md`).**
+- 229 actifs sur 39 réseaux, une vingtaine de memecoins. Devis `dry` réussis pour 13 cartes (DOGE, SHIB, PEPE, WIF,
+  PENGU, SPX, BOME, CASHCAT, TURBO, NearKat, BLACKDRAGON, SHITZU, JAMBO), plus TRUMP (« À décider »).
+- Achat : 0,2 à 1,7 % de perte jusqu'à 100 $. Retrait vers la chaîne d'origine : coût fixe de 0,10 à 0,25 $, donc une
+  carte brûlable d'au moins 5 $.
+- Catalogue : 786 cartes (7 retirées, 14 jetons politiques passés dans « À décider », 5 ajoutées), 77 « À décider ».
+
+**Plan (`plan.md`).** Phases 0 (décisions) à 7 (démo), chemin critique : MetaMask, `mt_transfer` par contrat, retrait.
+
+## 11/11 : catalogue v2 et socle technique
+
+**Demande.** La liste v1 ne va pas. Catalogue **full mèmes**, surtout des anciens qui ont explosé, ont rendu des gens
+riches et ne valent plus rien. Ceux qui ont connu un pic fou sont légendaires. DOGE, SHIB et PEPE sont mythiques mais on ne
+communique pas dessus : « ? » dans le catalogue. Une grosse liste de mèmes morts en communes. Toutes les chaînes,
+recherches en parallèle. Burn : on verra plus tard comment financer ; le retrait vers les exchanges n'est pas notre
+problème. Lancer le technique en sous-agents (simulation, contrat Rust NFT…), pas de front.
+
+**Résultats.**
+- Recherche par époque et par chaîne dans `docs/recherche-v2/` (r1 à r4), audit de v1 et relevé CoinGecko (r5).
+- `docs/catalogue-v2.md` et `docs/data/catalogue-v2.json` : 1 649 cartes (3 / 21 / 235 / 230 / 1 160), 101 « À décider ».
+- `contract/` (NEP-171/177/178/181/199, tirage sur reçus chaînés, mythiques scellés, marché, burn abstrait),
+  `verifier/`, `sim/`, `art/`, `docs/faisabilite.md` (faisable hors burn, MetaMask viable via near-connect).
+
 ## Questions ouvertes
 
 1. Nom du projet.
-2. Exclure les 63 jetons « à décider » ? Recommandation : les exclure.
+2. Trancher les 101 « À décider » et les drapeaux du catalogue v2.
 3. Créditer la carte en NEAR si l'achat des jetons échoue ? Recommandation : oui.
-4. Vérifier la couverture et la liquidité des memecoins sur NEAR Intents avant d'activer le burn.
+4. ~~Vérifier la couverture des memecoins sur NEAR Intents~~ : fait le 11/11 (`intents-couverture.md`). À revérifier avant chaque série.
 5. Tester MetaMask (adaptateur near-connect) sur testnet en premier.
 6. Après le script d'images : compléter chaînes et adresses dans le catalogue.
 7. Générer les visuels originaux (d'abord les 248 cartes à ayant droit).

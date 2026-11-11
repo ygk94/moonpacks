@@ -1,0 +1,7 @@
+[
+  {"card_id": "pepe", "weight": 1, "cap": 3,
+   "content": {"title": "PEPE MYTHIQUE", "media": "ipfs://bafy/pepe.png", "reference": null,
+               "backing": {"asset_id": "nep141:pepe.tkn.near", "amount": "1000"}}},
+  {"card_id": "doge-ü", "weight": 2, "cap": 5,
+   "content": {"title": "DOGE « or »", "media": null, "reference": null, "backing": null}}
+]

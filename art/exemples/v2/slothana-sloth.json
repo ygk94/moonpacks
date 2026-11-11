@@ -1,0 +1,10 @@
+{
+  "copies": null,
+  "description": "Carte Memaster rare (en déclin). Memecoin SLOTH, chaîne Solana, année du pic 2024. Le ticker est cité comme donnée factuelle ; visuel génératif abstrait. Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.",
+  "extra": "{\"annee_pic\": 2024, \"chaine\": \"Solana\", \"etat\": \"en déclin\", \"identifiant\": \"slothana-sloth\", \"non_affiliation\": \"Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.\", \"numero\": 261, \"rarete\": \"rare\"}",
+  "media": "slothana-sloth.svg",
+  "media_hash": "OrGjaxmUjVmRT6zDAetHpbyiXz5vG9khhguIcwj64ws=",
+  "reference": "slothana-sloth.ref.json",
+  "reference_hash": "TH0a7OhsRANNxSIW2txK1H5YYYJLA7nhCAZGDNlMNSw=",
+  "title": "SLOTH · Slothana"
+}

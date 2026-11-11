@@ -1,0 +1,10 @@
+{
+  "copies": null,
+  "description": "Carte Memaster commune (mort). Memecoin BEZOGE, chaîne Ethereum, année du pic 2021. Le ticker est cité comme donnée factuelle ; visuel génératif abstrait. Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.",
+  "extra": "{\"annee_pic\": 2021, \"chaine\": \"Ethereum\", \"etat\": \"mort\", \"identifiant\": \"bezoge-earth-bezoge\", \"non_affiliation\": \"Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.\", \"numero\": 500, \"rarete\": \"commune\"}",
+  "media": "bezoge-earth-bezoge.svg",
+  "media_hash": "bPgaNZ/Z71KelmM0PpROGNHV4LpsUufoyyYB62SY3HU=",
+  "reference": "bezoge-earth-bezoge.ref.json",
+  "reference_hash": "mt6eEK6gZCsx96uLR3+QXAwd2wQ4m/9pi1OTuhnqi44=",
+  "title": "BEZOGE · Bezoge Earth"
+}

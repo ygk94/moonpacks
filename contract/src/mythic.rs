@@ -1,0 +1,129 @@
+//! Mythiques secrètes. La table publique ne contient que
+//! `commitment = sha256(card_id || sel)` et `content_hash = sha256(json(content) || sel)`,
+//! avec le poids et le plafond. À la première sortie, la carte est créée « scellée » ;
+//! quiconque détient la préimage (en pratique l'owner) la révèle et le contrat vérifie les deux hashs.
+
+use crate::series::check_backing;
+use crate::types::*;
+use crate::*;
+use near_sdk::serde_json::json;
+
+pub(crate) fn compute_commitments(card_id: &str, sel: &[u8], content: &MythicContent) -> ([u8; 32], [u8; 32]) {
+    let mut a = card_id.as_bytes().to_vec();
+    a.extend_from_slice(sel);
+    let mut b = near_sdk::serde_json::to_vec(content)
+        .unwrap_or_else(|_| env::panic_str("Sérialisation impossible"));
+    b.extend_from_slice(sel);
+    (env::sha256_array(&a), env::sha256_array(&b))
+}
+
+/// Le sel doit faire exactement 32 octets (64 caractères hex), un par mythique :
+/// un sel court ou réutilisé permettrait de retrouver les autres mythiques par force brute
+/// sur le catalogue après une première révélation.
+pub(crate) fn decode_sel(sel: &str) -> Vec<u8> {
+    let b = hex_decode(sel).unwrap_or_else(|| env::panic_str("sel : hex invalide"));
+    require!(b.len() == 32, "sel : 32 octets exactement");
+    b
+}
+
+#[near(serializers = [json])]
+pub struct CommitmentPair {
+    pub commitment: String,
+    pub content_hash: String,
+}
+
+#[near]
+impl Contract {
+    /// Aide (lecture) : calcule les engagements d'une mythique. `sel` en hex (32 octets conseillés).
+    /// À appeler hors ligne de préférence (une vue RPC transmet le secret au nœud interrogé).
+    pub fn compute_mythic_commitment(&self, card_id: String, sel: String, content: MythicContent) -> CommitmentPair {
+        let sel = decode_sel(&sel);
+        let (c, h) = compute_commitments(&card_id, &sel, &content);
+        CommitmentPair { commitment: hex32(&c), content_hash: hex32(&h) }
+    }
+
+    /// Révèle une mythique déjà sortie au moins une fois. Le dépôt couvre le stockage ajouté
+    /// (excédent rendu). Met à jour les cartes scellées : métadonnées et adossement.
+    #[payable]
+    pub fn reveal_mythic(
+        &mut self,
+        series_id: u32,
+        mythic_index: u32,
+        card_id: String,
+        sel: String,
+        content: MythicContent,
+    ) {
+        let start = env::storage_usage();
+        require!(!card_id.is_empty() && card_id.len() <= MAX_ID_LEN, "card_id invalide");
+        require!(!content.title.is_empty() && content.title.len() <= MAX_TITLE_LEN, "title invalide");
+        for u in [&content.media, &content.reference].into_iter().flatten() {
+            require!(u.len() <= MAX_URL_LEN, "URL trop longue");
+        }
+        check_backing(&content.backing);
+        let sel_bytes = decode_sel(&sel);
+
+        let mut series = self.series_ref(series_id).clone();
+        let j = mythic_index as usize;
+        require!(j < series.table.mythics.len(), "Index de mythique inconnu");
+        require!(series.revealed_mythics[j].is_none(), "Mythique déjà révélée");
+        require!(series.mythic_minted[j] > 0, "Mythique jamais sortie : révélation refusée");
+        let m = series.table.mythics[j].clone();
+        let (c, h) = compute_commitments(&card_id, &sel_bytes, &content);
+        require!(hex32(&c) == m.commitment, "sha256(card_id || sel) ne correspond pas à l'engagement");
+        require!(hex32(&h) == m.content_hash, "Le contenu ne correspond pas à content_hash");
+
+        let revealed = RevealedMythic {
+            card_id: card_id.clone(),
+            sel: sel.clone(),
+            content: content.clone(),
+            revealed_at_height: env::block_height(),
+        };
+        let sealed = std::mem::take(&mut series.sealed_tokens[j]);
+        for token_id in &sealed {
+            let Some(meta_store) = self.tokens.token_metadata_by_id.as_mut() else { break };
+            let pack_id = meta_store
+                .get(token_id)
+                .and_then(|old| old.extra)
+                .and_then(|e| near_sdk::serde_json::from_str::<near_sdk::serde_json::Value>(&e).ok())
+                .and_then(|v| v.get("pack_id").and_then(|p| p.as_u64()))
+                .unwrap_or(0);
+            let issued = meta_store.get(token_id).and_then(|o| o.issued_at);
+            let mut meta = Self::revealed_mythic_metadata(series_id, &m, &revealed, pack_id, issued);
+            meta.updated_at = Some(env::block_timestamp_ms().to_string());
+            meta_store.insert(token_id, &meta);
+            if let Some(info) = self.cards.get_mut(token_id) {
+                info.sealed = false;
+            }
+            if let Some(b) = &content.backing {
+                // La carte a pu être brûlée entre-temps ? Impossible : une scellée n'a pas d'adossement.
+                if self.tokens.owner_by_id.get(token_id).is_some() {
+                    self.backing.insert(token_id.clone(), b.clone());
+                }
+            }
+        }
+        series.revealed_mythics[j] = Some(revealed);
+        *self.series.get_mut(series_id).unwrap() = series;
+
+        events::emit(
+            "mythic_revealed",
+            json!({
+                "series_id": series_id, "mythic_index": mythic_index, "card_id": card_id,
+                "sel": sel, "content": content, "commitment": m.commitment,
+                "content_hash": m.content_hash, "token_ids": sealed,
+            }),
+        );
+        if !sealed.is_empty() {
+            events::emit_nft_metadata_update(&sealed);
+        }
+
+        // Stockage : flush explicite pour mesurer, puis facturation au révélateur.
+        self.series.flush();
+        self.cards.flush();
+        self.backing.flush();
+        let end = env::storage_usage();
+        let cost = env::storage_byte_cost().as_yoctonear() * end.saturating_sub(start) as u128;
+        let deposit = env::attached_deposit().as_yoctonear();
+        require!(deposit >= cost, format!("Dépôt insuffisant pour le stockage : {} yoctoNEAR", cost));
+        Self::refund(&env::predecessor_account_id(), deposit - cost);
+    }
+}

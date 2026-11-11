@@ -1,0 +1,40 @@
+# Série 1, jeu C : 5 NEAR. Mythique 1 sur 10 000 (environ 275 NEAR). Moitié des boosters sans carte brûlable.
+nom: "Série 1 C : 5 NEAR, variante d'entrée"
+prix: 5                  # NEAR (environ 18 $)
+n_cartes: 5
+near_usd: 3.6            # pour les conversions du rapport seulement
+beta: 0.60               # part du prix dépensée en jetons, en moyenne
+delta: 0.10              # part du prix versée à la réserve de variance
+epsilon: 0.15            # marge anti-arbitrage visée
+v_cap: 300               # NEAR, adossement maximal d'un booster
+v_min_brulable: 1.4      # NEAR (5 $) : valeur minimale utile d'une carte brûlable (20 × coût fixe de retrait)
+calibrer_avec_plafonds: true   # κ est recalculé pour que E[adossement] = β·P malgré les plafonds par carte
+
+# Effectifs du catalogue v2 (provisoires) et nombre de cartes brûlables dans chaque rareté.
+# part_brulable : probabilité qu'une carte tirée dans cette rareté soit une brûlable (la table favorise ces pièces).
+# revente : prix moyen de revente d'une carte de collection (NEAR), utilisé pour le test d'arbitrage.
+# plafond : adossement maximal d'une carte (NEAR), fixé par la profondeur mesurée (devis à 100 et 1 000 $).
+raretes:
+  commune:    {poids: 1,   part_brulable: 0.08, effectif: 520, brulables: 2, revente: 0.03, plafond: 25}
+  rare:       {poids: 1.2, part_brulable: 0.20, effectif: 150, brulables: 2, revente: 0.08, plafond: 30}
+  epique:     {poids: 3,   part_brulable: 0.30, effectif: 80,  brulables: 1, revente: 0.25, plafond: 100}
+  legendaire: {poids: 9,   part_brulable: 0.50, effectif: 45,  brulables: 5, revente: 1.0,  plafond: 280}
+  mythique:   {poids: 130, part_brulable: 1.00, effectif: 3,   brulables: 3, revente: 0,    plafond: 1500,
+               multiplicateur: {valeurs: [1], probas: [1]}}   # DOGE, SHIB, PEPE : valeur fixe, secrètes
+
+emplacements:
+  tables:
+    standard:  {commune: 0.74, rare: 0.20, epique: 0.05,  legendaire: 0.01,   mythique: 0.0}
+    favorable: {commune: 0.40, rare: 0.37, epique: 0.17,  legendaire: 0.0599, mythique: 0.0001}
+  ordre: [standard, standard, standard, standard, favorable]
+
+multiplicateur: {valeurs: [0.8, 1, 2], probas: [0.5, 0.35, 0.15]}
+
+couts:
+  s_achat: 0.01          # perte à l'achat (mesurée : 0,2 à 1,7 %)
+  f_burn: 0.002          # frais proportionnels au burn (appFees 20 pb)
+  f_burn_fixe: 0.03      # NEAR par carte brûlée (retrait vers NEAR : quasi nul ; vers la chaîne d'origine : 0,03 à 0,07)
+  s_vente: 0.03          # perte de l'attaquant à la revente des jetons
+  phi: 0.05              # frais du marché intégré
+
+ruine: {horizon: 10000, trajectoires: 10000, z: 3}

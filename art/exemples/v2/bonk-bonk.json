@@ -1,0 +1,10 @@
+{
+  "copies": null,
+  "description": "Carte Memaster légendaire (en déclin). Memecoin BONK, chaîne Solana, année du pic 2022. Le ticker est cité comme donnée factuelle ; visuel génératif abstrait. Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.",
+  "extra": "{\"annee_pic\": 2022, \"chaine\": \"Solana\", \"etat\": \"en déclin\", \"identifiant\": \"bonk-bonk\", \"non_affiliation\": \"Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.\", \"numero\": 1, \"rarete\": \"légendaire\"}",
+  "media": "bonk-bonk.svg",
+  "media_hash": "q+oR0EKEbHxprnMeydxwOKtLnGSDtJZMEbDgylsafxg=",
+  "reference": "bonk-bonk.ref.json",
+  "reference_hash": "YNOEvr21ghja6FOOR3m3TFLMfXGX1zaO/MfLvd2Gxk8=",
+  "title": "BONK · Bonk"
+}

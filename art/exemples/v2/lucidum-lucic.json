@@ -1,0 +1,10 @@
+{
+  "copies": null,
+  "description": "Carte Memaster rare (en déclin). Memecoin LUCIC, chaîne à vérifier, année du pic 2025. Le ticker est cité comme donnée factuelle ; visuel génératif abstrait. Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.",
+  "extra": "{\"annee_pic\": 2025, \"chaine\": null, \"etat\": \"en déclin\", \"identifiant\": \"lucidum-lucic\", \"non_affiliation\": \"Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.\", \"numero\": 262, \"rarete\": \"rare\"}",
+  "media": "lucidum-lucic.svg",
+  "media_hash": "e8anGfUNo7ZuyjVsl0g7qgQEcMuTPdIAYzvs0pw2BVg=",
+  "reference": "lucidum-lucic.ref.json",
+  "reference_hash": "eYQUNUWaQOd/zCTstvOBA4o/f0Z274O52DMiE6bcf6w=",
+  "title": "LUCIC · Lucidum"
+}

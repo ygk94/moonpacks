@@ -1,0 +1,7 @@
+target/
+# Préimages des mythiques (scripts/gen_mythics.py) : ne jamais committer
+scripts/secrets/
+*.secrets.json
+# Arguments générés par scripts/build_series.py (publics, mais régénérables et liés aux sels locaux)
+scripts/out/
+__pycache__/

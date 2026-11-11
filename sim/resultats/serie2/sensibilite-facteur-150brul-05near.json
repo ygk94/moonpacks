@@ -1,0 +1,47 @@
+[
+ {
+  "facteur": 1.5,
+  "realisable": true,
+  "beta_vise": 0.6,
+  "beta_effectif": 0.6,
+  "adossement_max": 24.592384905819998,
+  "marge_par_booster": 1.5004145426857995,
+  "marge_par_booster_formule": 1.5000000000000002,
+  "p_au_moins_une_brulable": 0.21322050000000004,
+  "p_au_moins_une_brulable_formule": 0.21319317244388947,
+  "r0_risque_5": 518.7200292296227,
+  "r0_risque_1": 670.9737192740739,
+  "brulable_min": 3.5922335459318497,
+  "beta_max_simule": 0.8463812369202515
+ },
+ {
+  "facteur": 2.0,
+  "realisable": true,
+  "beta_vise": 0.6,
+  "beta_effectif": 0.6,
+  "adossement_max": 14.076537359399998,
+  "marge_par_booster": 1.4955731818704234,
+  "marge_par_booster_formule": 1.5000000000000002,
+  "p_au_moins_une_brulable": 0.1335535,
+  "p_au_moins_une_brulable_formule": 0.13329366540841037,
+  "r0_risque_5": 637.5598475081392,
+  "r0_risque_1": 833.2340332839143,
+  "brulable_min": 6.276659875704707,
+  "beta_max_simule": 0.8483911506943969
+ },
+ {
+  "facteur": 3.0,
+  "realisable": true,
+  "beta_vise": 0.6,
+  "beta_effectif": 0.6,
+  "adossement_max": 6.3866911471,
+  "marge_par_booster": 1.489456556477144,
+  "marge_par_booster_formule": 1.5000000000000002,
+  "p_au_moins_une_brulable": 0.06764749999999997,
+  "p_au_moins_une_brulable_formule": 0.06739761714525438,
+  "r0_risque_5": 933.2989927184886,
+  "r0_risque_1": 1300.2348512969434,
+  "brulable_min": 13.856237756504989,
+  "beta_max_simule": 0.850208229885907
+ }
+]

@@ -1,0 +1,41 @@
+[package]
+name = "memaster"
+version = "0.1.0"
+edition = "2021"
+description = "Memaster : boosters de cartes NFT memecoins sur NEAR"
+license = "UNLICENSED"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# Ajoute une méthode owner qui fait échouer le dernier reçu du tirage (tests de retry_reveal uniquement).
+test-hooks = []
+
+[dependencies]
+near-sdk = "5.30.1"
+near-contract-standards = "5.30.1"
+# SHA-256 incrémental du chargement par lots (src/hash_stream.rs) : fonction de compression seule.
+sha2 = { version = "0.10.9", default-features = false, features = ["compress"] }
+
+[dev-dependencies]
+near-sdk = { version = "5.30.1", features = ["unit-testing"] }
+near-workspaces = { version = "0.24.0", features = ["unstable"] }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
+anyhow = "1"
+cargo-near-build = "0.11.5"
+sha2 = "0.10"
+hex = "0.4"
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
+
+[workspace]
+members = [".", "mock-redeemer"]

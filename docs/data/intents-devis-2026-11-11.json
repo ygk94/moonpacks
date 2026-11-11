@@ -1,0 +1,981 @@
+[
+ {
+  "symbol": "BLACKDRAGON",
+  "blockchain": "near",
+  "assetId": "nep141:blackdragon.tkn.near",
+  "price": 6.386e-09,
+  "coingeckoId": "black-dragon",
+  "contractAddress": "blackdragon.tkn.near",
+  "q1": {
+   "usd_out": 0.992456767764,
+   "perte_pct": 0.75,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.920122964247,
+   "perte_pct": 0.8,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 98.758938159836,
+   "perte_pct": 1.24,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"aa937990-e12e-48ba-af88-a2ffcbef32b6\",\"timestamp\":\"2026-11-11T01:02:24.364Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "SHITZU",
+  "blockchain": "near",
+  "assetId": "nep141:token.0xshitzu.near",
+  "price": 0.00146343,
+  "coingeckoId": "shitzu",
+  "contractAddress": "token.0xshitzu.near",
+  "q1": {
+   "usd_out": 0.993934467955,
+   "perte_pct": 0.61,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.935724821984,
+   "perte_pct": 0.64,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 98.996707367273,
+   "perte_pct": 1.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 955.301731495161,
+   "perte_pct": 4.47,
+   "withdrawFee": "0",
+   "temps_s": 12
+  }
+ },
+ {
+  "symbol": "ABG",
+  "blockchain": "near",
+  "assetId": "nep141:abg-966.meme-cooking.near",
+  "price": 0,
+  "coingeckoId": "abg",
+  "contractAddress": "abg-966.meme-cooking.near",
+  "q1": {
+   "usd_out": 0.0,
+   "perte_pct": 100.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 0.0,
+   "perte_pct": 100.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"9fb621ed-a56e-432a-9e83-541b03cd679f\",\"timestamp\":\"2026-11-11T01:02:32.765Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"4ae60a21-9235-44e1-b2ce-418d389e6fc5\",\"timestamp\":\"2026-11-11T01:02:36.284Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "NOEAR",
+  "blockchain": "near",
+  "assetId": "nep141:noear-324.meme-cooking.near",
+  "price": 0,
+  "coingeckoId": "noear",
+  "contractAddress": "noear-324.meme-cooking.near",
+  "q1": {
+   "usd_out": 0.0,
+   "perte_pct": 100.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 0.0,
+   "perte_pct": 100.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 0.0,
+   "perte_pct": 100.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"e94b28e5-b5ba-4c1b-9ea9-7b35c59edf44\",\"timestamp\":\"2026-11-11T01:02:42.238Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "JAMBO",
+  "blockchain": "near",
+  "assetId": "nep141:jambo-1679.meme-cooking.near",
+  "price": 0.00019266111647517746,
+  "coingeckoId": "jambo-2",
+  "contractAddress": "jambo-1679.meme-cooking.near",
+  "q1": {
+   "usd_out": 0.996611012539,
+   "perte_pct": 0.34,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.962342757128,
+   "perte_pct": 0.38,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.248251391475,
+   "perte_pct": 0.75,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 956.462671981307,
+   "perte_pct": 4.35,
+   "withdrawFee": "0",
+   "temps_s": 12
+  }
+ },
+ {
+  "symbol": "NearKat",
+  "blockchain": "near",
+  "assetId": "nep141:kat.token0.near",
+  "price": 8.727e-05,
+  "coingeckoId": "nearkat",
+  "contractAddress": "kat.token0.near",
+  "q1": {
+   "usd_out": 0.993794322733,
+   "perte_pct": 0.62,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.927885712033,
+   "perte_pct": 0.72,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 98.284189793959,
+   "perte_pct": 1.72,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 893.338947537044,
+   "perte_pct": 10.67,
+   "withdrawFee": "0",
+   "temps_s": 12
+  }
+ },
+ {
+  "symbol": "GNEAR",
+  "blockchain": "near",
+  "assetId": "nep141:gnear-229.meme-cooking.near",
+  "price": 0,
+  "coingeckoId": "gnear",
+  "contractAddress": "gnear-229.meme-cooking.near",
+  "q1": {
+   "usd_out": 0.0,
+   "perte_pct": 100.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 0.0,
+   "perte_pct": 100.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"b8719f9f-0548-4d4d-8c9f-4bd7db3f1279\",\"timestamp\":\"2026-11-11T01:02:53.700Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"e132b1ad-04b9-4ab2-ade3-6d337e0f94a0\",\"timestamp\":\"2026-11-11T01:02:57.273Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "DOGE",
+  "blockchain": "doge",
+  "assetId": "nep141:doge.omft.near",
+  "price": 0.068248,
+  "coingeckoId": "dogecoin",
+  "contractAddress": null,
+  "q1": {
+   "usd_out": 0.996613403629,
+   "perte_pct": 0.34,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.967604286281,
+   "perte_pct": 0.32,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.648502093367,
+   "perte_pct": 0.35,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 996.4850339508,
+   "perte_pct": 0.35,
+   "withdrawFee": "0",
+   "temps_s": 12
+  }
+ },
+ {
+  "symbol": "TURBO",
+  "blockchain": "eth",
+  "assetId": "nep141:eth-0xa35923162c49cf95e6bf26623385eb431ad920d3.omft.near",
+  "price": 0.00069745,
+  "coingeckoId": "turbo",
+  "contractAddress": "0xa35923162c49cf95e6bf26623385eb431ad920d3",
+  "q1": {
+   "usd_out": 0.994010380188,
+   "perte_pct": 0.6,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.940106799351,
+   "perte_pct": 0.6,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.428575785931,
+   "perte_pct": 0.57,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 993.442002475878,
+   "perte_pct": 0.66,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"recipient is not valid\",\"correlationId\":\"95eca839-10c2-446e-940c-5df24bf334b3\",\"timestamp\":\"2026-11-11T01:03:04.464Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "$WIF",
+  "blockchain": "sol",
+  "assetId": "nep141:sol-b9c68f94ec8fd160137af8cdfe5e61cd68e2afba.omft.near",
+  "price": 0.158183,
+  "coingeckoId": "dogwifcoin",
+  "contractAddress": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+  "q1": {
+   "usd_out": 0.99176827888,
+   "perte_pct": 0.82,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.917690224341,
+   "perte_pct": 0.82,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.176904616455,
+   "perte_pct": 0.82,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 990.183644225808,
+   "perte_pct": 0.98,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "retrait10": {
+   "usd_out": 9.704084850147,
+   "perte_pct": 2.96,
+   "withdrawFee": "1392811",
+   "temps_s": 9
+  }
+ },
+ {
+  "symbol": "BOME",
+  "blockchain": "sol",
+  "assetId": "nep141:sol-57d087fd8c460f612f8701f5499ad8b2eec5ab68.omft.near",
+  "price": 0.00060447,
+  "coingeckoId": "book-of-meme",
+  "contractAddress": "ukHH6c7mMyiWCf1b9pnWe25TSpkDDt3H5pQZgZ74J82",
+  "q1": {
+   "usd_out": 0.994271326721,
+   "perte_pct": 0.57,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.94271825911,
+   "perte_pct": 0.57,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.377925560295,
+   "perte_pct": 0.62,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 993.651984210251,
+   "perte_pct": 0.63,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "retrait10": {
+   "usd_out": 9.718376544173,
+   "perte_pct": 2.82,
+   "withdrawFee": "364559076",
+   "temps_s": 9
+  }
+ },
+ {
+  "symbol": "TRUMP",
+  "blockchain": "sol",
+  "assetId": "nep141:sol-c58e6539c2f2e097c251f8edf11f9c03e581f8d4.omft.near",
+  "price": 1.14,
+  "coingeckoId": "official-trump",
+  "contractAddress": "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN",
+  "q1": {
+   "usd_out": 0.99379432,
+   "perte_pct": 0.62,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.93795902,
+   "perte_pct": 0.62,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.37960376,
+   "perte_pct": 0.62,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"fd7f6d6b-4c64-4786-a4db-05130ea3bb53\",\"timestamp\":\"2026-11-11T01:03:17.959Z\",\"path\":\"/v0/quote\"}"
+  },
+  "retrait10": {
+   "usd_out": 9.92200455,
+   "perte_pct": 0.78,
+   "withdrawFee": "8826",
+   "temps_s": 9
+  }
+ },
+ {
+  "symbol": "SPX",
+  "blockchain": "eth",
+  "assetId": "nep141:eth-0xe0f63a424a4439cbe457d80e4f4b51ad25b2c56c.omft.near",
+  "price": 0.36595,
+  "coingeckoId": "spx6900",
+  "contractAddress": "0xe0f63a424a4439cbe457d80e4f4b51ad25b2c56c",
+  "q1": {
+   "usd_out": 1.0,
+   "perte_pct": 0.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 10.0,
+   "perte_pct": 0.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 100.0,
+   "perte_pct": 0.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 1000.0,
+   "perte_pct": 0.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"recipient is not valid\",\"correlationId\":\"2d0386f9-874e-459a-b781-b184a0e5789d\",\"timestamp\":\"2026-11-11T01:03:22.161Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "SHIB",
+  "blockchain": "eth",
+  "assetId": "nep141:eth-0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce.omft.near",
+  "price": 4.47e-06,
+  "coingeckoId": "shiba-inu",
+  "contractAddress": "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
+  "q1": {
+   "usd_out": 0.99582901517,
+   "perte_pct": 0.42,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.958298139692,
+   "perte_pct": 0.42,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.582984392416,
+   "perte_pct": 0.42,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 995.829848916655,
+   "perte_pct": 0.42,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"recipient is not valid\",\"correlationId\":\"62c67b90-8386-4743-9f27-e26e137fe4d4\",\"timestamp\":\"2026-11-11T01:03:25.439Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "PEPE",
+  "blockchain": "eth",
+  "assetId": "nep141:eth-0x6982508145454ce325ddbe47a25d4ec3d2311933.omft.near",
+  "price": 5.4e-06,
+  "coingeckoId": "pepe",
+  "contractAddress": "0x6982508145454ce325ddbe47a25d4ec3d2311933",
+  "q1": {
+   "usd_out": 0.99767999847,
+   "perte_pct": 0.23,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.974054010364,
+   "perte_pct": 0.26,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.713008334777,
+   "perte_pct": 0.29,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 997.130086348832,
+   "perte_pct": 0.29,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"recipient is not valid\",\"correlationId\":\"ac3ab75a-46c6-4b8a-9a93-d6974fe60c36\",\"timestamp\":\"2026-11-11T01:03:28.953Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "PENGU",
+  "blockchain": "sol",
+  "assetId": "nep141:sol-0xaad74c68eecfc9f8c5bdcea614f6167048c795ef.omdep.near",
+  "price": 0.00622336,
+  "coingeckoId": "pudgy-penguins",
+  "contractAddress": "2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv",
+  "q1": {
+   "usd_out": 0.995948221373,
+   "perte_pct": 0.41,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.959482269715,
+   "perte_pct": 0.41,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.571839668807,
+   "perte_pct": 0.43,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 995.531994108076,
+   "perte_pct": 0.45,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "retrait10": {
+   "usd_out": 9.945606114224,
+   "perte_pct": 0.54,
+   "withdrawFee": "1607488",
+   "temps_s": 9
+  }
+ },
+ {
+  "symbol": "PONS",
+  "blockchain": "hood",
+  "assetId": "nep141:hood-0x39dbed3a2bd333467115de45665cc57f813c4571.omft.near",
+  "price": 0.147798,
+  "coingeckoId": "pons",
+  "contractAddress": "0x39dbed3a2bd333467115de45665cc57f813c4571",
+  "q1": {
+   "usd_out": 1.0,
+   "perte_pct": 0.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 10.0,
+   "perte_pct": 0.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 100.0,
+   "perte_pct": 0.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 1000.0,
+   "perte_pct": 0.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"recipient is not valid\",\"correlationId\":\"b13cab90-b738-40ac-9b6e-c5010bb7cb33\",\"timestamp\":\"2026-11-11T01:03:36.096Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "CASHCAT",
+  "blockchain": "hood",
+  "assetId": "nep141:hood-0x020bfc650a365f8bb26819deaabf3e21291018b4.omft.near",
+  "price": 0.060758,
+  "coingeckoId": "cash-cat",
+  "contractAddress": "0x020bfc650a365f8bb26819deaabf3e21291018b4",
+  "q1": {
+   "usd_out": 1.0,
+   "perte_pct": 0.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 10.0,
+   "perte_pct": 0.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 100.0,
+   "perte_pct": 0.0,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 999.706256921731,
+   "perte_pct": 0.03,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"recipient is not valid\",\"correlationId\":\"428d5f0e-2f33-4845-8694-789cdc17511d\",\"timestamp\":\"2026-11-11T01:03:39.436Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "TURBO",
+  "blockchain": "near",
+  "assetId": "nep141:a35923162c49cf95e6bf26623385eb431ad920d3.factory.bridge.near",
+  "price": 0.00069745,
+  "coingeckoId": "turbo",
+  "contractAddress": "a35923162c49cf95e6bf26623385eb431ad920d3.factory.bridge.near",
+  "q1": {
+   "usd_out": 0.993894999397,
+   "perte_pct": 0.61,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.937228620271,
+   "perte_pct": 0.63,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.362140787782,
+   "perte_pct": 0.64,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 992.779347938022,
+   "perte_pct": 0.72,
+   "withdrawFee": "0",
+   "temps_s": 12
+  }
+ },
+ {
+  "symbol": "TURBO",
+  "blockchain": "sol",
+  "assetId": "nep141:sol-df27d7abcc1c656d4ac3b1399bbfbba1994e6d8c.omft.near",
+  "price": 0.00069745,
+  "coingeckoId": "turbo",
+  "contractAddress": "2Dyzu65QA9zdX1UeE7Gx71k7fiwyUK6sZdrvJ7auq5wm",
+  "q1": {
+   "usd_out": 0.99362025896,
+   "perte_pct": 0.64,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.936212580182,
+   "perte_pct": 0.64,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.404795488959,
+   "perte_pct": 0.6,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"97c9eb9c-dccd-44f7-a189-844781e8c137\",\"timestamp\":\"2026-11-11T01:03:48.372Z\",\"path\":\"/v0/quote\"}"
+  },
+  "retrait10": {
+   "usd_out": 9.716442212285,
+   "perte_pct": 2.84,
+   "withdrawFee": "31623240220",
+   "temps_s": 9
+  }
+ },
+ {
+  "symbol": "PURGE",
+  "blockchain": "near",
+  "assetId": "nep141:purge-558.meme-cooking.near",
+  "price": 0.00078714,
+  "coingeckoId": "forgive-me-father",
+  "contractAddress": "purge-558.meme-cooking.near",
+  "q1": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"85c4722c-9a2b-41cc-a3bd-e859fbdc88f6\",\"timestamp\":\"2026-11-11T01:03:52.430Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q10": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"795aa39a-a359-4c7a-a1ea-79d28251c65c\",\"timestamp\":\"2026-11-11T01:03:55.913Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q100": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"d449360d-f425-4e83-91d6-68a198868529\",\"timestamp\":\"2026-11-11T01:03:59.534Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"73147476-9d3c-4fc9-9643-89a49445dead\",\"timestamp\":\"2026-11-11T01:04:03.021Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "SPX",
+  "blockchain": "sol",
+  "assetId": "nep141:sol-c634d063ceff771aff0c972ec396fd915a6bbd0e.omft.near",
+  "price": 0.36595,
+  "coingeckoId": "spx6900",
+  "contractAddress": "J3NKxxXZcnNiMjKw9hYb2K4LUxgwB6t1FtPtQVsv3KFr",
+  "q1": {
+   "usd_out": 0.994488084952,
+   "perte_pct": 0.55,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.944884917279,
+   "perte_pct": 0.55,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.476340806471,
+   "perte_pct": 0.52,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 994.666382549299,
+   "perte_pct": 0.53,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "retrait10": {
+   "usd_out": 9.735906116985,
+   "perte_pct": 2.64,
+   "withdrawFee": "60388061",
+   "temps_s": 9
+  }
+ },
+ {
+  "symbol": "MOG",
+  "blockchain": "eth",
+  "assetId": "nep141:eth-0xaaee1a9723aadb7afa2810263653a34ba2c21c7a.omft.near",
+  "price": 9.0774e-08,
+  "coingeckoId": "mog-coin",
+  "contractAddress": "0xaaee1a9723aadb7afa2810263653a34ba2c21c7a",
+  "q1": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"aaa6ae29-dde0-449b-940f-9826d1fcf482\",\"timestamp\":\"2026-11-11T01:04:10.457Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q10": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"91b82ad5-c87d-400e-9356-c79be99fd2c2\",\"timestamp\":\"2026-11-11T01:04:13.947Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q100": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"db886fd9-57b0-4987-b339-bbf5001c22a1\",\"timestamp\":\"2026-11-11T01:04:17.471Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"bdadc61e-f9ca-455c-a9b1-26cb88a05e93\",\"timestamp\":\"2026-11-11T01:04:21.040Z\",\"path\":\"/v0/quote\"}"
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"recipient is not valid\",\"correlationId\":\"31ca3e14-1bbe-46ba-be11-bb2f2e0e5523\",\"timestamp\":\"2026-11-11T01:04:21.603Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "BRETT",
+  "blockchain": "base",
+  "assetId": "nep141:base-0x532f27101965dd16442e59d40670faf5ebb142e4.omft.near",
+  "price": 0.00369825,
+  "coingeckoId": "based-brett",
+  "contractAddress": "0x532f27101965dd16442e59d40670faf5ebb142e4",
+  "q1": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"2cc09966-3aab-4421-9ebe-a6421e989e93\",\"timestamp\":\"2026-11-11T01:04:24.675Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q10": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"58f38315-0221-434f-aa19-6c6f848e2dac\",\"timestamp\":\"2026-11-11T01:04:28.176Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q100": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"2b8a5ac4-0682-4866-9605-3aa02416484c\",\"timestamp\":\"2026-11-11T01:04:31.735Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"558898d9-1f16-4875-93c1-1e3ec16cdeb9\",\"timestamp\":\"2026-11-11T01:04:35.298Z\",\"path\":\"/v0/quote\"}"
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"recipient is not valid\",\"correlationId\":\"292134d2-91b1-4cb3-b66d-eb0ad97efb81\",\"timestamp\":\"2026-11-11T01:04:35.832Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "MELANIA",
+  "blockchain": "sol",
+  "assetId": "nep141:sol-d600e625449a4d9380eaf5e3265e54c90d34e260.omft.near",
+  "price": 0.05621,
+  "coingeckoId": "melania-meme",
+  "contractAddress": "FUAfBo2jgks6gB4Z4LfZkqSZgzNucisEHqnNebaRxM1P",
+  "q1": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"55a04ce1-0462-4e2e-b33e-afb6fa5fed1e\",\"timestamp\":\"2026-11-11T01:04:38.945Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q10": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"ae677751-9bef-4836-ad78-08e669d7cec4\",\"timestamp\":\"2026-11-11T01:04:42.457Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q100": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"0ee0dc7f-3309-4b33-be06-3ff11583f6c5\",\"timestamp\":\"2026-11-11T01:04:46.023Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"322901ac-7857-4b07-8b89-6ca9b085da35\",\"timestamp\":\"2026-11-11T01:04:49.575Z\",\"path\":\"/v0/quote\"}"
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"345e1d0c-9566-4879-89b3-cf263950869c\",\"timestamp\":\"2026-11-11T01:04:53.196Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "LOUD",
+  "blockchain": "sol",
+  "assetId": "nep141:sol-bb27241c87aa401cc963c360c175dd7ca7035873.omft.near",
+  "price": 0.00018077,
+  "coingeckoId": "loud",
+  "contractAddress": "EJZJpNa4tDZ3kYdcRZgaAtaKm3fLJ5akmyPkCaKmfWvd",
+  "q1": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"24003374-dfbc-4ce7-af6f-a104e06810a1\",\"timestamp\":\"2026-11-11T01:04:56.288Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q10": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"8ce3a83c-7e77-4b8a-9018-6fc5935d9e95\",\"timestamp\":\"2026-11-11T01:04:59.762Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q100": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"880c3ffb-4961-4128-951e-31a398cd0638\",\"timestamp\":\"2026-11-11T01:05:03.240Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"d45c5126-9d9d-4796-a493-0e94677a0c9e\",\"timestamp\":\"2026-11-11T01:05:06.751Z\",\"path\":\"/v0/quote\"}"
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"1db00fa6-eb45-40ae-87d6-91b3a944a8ad\",\"timestamp\":\"2026-11-11T01:05:10.452Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "NEARKAT",
+  "blockchain": "sol",
+  "assetId": "nep141:sol-0x4629c2e57ccb57f0a21e04f5b5449ef251932cec.omdep.near",
+  "price": 0.00070922,
+  "coingeckoId": "nearkat-2",
+  "contractAddress": "6UtY9iTZMQQ5QZVrbzFnNaJntV7oySm9k97mvwnuZcxr",
+  "q1": {
+   "erreur": "{\"message\":\"Quoting for this pair is not available\",\"correlationId\":\"bebbafdf-aaab-45d5-9c6e-b996e79d5cac\",\"timestamp\":\"2026-11-11T01:05:10.502Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q10": {
+   "erreur": "{\"message\":\"Quoting for this pair is not available\",\"correlationId\":\"dcd4f883-53ad-4e0f-9f12-e564ab2fb2d3\",\"timestamp\":\"2026-11-11T01:05:10.957Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q100": {
+   "erreur": "{\"message\":\"Quoting for this pair is not available\",\"correlationId\":\"729fa711-46c1-4873-a600-e494fed6c8c1\",\"timestamp\":\"2026-11-11T01:05:11.411Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"Quoting for this pair is not available\",\"correlationId\":\"046293cc-090d-4acf-b7fd-f9223abd43f3\",\"timestamp\":\"2026-11-11T01:05:11.871Z\",\"path\":\"/v0/quote\"}"
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"Quoting for this pair is not available\",\"correlationId\":\"9838f25d-9a0d-4cb4-80ef-f550b162b815\",\"timestamp\":\"2026-11-11T01:05:12.334Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "wNEARKAT",
+  "blockchain": "sol",
+  "assetId": "nep141:sol-0xa1f9a1925e2dd108b1abc3248a567e69fa7ae4e8.omdep.near",
+  "price": 0.00070922,
+  "coingeckoId": "nearkat-2",
+  "contractAddress": "415bGhU9GtBPPnbtz9csVfcEvFSkVMWJKxQQYAggCUBQ",
+  "q1": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"229a64ff-25b7-4b8a-ba13-9c8ee533a854\",\"timestamp\":\"2026-11-11T01:05:15.407Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q10": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"8b3a164f-dd44-40a7-98bc-1511bb609f51\",\"timestamp\":\"2026-11-11T01:05:18.933Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q100": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"044a63e0-f446-489d-a9bf-f9d05b163d76\",\"timestamp\":\"2026-11-11T01:05:22.437Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"c52750f7-35bb-4bd5-9718-1e979980de30\",\"timestamp\":\"2026-11-11T01:05:25.935Z\",\"path\":\"/v0/quote\"}"
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"6d816309-821f-432f-b397-9322fe6b19b3\",\"timestamp\":\"2026-11-11T01:05:29.531Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "STJACK",
+  "blockchain": "near",
+  "assetId": "nep141:stjack.tkn.primitives.near",
+  "price": 0,
+  "coingeckoId": null,
+  "contractAddress": "stjack.tkn.primitives.near",
+  "q1": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"09353898-24c2-4638-9a87-d4e9f8ac49f1\",\"timestamp\":\"2026-11-11T01:05:32.605Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q10": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"db2325d6-45ad-41fe-a250-8b74e8c754b5\",\"timestamp\":\"2026-11-11T01:05:36.129Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q100": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"fc7dacfb-5df5-4237-9438-b1d2f351baaa\",\"timestamp\":\"2026-11-11T01:05:39.678Z\",\"path\":\"/v0/quote\"}"
+  },
+  "q1000": {
+   "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"02490d91-0eb6-4c13-a96e-3d2609e5308b\",\"timestamp\":\"2026-11-11T01:05:43.198Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "COCA",
+  "blockchain": "pol",
+  "assetId": "nep141:pol-0x7b12598e3616261df1c05ec28de0d2fb10c1f206.omdep.near",
+  "price": 0.698332,
+  "coingeckoId": "coca",
+  "contractAddress": "0x7b12598e3616261df1c05ec28de0d2fb10c1f206",
+  "q1": {
+   "usd_out": 0.964833785775,
+   "perte_pct": 3.52,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.648335915751,
+   "perte_pct": 3.52,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 96.390506548574,
+   "perte_pct": 3.61,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 955.916362314703,
+   "perte_pct": 4.41,
+   "withdrawFee": "0",
+   "temps_s": 12
+  }
+ },
+ {
+  "symbol": "COCA",
+  "blockchain": "base",
+  "assetId": "nep141:base-0x959fc04dbf97a27073f89237cd62605f4d1b906d.omft.near",
+  "price": 0.698332,
+  "coingeckoId": "coca",
+  "contractAddress": "0x959fc04dbf97a27073f89237cd62605f4d1b906d",
+  "q1": {
+   "usd_out": 0.96483475061,
+   "perte_pct": 3.52,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.648345564096,
+   "perte_pct": 3.52,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 96.41727717061,
+   "perte_pct": 3.58,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 956.049575551574,
+   "perte_pct": 4.4,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "retrait10": {
+   "erreur": "{\"message\":\"recipient is not valid\",\"correlationId\":\"c05735ee-9938-4ddd-acd3-478cd47dfb6f\",\"timestamp\":\"2026-11-11T01:05:53.866Z\",\"path\":\"/v0/quote\"}"
+  }
+ },
+ {
+  "symbol": "DOGE",
+  "blockchain": "aptos",
+  "assetId": "1cs_v1:aptos:aptos-fa:0xc4f728166326df289538e70a91d3cea6ed451812ac6941d26f8309022b850393",
+  "price": 0.068248,
+  "coingeckoId": "dogecoin",
+  "contractAddress": "0xc4f728166326df289538e70a91d3cea6ed451812ac6941d26f8309022b850393",
+  "q1": {
+   "usd_out": 0.992059228161,
+   "perte_pct": 0.79,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q10": {
+   "usd_out": 9.921369098824,
+   "perte_pct": 0.79,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q100": {
+   "usd_out": 99.205956741326,
+   "perte_pct": 0.79,
+   "withdrawFee": "0",
+   "temps_s": 12
+  },
+  "q1000": {
+   "usd_out": 992.188574935554,
+   "perte_pct": 0.78,
+   "withdrawFee": "0",
+   "temps_s": 12
+  }
+ }
+]

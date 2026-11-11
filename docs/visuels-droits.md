@@ -4,7 +4,7 @@
 
 ## Portée et méthode
 
-- **Périmètre.** Les 802 cartes du tableau « Cartes » de `catalogue-final.md`, chacune dans une seule liste.
+- **Périmètre.** Les 786 cartes (mise à jour du 11/11/2026) du tableau « Cartes » de `catalogue-final.md`, chacune dans une seule liste.
 - **À décider.** Les 63 jetons de la section « À décider » du catalogue sont hors de ces listes.
 - **Sources.** `catalogue-final.md` et la section 2 de `marche-droits-economie.md`, sans nouvelle recherche. Le catalogue final ne décrit pas les visuels : le tri se fait donc d'abord sur les noms et les tickers.
 - **« À confirmer ».** Le rapprochement avec un tiers vient du nom seul ou d'un souvenir général, pas d'une source lue ici. Le fait reste à contrôler, et rien n'est affirmé sur le jeton lui-même.
@@ -34,7 +34,6 @@
 | 30 | My Paqman Coin | MPC | Nom évoquant Pac-Man, à confirmer |
 | 32 | Floki | FLOKI | Nom évoquant le chien d'Elon Musk, à confirmer ; aucune licence trouvée (source) |
 | 38 | Hamster Kombat | HMSTR | Nom évoquant Mortal Kombat, à confirmer |
-| 41 | America Party | AMERICA | Nom pouvant renvoyer à un projet politique d'Elon Musk, à confirmer |
 | 42 | Peanut the Squirrel | PNUT | Animal réel avec propriétaire, à confirmer |
 | 48 | Binance Life (币安人生) | 币安人生 | Marque Binance |
 | 52 | PepeFork | PORK | Dérivé de Pepe (Matt Furie) |
@@ -61,7 +60,6 @@
 | 99 | Pepecoin | PEP | Dérivé de Pepe (Matt Furie) |
 | 101 | ElonXCat | EXC | Référence à Elon Musk |
 | 105 | The Black Bull | ANSEM | Ticker évoquant un influenceur réel, à confirmer |
-| 106 | MAGA | TRUMP (ERC-20) | Référence à Donald Trump |
 | 110 | Trollface | TROLL | Mème connu avec auteur possible, à confirmer |
 | 112 | Grok | GROK | Produit et marque Grok (xAI), à confirmer |
 | 115 | GME (Ethereum) | GME | Ticker GameStop |
@@ -108,7 +106,6 @@
 | 272 | ubik | UBIK | Nom évoquant le roman de Philip K. Dick, à confirmer |
 | 274 | Claude Crab | CRABAI | Référence à Claude (Anthropic) |
 | 283 | Simon's Cat | CAT | Personnage et marque Simon's Cat |
-| 285 | AGENDA 47 | A47 | Nom pouvant renvoyer à un programme de Donald Trump, à confirmer |
 | 287 | Dog Wif Nunchucks | NINJA | Dérivé possible de dogwifhat, à confirmer |
 | 294 | PUMPSTOP | XCAT | Nom évoquant GameStop, à confirmer |
 | 301 | FLORK | FLORK | Nom évoquant un personnage de bande dessinée en ligne, à confirmer |
@@ -127,7 +124,6 @@
 | 366 | Xavier: Renegade Angel | XAVIER | Titre d'une série télévisée |
 | 368 | Hoppy | HOPPY | Nom évoquant un personnage de Matt Furie, à confirmer |
 | 373 | V2EX | V2EX | Nom d'un forum existant possible, à confirmer |
-| 377 | Danold Tromp | DANOLD | Déformation du nom de Donald Trump |
 | 381 | The Original Doge | OGDOGE | Dérivé de Doge |
 | 388 | Z李REAL SUPER COIN | ZREAL | Nom pouvant renvoyer à une personne réelle, à confirmer |
 | 393 | Strategy Coin | STRATEGY | Nom pouvant évoquer la société Strategy, à confirmer |
@@ -137,10 +133,8 @@
 | 401 | PEPECASH | PECH | Dérivé de Pepe (Matt Furie) |
 | 402 | PEPECAT | PEPECAT | Dérivé de Pepe (Matt Furie) |
 | 403 | SCHIFFY | SCHIFFY | Nom pouvant renvoyer à Peter Schiff, à confirmer |
-| 405 | PutinCoin | PUT | Référence à Vladimir Poutine (personne réelle) |
 | 406 | Claudia | CLAUDIA | Nom pouvant évoquer Claude (Anthropic), à confirmer |
 | 412 | The Doge NFT / Own The Doge | DOG | Détenteur d'une licence exclusive sur la photo Doge (source) |
-| 423 | OriginTrail (BRC-20 TRAC) | TRAC | Nom d'un projet tiers existant, à confirmer |
 | 424 | SHIBA ON BASE | SHIB | Dérivé possible de Shiba Inu, même ticker, à confirmer |
 | 434 | The Final Form Bull | CZ | Ticker évoquant CZ, à confirmer |
 | 437 | DogWifJob | JOB | Dérivé possible de dogwifhat, à confirmer |
@@ -182,7 +176,6 @@
 | 571 | Bone ShibaSwap † | BONE | Nom bâti sur Shiba Inu, à confirmer |
 | 572 | Brainlet | BRAINLET | Mème proche de la famille Wojak, à confirmer |
 | 577 | catwifhat | CWIF | Dérivé possible de dogwifhat, à confirmer |
-| 578 | Central African Republic Meme | CAR | Nom renvoyant à un État, à confirmer |
 | 580 | ChillDeer | CHILLDEER | Dérivé possible de Chill Guy, à confirmer |
 | 584 | Comedian † | BAN | Nom pouvant évoquer l'œuvre « Comedian » de Maurizio Cattelan, à confirmer |
 | 592 | Davido † | DAVIDO | Nom d'un artiste réel, à confirmer |
@@ -193,7 +186,6 @@
 | 603 | Dogeparty | XDP | Dérivé de Doge |
 | 606 | Dogs of Elon | DOE | Référence à Elon Musk |
 | 608 | DogWifCat | à vérifier | Dérivé possible de dogwifhat, à confirmer |
-| 609 | Doland Tremp | TREMP | Déformation du nom de Donald Trump |
 | 613 | Elon Buys Twitter | EBT | Référence à Elon Musk et à la marque Twitter |
 | 614 | ElonGate † | ELONGATE | Référence à Elon Musk |
 | 616 | Fantasy Pepe | FEPE | Dérivé de Pepe (Matt Furie) |
@@ -208,20 +200,15 @@
 | 634 | Harambe | HARAMBE | Animal réel d'un zoo, à confirmer |
 | 635 | HarryPotterObamaSonic10Inu | BITCOIN | Harry Potter, Barack Obama et Sonic cités dans le nom |
 | 636 | Hasbulla | HASBI | Personne réelle, à confirmer |
-| 643 | Hunter Biden's Laptop | LAPTOP | Référence à Hunter Biden (personne réelle) |
-| 644 | Hunter Boden | HUNTER | Déformation du nom de Hunter Biden |
 | 646 | IKUN | IKUN | Nom pouvant renvoyer aux fans d'un artiste chinois, à confirmer |
 | 647 | Intel (Intear) | INTEL | Nom identique à la marque Intel, à confirmer |
-| 648 | Jeo Boden | BODEN | Déformation du nom de Joe Biden |
 | 649 | Jesse (créateur Zora) | JESSE | Personne réelle (créateur, catalogue) |
 | 650 | Just a chill guy † | CHILLGUY | Artiste ayant annoncé des retraits (source) |
-| 651 | Kamala Horris † | KAMA | Déformation du nom de Kamala Harris |
 | 653 | Kazonomics (créateur Zora) | KAZONOMICS | Personne réelle probable (créateur, catalogue), à confirmer |
 | 654 | Keanu | KEANU | Nom pouvant renvoyer à Keanu Reeves, à confirmer |
 | 656 | Keyboard Cat † | KEYCAT | Mème connu fondé sur un animal réel, à confirmer |
 | 660 | Lil Pump | LILPUMP | Nom d'un artiste réel (catégorie Célébrités, catalogue) |
 | 662 | Luce † | LUCE | Nom pouvant renvoyer à une mascotte institutionnelle, à confirmer |
-| 666 | MAGA Hat | MAGA | Référence au slogan de Donald Trump |
 | 668 | Maxi Doge | MAXI | Dérivé de Doge |
 | 678 | Moltbook | à vérifier | Nom pouvant renvoyer à un service tiers, à confirmer |
 | 680 | Monacoin † | MONA | Nom pouvant renvoyer à un personnage de forum japonais, à confirmer |
@@ -250,11 +237,9 @@
 | 755 | SolanaDoge | à vérifier | Dérivé de Doge |
 | 759 | Soulja Boy | SBOY | Nom d'un artiste réel (catégorie Célébrités, catalogue) |
 | 761 | Suijak | SUIJAK | Nom dérivé de Wojak, à confirmer |
-| 763 | Super Trump | STRUMP | Référence à Donald Trump |
 | 765 | Tamadoge † | TAMA | Dérivé de Doge |
 | 766 | TARS AI | TAI | Nom pouvant évoquer un personnage du film Interstellar, à confirmer |
 | 769 | TikTok Memes | TIKTOK | Marque TikTok |
-| 775 | TrumpCoin † | TRUMP | Référence à Donald Trump |
 | 776 | Tung Tung | TRIPLET | Personnage de « brainrot italien » (catalogue), auteur à identifier, à confirmer |
 | 782 | VaderAI | VADER | Nom pouvant évoquer Dark Vador (Star Wars), à confirmer |
 | 784 | Waka Flocka Flame † | FLOCKA | Nom d'un artiste réel |
@@ -285,7 +270,6 @@ Aucune carte. Les sources lues ne documentent aucune licence ouverte : `marche-d
 | 8 | Notcoin | NOT | Aucune licence connue |
 | 10 | Bonk | BONK | Aucune licence trouvée, jugé risqué (source) |
 | 11 | MEMETOON | MEME | Aucune licence connue |
-| 14 | Dentacoin | DCN | Aucune licence connue |
 | 17 | Fartcoin | FARTCOIN | Aucune licence connue |
 | 19 | OSK | OSK | Aucune licence connue |
 | 20 | Animecoin | ANIME | Aucune licence connue |
@@ -440,14 +424,12 @@ Aucune carte. Les sources lues ne documentent aucune licence ouverte : `marche-d
 | 242 | Vita Inu | VINU | Aucune licence connue |
 | 243 | XDOG | XDOG | Aucune licence connue |
 | 244 | IlluminatiCoin | NATI | Aucune licence connue |
-| 245 | Private Aviation Finance Token | CINO | Aucune licence connue |
 | 246 | Blub | BLUB | Aucune licence connue |
 | 247 | Dingocoin | DINGO | Aucune licence connue |
 | 248 | Manifesting | MANIFEST | Aucune licence connue |
 | 249 | BabyCashCat | BABY | Aucune licence connue |
 | 250 | KNOTS | KNOTS | Aucune licence connue |
 | 252 | Everybody | HOLD | Aucune licence connue |
-| 253 | Bitchemical Token | BCHEM | Aucune licence connue |
 | 254 | Bitcoin Wizards | WZRD | Aucune licence connue |
 | 255 | Moochii | MOOCHII | Aucune licence connue |
 | 256 | Anon | ANON | Aucune licence connue |
@@ -547,7 +529,6 @@ Aucune carte. Les sources lues ne documentent aucune licence ouverte : `marche-d
 | 376 | BullDogito | BDOGITO | Aucune licence connue |
 | 378 | GOATED | GOATED | Aucune licence connue |
 | 379 | Loaf Token | LOAF | Aucune licence connue |
-| 380 | Puss | PUSS | Aucune licence connue |
 | 382 | DEBT | DEBT | Aucune licence connue |
 | 383 | Barking Puppy | BP | Aucune licence connue |
 | 384 | Jean Phil | JEANPHIL | Aucune licence connue |
@@ -607,7 +588,6 @@ Aucune carte. Les sources lues ne documentent aucune licence ouverte : `marche-d
 | 460 | Buttcoin | BUTTCOIN | Aucune licence connue |
 | 462 | Anoncoin | ANONCOIN | Aucune licence connue |
 | 464 | LOXI | LOXI | Aucune licence connue |
-| 465 | ZygoSwap | ZSWAP | Aucune licence connue |
 | 466 | FEFER | FEFER | Aucune licence connue |
 | 467 | Wolfies | PACK | Aucune licence connue |
 | 468 | saucecoin | SAUCE | Aucune licence connue |
@@ -829,22 +809,26 @@ Aucune carte. Les sources lues ne documentent aucune licence ouverte : `marche-d
 | 791 | Wise Monkey | MONKY | Aucune licence connue |
 | 796 | Yeet | YEET | Aucune licence connue |
 | 797 | Yellow Ket | KET | Aucune licence connue |
-| 799 | Zora | ZORA | Aucune licence connue |
 | 800 | 客服小何 (Customer Xiaohe) | KEFU | Aucune licence connue |
 | 801 | 老子 | 老子 | Aucune licence connue |
 | 802 | 雪球 (Snowball) | 雪球 | Aucune licence connue |
+| 803 | Jambo (meme-cooking) | JAMBO | Aucune licence connue |
+| 804 | ABG | ABG | Aucune licence connue |
+| 805 | GNEAR | GNEAR | Aucune licence connue |
+| 806 | NOEAR | NOEAR | Aucune licence connue |
+| 807 | LOUD | LOUD | Aucune licence connue |
 
 ## Jetons « À décider »
 
-63 jetons, laissés hors de ces listes, en attente d'une décision humaine.
+77 jetons, laissés hors de ces listes, en attente d'une décision humaine (dont 14 jetons politiques déplacés le 11/11/2026).
 
 ## Décompte
 
 | Liste | Cartes |
 |---|---|
-| A : tiers identifiable, à générer plus tard | 248 |
+| A : tiers identifiable, à générer plus tard | 233 |
 | B : licence ouverte documentée | 0 |
-| C : aucune licence connue | 554 |
-| **Total** | **802** |
+| C : aucune licence connue | 553 |
+| **Total** | **786** |
 
 Contrôle : `sed -n '/^## Liste X/,/^## Liste Y/p' visuels-droits.md | grep -c '^| [0-9]'`, en remplaçant X et Y par les sections voisines.

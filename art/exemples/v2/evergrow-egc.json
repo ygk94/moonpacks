@@ -1,0 +1,10 @@
+{
+  "copies": null,
+  "description": "Carte Memaster légendaire (mort). Memecoin EGC, chaîne BNB Chain, année du pic 2021. Le ticker est cité comme donnée factuelle ; visuel génératif abstrait. Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.",
+  "extra": "{\"annee_pic\": 2021, \"chaine\": \"BNB Chain\", \"etat\": \"mort\", \"identifiant\": \"evergrow-egc\", \"non_affiliation\": \"Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.\", \"numero\": 19, \"rarete\": \"légendaire\"}",
+  "media": "evergrow-egc.svg",
+  "media_hash": "XQswOUW2/sXabiYgZ53qhBbR6B5YYjs3YfxRzSiFrKo=",
+  "reference": "evergrow-egc.ref.json",
+  "reference_hash": "rqO3xbdjtzyayrkb9Izt47uKklHna98NVt0GR+QPkHM=",
+  "title": "EGC · EverGrow"
+}

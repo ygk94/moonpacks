@@ -1,0 +1,29 @@
+# Exemple travaillé de docs/marche-droits-economie.md, partie 4.4 (paramètres illustratifs).
+# d = 20 %, q = 60 % : chaque carte est brûlable avec une probabilité (1 − d)·q = 48 %, quelle que soit sa rareté.
+nom: "Exemple 4.4 du document"
+prix: 10                # NEAR
+n_cartes: 5
+near_usd: 3.6
+beta: 0.60
+delta: 0.10             # part du prix versée à la réserve (δ = 1 NEAR)
+epsilon: 0.15
+v_cap: 250              # NEAR, plafond par booster
+calibrer_avec_plafonds: false
+raretes:
+  commune:      {poids: 1,   part_brulable: 0.48, revente: 0.3}
+  peu_commune:  {poids: 2,   part_brulable: 0.48, revente: 0.3}
+  rare:         {poids: 8,   part_brulable: 0.48, revente: 0.3}
+  epique:       {poids: 30,  part_brulable: 0.48, revente: 0.3}
+  legendaire:   {poids: 110, part_brulable: 0.48, revente: 0.3}
+emplacements:
+  tables:
+    standard: {commune: 0.70, peu_commune: 0.20, rare: 0.08, epique: 0.018, legendaire: 0.002}
+  ordre: [standard, standard, standard, standard, standard]
+multiplicateur: {valeurs: [0.5, 1, 2], probas: [0.4, 0.4, 0.2]}
+couts:
+  s_achat: 0.015
+  f_burn: 0.02
+  f_burn_fixe: 0.0
+  s_vente: 0.03
+  phi: 0.05
+ruine: {horizon: 10000, trajectoires: 4000, z: 3}

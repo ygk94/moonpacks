@@ -10,7 +10,7 @@ Second projet de l'équipe pour le NEAR HACKATHON, tracks **NFTs** et **memecoin
 - Les memecoins morts sont des **cartes de collection**, dans les mêmes boosters.
 - Les taux de drop sont publiés **on-chain**.
 - Wallet visé : MetaMask. Démo : NEAR Intents.
-- Catalogue visé : 500 à 1000 cartes (802 aujourd'hui).
+- Catalogue visé : 500 à 1000 cartes (786 aujourd'hui, dont 13 brûlables via NEAR Intents).
 
 ## Mécaniques (détail : `docs/mecaniques.md`)
 
@@ -32,7 +32,7 @@ recalculer avec le gaz réel mesuré sur testnet.
 
 ## État au 11/11/2026
 
-C'est de la recherche, pas encore de code. Tout est dans `docs/` :
+C'est de la recherche, pas encore de code. **Le plan de travail est dans `docs/plan.md`.** Tout est dans `docs/` :
 
 | Fichier | Contenu |
 |---|---|
@@ -41,9 +41,12 @@ C'est de la recherche, pas encore de code. Tout est dans `docs/` :
 | `intents-et-garde.md` | Garde des jetons via NEAR Intents, relayeur, burn |
 | `wallets-et-alea.md` | MetaMask sur NEAR, tirage aléatoire, marketplace |
 | `marche-droits-economie.md` | Marché, droit français des jeux, économie du booster |
-| `catalogue-final.md` | **Le catalogue retenu** : 802 cartes, avec rareté, burn et chaîne, plus 63 jetons « à décider » |
+| `plan.md` | **Le plan de travail**, par phases, avec les décisions à prendre |
+| `intents-couverture.md` | Memecoins réellement disponibles sur NEAR Intents (relevé du 11/11), coûts d'achat et de retrait |
+| `catalogue-final.md` | **Le catalogue retenu** : 786 cartes, avec rareté, burn (statut Intents réel) et chaîne, plus 77 jetons « à décider » |
 | `catalogue*.md` | Catalogues intermédiaires (général, Solana, Base et autres, historiques, CoinGecko brut) |
-| `visuels-droits.md` | Droits sur les visuels : 248 cartes avec ayant droit identifiable, 0 sous licence ouverte, 554 sans licence connue |
+| `visuels-droits.md` | Droits sur les visuels : 233 cartes avec ayant droit identifiable, 0 sous licence ouverte, 553 sans licence connue |
+| `devis-intents.py`, `data/` | Script de devis 1Click `dry` et relevés bruts du 11/11 |
 | `recuperer-images.py` | Télécharge les logos et adresses depuis CoinGecko (`python3 docs/recuperer-images.py`) |
 
 ## Points de vigilance

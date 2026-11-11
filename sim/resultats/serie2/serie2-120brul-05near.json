@@ -1,0 +1,412 @@
+{
+ "nom": "Série 2 : 120 brûlables, 5 NEAR",
+ "config": {
+  "nom": "Série 2 : 120 brûlables, 5 NEAR",
+  "prix": 5,
+  "n_cartes": 5,
+  "near_usd": 3.6,
+  "beta": 0.6,
+  "delta": 0.1,
+  "epsilon": 0.15,
+  "v_cap": 300,
+  "v_min_brulable": 1.4,
+  "calibrer_avec_plafonds": true,
+  "raretes": {
+   "commune": {
+    "poids": 1,
+    "part_brulable": 0.0,
+    "effectif": 1160,
+    "brulables": 0,
+    "revente": 0.03,
+    "plafond": 25
+   },
+   "rare": {
+    "poids": 1.2,
+    "part_brulable": 0.0,
+    "effectif": 230,
+    "brulables": 0,
+    "revente": 0.08,
+    "plafond": 30
+   },
+   "epique": {
+    "poids": 3,
+    "part_brulable": 0.417021,
+    "effectif": 235,
+    "brulables": 98,
+    "revente": 0.25,
+    "plafond": 100
+   },
+   "legendaire": {
+    "poids": 9,
+    "part_brulable": 0.904762,
+    "effectif": 21,
+    "brulables": 19,
+    "revente": 1.0,
+    "plafond": 280
+   },
+   "mythique": {
+    "poids": 100000,
+    "part_brulable": 1.0,
+    "effectif": 3,
+    "brulables": 3,
+    "revente": 0,
+    "plafond": 276,
+    "multiplicateur": {
+     "valeurs": [
+      1
+     ],
+     "probas": [
+      1
+     ]
+    }
+   }
+  },
+  "emplacements": {
+   "tables": {
+    "standard": {
+     "commune": 0.923746,
+     "rare": 0.053782,
+     "epique": 0.021981,
+     "legendaire": 0.000491,
+     "mythique": 0.0
+    },
+    "favorable": {
+     "commune": 0.6450290000000001,
+     "rare": 0.21513,
+     "epique": 0.131884,
+     "legendaire": 0.007857,
+     "mythique": 0.0001
+    }
+   },
+   "ordre": [
+    "standard",
+    "standard",
+    "standard",
+    "standard",
+    "favorable"
+   ]
+  },
+  "multiplicateur": {
+   "valeurs": [
+    0.8,
+    1,
+    2
+   ],
+   "probas": [
+    0.5,
+    0.35,
+    0.15
+   ]
+  },
+  "couts": {
+   "s_achat": 0.01,
+   "f_burn": 0.002,
+   "f_burn_fixe": 0.03,
+   "s_vente": 0.03,
+   "phi": 0.05
+  },
+  "ruine": {
+   "horizon": 10000,
+   "trajectoires": 10000,
+   "z": 3
+  },
+  "catalogue": {
+   "source": "docs/data/catalogue-v2.json",
+   "graine_brulables": 2026,
+   "facteur_palier": 2.0,
+   "brulables": {
+    "epique": [
+     "a-meme-coin-amc",
+     "andy-eth-andy",
+     "anonymous-cat-zcat",
+     "apu-apustaja-apu",
+     "artificial-inu-ai",
+     "aura-aura",
+     "baby-doge-coin-babydoge",
+     "baby-shark-universe-bsu",
+     "banana-for-scale-bananas31",
+     "based-pepe-pepe",
+     "believe-believe",
+     "bellscoin-bells",
+     "bertram-the-pomeranian-bert",
+     "billy-bitcoin-billy",
+     "binance-life-u5e01-5b89-4eba-751f",
+     "broccoli-broccoli",
+     "buildon-b",
+     "bulla-bulla",
+     "catbal-catbal",
+     "catecoin-cate",
+     "coco-coco",
+     "comedian-ban",
+     "constitutiondao-people",
+     "coq-inu-coq",
+     "crazybunny-crazybunny",
+     "degen-degen",
+     "dogeking-dogeking",
+     "dogi-dogi",
+     "doginme-doginme",
+     "dogs-dogs",
+     "egl1-egl1",
+     "fartboy-fartboy",
+     "gekko-gekko",
+     "giggle-academy-giggle",
+     "gme-ethereum-gme",
+     "gme-solana-gme",
+     "grok-grok",
+     "happy-happy",
+     "jeff-jeff",
+     "just-a-chill-guy-chillguy",
+     "katana-inu-kata",
+     "kekius-maximus-kekius",
+     "kendu-kendu",
+     "landwolf-wolf",
+     "loaded-lions-lion",
+     "lock-in-lockin",
+     "marsmi-marsmi",
+     "mcdull-meme-mcdull",
+     "meme-horse-mhorse",
+     "milady-cult-coin-cult",
+     "milady-meme-coin-ladys",
+     "mog-coin-mog",
+     "monacoin-mona",
+     "monkeys-monkeys",
+     "moonbirds-birb",
+     "mooncoin-moon",
+     "mori-coin-mori",
+     "my-paqman-coin-mpc",
+     "myro-myro",
+     "nacho-the-kat-nacho",
+     "non-playable-coin-npc",
+     "onyx-arches-oxa",
+     "osaka-protocol-osak",
+     "pain-pain",
+     "peipei-peipei",
+     "penguin-a-ne-pas-confondre-avec-pudgy-penguins-penguin",
+     "pepefork-pork",
+     "pikaboss-pika",
+     "pippin-pippin",
+     "pondcoin-pndc",
+     "ponke-ponke",
+     "purr-purr",
+     "refund-rfd",
+     "rekt-rekt",
+     "resistance-dog-redo",
+     "rich-quack-quack",
+     "ryujin-ryu",
+     "shiba-inu-treat-treat",
+     "shrub-shrub",
+     "sigma-sigma",
+     "simon-s-cat-cat",
+     "ski-mask-dog-ski",
+     "slerf-slerf",
+     "snek-snek",
+     "stonks-stnk",
+     "sudeng-hippo",
+     "sundog-sundog",
+     "toshi-toshi",
+     "trollface-troll",
+     "tron-bull-bull",
+     "tutorial-tut",
+     "uncommon-goods-uncommongoods",
+     "useless-coin-useless",
+     "vine-coin-vine",
+     "whitewhale-whitewhale",
+     "wojak-coin-wojak",
+     "would-would",
+     "xrp-army-army"
+    ],
+    "legendaire": [
+     "bonk-bonk",
+     "book-of-meme-bome",
+     "brett-brett",
+     "cat-in-a-dogs-world-mew",
+     "dog-go-to-the-moon-dog",
+     "dogelon-mars-elon",
+     "dogwifhat-wif",
+     "fartcoin-fartcoin",
+     "floki-floki",
+     "goatseus-maximus-goat",
+     "memecoin-meme",
+     "neiro-neiro",
+     "ordinals-ordi",
+     "peanut-the-squirrel-pnut",
+     "popcat-popcat",
+     "pudgy-penguins-pengu",
+     "sats-sats-1000sats",
+     "spx6900-spx",
+     "turbo-turbo"
+    ],
+    "mythique": [
+     "mythique-m1",
+     "mythique-m2",
+     "mythique-m3"
+    ]
+   }
+  }
+ },
+ "analytique": {
+  "kappa": 7.975039285288354,
+  "kappa_sans_plafond": 0.2892203832916297,
+  "esperance_adossement": 3.0,
+  "sigma_booster": 11.328238062693648,
+  "c": 0.9583794,
+  "revente_collection_nette": 0.18771261318569998,
+  "cartes_brulables_moyennes": 0.10065021956999999,
+  "gain_attaquant_moyen": 3.0598313065986,
+  "beta_max_formule": 0.8483710925759466,
+  "p_aucune_brulable": 0.9022576199894377,
+  "p_au_moins_un_commune": 0.9999879982826558,
+  "p_au_moins_un_commune_brulable": 0.0,
+  "p_au_moins_un_rare": 0.37083790326711674,
+  "p_au_moins_un_rare_brulable": 0.0,
+  "p_au_moins_un_epique": 0.20573225133079298,
+  "p_au_moins_un_epique_brulable": 0.08917445200884566,
+  "p_au_moins_un_legendaire": 0.009804134200745773,
+  "p_au_moins_un_legendaire_brulable": 0.008871860432874135,
+  "p_au_moins_un_mythique": 9.999999999998899e-05,
+  "p_au_moins_un_mythique_brulable": 9.999999999998899e-05,
+  "valeur_par_rarete": {
+   "epique": {
+    "base": 23.92511785586506,
+    "min": 19.14009428469205,
+    "max": 47.85023571173012
+   },
+   "legendaire": {
+    "base": 71.77535356759518,
+    "min": 57.42028285407614,
+    "max": 143.55070713519035
+   },
+   "mythique": {
+    "base": 276.0,
+    "min": 276.0,
+    "max": 276.0
+   }
+  },
+  "r0_normale": 877.4803992227751,
+  "proba_ruine_brownien_equivalente": 0.011108996538242306
+ },
+ "simulation": {
+  "n_boosters": 2000000,
+  "kappa": 7.975039285288354,
+  "esperance_adossement": 3.002992580192758,
+  "esperance_adossement_sans_vcap": 3.003004505310614,
+  "erreur_type": 0.008005850540168806,
+  "sigma_booster": 11.321982412238693,
+  "percentiles": {
+   "1": 0.0,
+   "5": 0.0,
+   "10": 0.0,
+   "25": 0.0,
+   "50": 0.0,
+   "75": 0.0,
+   "90": 0.0,
+   "95": 23.92511785586506,
+   "99": 47.85023571173012,
+   "99.9": 143.55070713519035,
+   "99.99": 191.4009428469205
+  },
+  "max": 300.0,
+  "p_vcap_actif": 5e-07,
+  "p_adossement_ge_prix": 0.09785,
+  "p_adossement_plus_revente_ge_prix": 0.09785,
+  "p_aucune_brulable": 0.90215,
+  "cartes_brulables_moyennes": 0.1007505,
+  "gain_attaquant_moyen": 3.0626953807095876,
+  "p_au_moins_un_commune": 0.9999875,
+  "p_au_moins_un_commune_brulable": 0.0,
+  "p_au_moins_un_rare": 0.3707675,
+  "p_au_moins_un_rare_brulable": 0.0,
+  "p_au_moins_un_epique": 0.2058215,
+  "p_au_moins_un_epique_brulable": 0.0892275,
+  "p_au_moins_un_legendaire": 0.0098785,
+  "p_au_moins_un_legendaire_brulable": 0.0089265,
+  "p_au_moins_un_mythique": 9.2e-05,
+  "p_au_moins_un_mythique_brulable": 9.2e-05,
+  "part_brulables_sous_vmin": 0.0,
+  "beta_max_simule": 0.847361027962279
+ },
+ "ruine": {
+  "trajectoires": 20000,
+  "horizon": 10000,
+  "apport_par_booster": 3.5,
+  "r0_normale": 877.4803992227751,
+  "z": 3,
+  "p_ruine_a_r0_normale": 0.0191,
+  "p_ruine_brownien_equivalente": 0.011108996538242306,
+  "courbe": [
+   [
+    300.0,
+    0.8482
+   ],
+   [
+    380.0,
+    0.4846
+   ],
+   [
+    620.0,
+    0.102
+   ],
+   [
+    880.0,
+    0.01885
+   ],
+   [
+    980.0,
+    0.01
+   ],
+   [
+    1330.0,
+    0.001
+   ]
+  ],
+  "r0_risque_0.05": 732.7046357359312,
+  "r0_risque_0.01": 979.8271834282641,
+  "r0_risque_0.001": 1326.878684420634
+ },
+ "cartes": {
+  "commune": {
+   "cartes_par_booster": 4.340013,
+   "exemplaires_par_brulable": null,
+   "exemplaires_par_collection": 37.41390517241379,
+   "faveur_brulable": null
+  },
+  "rare": {
+   "cartes_par_booster": 0.430258,
+   "exemplaires_par_brulable": null,
+   "exemplaires_par_collection": 18.706869565217392,
+   "faveur_brulable": null
+  },
+  "epique": {
+   "cartes_par_booster": 0.219808,
+   "exemplaires_par_brulable": 9.353525711020406,
+   "exemplaires_par_collection": 9.35353635270073,
+   "faveur_brulable": 0.9999988622826789
+  },
+  "legendaire": {
+   "cartes_par_booster": 0.009821,
+   "exemplaires_par_brulable": 4.676667158947368,
+   "exemplaires_par_collection": 4.676661990000002,
+   "faveur_brulable": 1.0000011052642628
+  },
+  "mythique": {
+   "cartes_par_booster": 0.0001,
+   "exemplaires_par_brulable": 0.3333333333333333,
+   "exemplaires_par_collection": null,
+   "faveur_brulable": null
+  }
+ },
+ "serie2": {
+  "realisable": true,
+  "beta_vise": 0.6,
+  "beta_effectif": 0.6,
+  "adossement_max": 11.682042125359999,
+  "marge_par_booster": 1.4970074198072418,
+  "marge_par_booster_formule": 1.5000000000000002,
+  "p_au_moins_une_brulable": 0.09784999999999999,
+  "p_au_moins_une_brulable_formule": 0.09774238001056235,
+  "r0_risque_5": 732.7046357359312,
+  "r0_risque_1": 979.8271834282641,
+  "brulable_min": 19.14009428469205,
+  "beta_max_simule": 0.847361027962279
+ }
+}

@@ -1,0 +1,10 @@
+{
+  "copies": null,
+  "description": "Carte Memaster commune (en déclin). Memecoin BNBTIGEROG, chaîne à vérifier, année du pic 2023. Le ticker est cité comme donnée factuelle ; visuel génératif abstrait. Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.",
+  "extra": "{\"annee_pic\": 2023, \"chaine\": null, \"etat\": \"en déclin\", \"identifiant\": \"bnb-tiger-og-bnbtigerog\", \"non_affiliation\": \"Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.\", \"numero\": 488, \"rarete\": \"commune\"}",
+  "media": "bnb-tiger-og-bnbtigerog.svg",
+  "media_hash": "E6euisNZrIs5mmH3kIRPAFl1PnpYSsmVGggTOBEZfCs=",
+  "reference": "bnb-tiger-og-bnbtigerog.ref.json",
+  "reference_hash": "HJyZ1Bb90RELHfnZFYNFdaAbP3RU1SECFRgH+WjjWjA=",
+  "title": "BNBTIGEROG · BNB Tiger OG"
+}

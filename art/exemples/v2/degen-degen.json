@@ -1,0 +1,10 @@
+{
+  "copies": null,
+  "description": "Carte Memaster épique (en déclin). Memecoin DEGEN, chaîne Base, année du pic 2024. Le ticker est cité comme donnée factuelle ; visuel génératif abstrait. Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.",
+  "extra": "{\"annee_pic\": 2024, \"chaine\": \"Base\", \"etat\": \"en déclin\", \"identifiant\": \"degen-degen\", \"non_affiliation\": \"Sans lien ni partenariat avec les projets, créateurs ou titulaires cités.\", \"numero\": 22, \"rarete\": \"épique\"}",
+  "media": "degen-degen.svg",
+  "media_hash": "NqD9GKBcOcBnN1KROOqG6eRph+KbB9qfhaxUhNTXyVc=",
+  "reference": "degen-degen.ref.json",
+  "reference_hash": "QzARNlg3GVNDJb1EjRMPjtqJpER0DA78xpwFx8V5GeQ=",
+  "title": "DEGEN · Degen"
+}

@@ -1,0 +1,52 @@
+{
+  "_doc": "Paramètres de scripts/build_series.py. Valeurs illustratives : rien n'est décidé. Les brûlables sont factices.",
+  "slug": "serie-v2",
+  "name": "Memaster v2",
+  "price_yocto": "100000000000000000000000",
+  "cards_per_pack": 5,
+  "rarity_weights": {
+    "mythic": 2,
+    "legendary": 20,
+    "epic": 180,
+    "rare": 800,
+    "common": 8998
+  },
+  "card_weights": {
+    "legendary": 1,
+    "epic": 1,
+    "rare": 1,
+    "common": 1
+  },
+  "caps": {
+    "legendary": 50,
+    "epic": null,
+    "rare": null,
+    "common": null
+  },
+  "card_overrides": {},
+  "mythic": {
+    "weight": 1,
+    "cap": 10
+  },
+  "media_template": "ipfs://TODO/{id}.svg",
+  "reference_template": null,
+  "burnables": [
+    {
+      "card_id": "bonk-bonk",
+      "asset_id": "nep141:factice-bonk.near",
+      "amount": "1000000"
+    },
+    {
+      "card_id": "shibadoge-shibdoge",
+      "asset_id": "nep141:factice-shibdoge.near",
+      "amount": "42"
+    },
+    {
+      "card_id": "mythique-m1",
+      "asset_id": "nep141:factice-m1.near",
+      "amount": "1000"
+    }
+  ],
+  "royalties": [],
+  "batch_size": 200
+}
