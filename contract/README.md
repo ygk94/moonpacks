@@ -35,6 +35,7 @@ ultra rare sans garantie, mythique 1 sur 10⁶, valeur aléatoire par pack, myth
 | `src/tests_batch.rs` | Tests unitaires du chargement par lots |
 | `src/tests_mech.rs` | Tests unitaires des mécaniques et du stockage par carte |
 | `scripts/build_series.py` | Arguments des appels de série à partir du catalogue v2, vrais noms des mythiques lus dans `docs/data/secrets/mythiques.json`, tables de valeur (`--tables-valeur`) (voir « Série v2 ») |
+| `scripts/validate_series.py` | Validateur à lancer avant `open_series` : règles du contrat réécrites hors ligne (en accord avec `validate_table` sur des tables mutées au hasard, `tests_fuzz.rs`), lots du dossier de sortie, valeur moyenne (rush ≤ 80 %, normale ≤ 100 %), préimages des mythiques révélables, aucun secret dans les fichiers publics (`--git` : fichiers suivis). Appelé aussi par `build_series.py` |
 
 ### Séries et table figée
 

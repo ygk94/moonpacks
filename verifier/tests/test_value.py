@@ -12,6 +12,8 @@ from pathlib import Path
 
 from memaster_verifier import core, verify
 
+from tests import fake_secrets
+
 VEC = Path(__file__).parent / "vectors"
 CONTRACT = Path(__file__).resolve().parents[2] / "contract"
 CATALOGUE = CONTRACT.parent / "docs" / "data" / "catalogue-v2.json"
@@ -140,9 +142,16 @@ class SandboxValue(unittest.TestCase):
         self.assertTrue(any(x.startswith("valeur :") for x in rep.ok_lines))
 
 
+_FAKE_DIR = tempfile.mkdtemp(prefix="memaster-fake-mythics-")
+FAKE_MYTHICS = fake_secrets.write_fake_mythics(_FAKE_DIR)
+
+
 def run_script(*args):
+    """build_series.py avec un faux fichier de mythiques (jamais le fichier secret), sauf
+    `--mythiques` explicite."""
+    extra = [] if "--mythiques" in args else ["--mythiques", str(FAKE_MYTHICS)]
     return subprocess.run(
-        [sys.executable, "-I", str(CONTRACT / "scripts" / "build_series.py"), str(CONTRACT / "scripts" / "serie-exemple.json"), *args],
+        [sys.executable, "-I", str(CONTRACT / "scripts" / "build_series.py"), str(CONTRACT / "scripts" / "serie-exemple.json"), *extra, *args],
         capture_output=True, text=True,
     )
 
@@ -154,27 +163,27 @@ class BuildSeriesScript(unittest.TestCase):
     def setUpClass(cls):
         with open(CATALOGUE, encoding="utf-8") as f:
             cls.catalogue = json.load(f)
-        cls.has_secret = all(c.get("secret") for c in cls.catalogue if c["rarete"] == "mythique")
 
     def out(self, d, name):
         return ["--out", str(Path(d) / name), "--secrets", str(Path(d) / "secrets" / f"{name}.json")]
 
     def test_mythic_file_and_fallback(self):
-        if not self.has_secret:
-            self.skipTest("catalogue sans champ secret : repli non testable")
+        """Fichier des vrais noms (faux noms ici), repli sur un champ `secret` du catalogue, format
+        liste avec `catalogue_id`, fichier absent ou incomplet, garde-fou anti-fuite."""
         with tempfile.TemporaryDirectory() as d:
-            secrets = {c["id"]: c["secret"] for c in self.catalogue if c["rarete"] == "mythique"}
+            secrets = fake_secrets.fake_mythics()
             sf = Path(d) / "mythiques.json"
             sf.write_text(json.dumps(secrets, ensure_ascii=False), encoding="utf-8")
-            # Catalogue sans champ secret : le fichier suffit.
             cat = Path(d) / "cat.json"
             cat.write_text(json.dumps([{k: v for k, v in c.items() if k != "secret"} for c in self.catalogue], ensure_ascii=False), encoding="utf-8")
             r = run_script("--catalogue", str(cat), "--mythiques", str(sf), *self.out(d, "a"))
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertNotIn("repli", r.stderr)
             # Même table par le repli sur le champ secret (mêmes sels réutilisés).
+            cat_secret = Path(d) / "cat-secret.json"
+            cat_secret.write_text(json.dumps([dict(c, secret=secrets[c["id"]]) if c["id"] in secrets else c for c in self.catalogue], ensure_ascii=False), encoding="utf-8")
             (Path(d) / "secrets" / "b.json").write_bytes((Path(d) / "secrets" / "a.json").read_bytes())
-            r2 = run_script("--mythiques", str(Path(d) / "absent.json"), *self.out(d, "b"))
+            r2 = run_script("--catalogue", str(cat_secret), "--mythiques", str(Path(d) / "absent.json"), *self.out(d, "b"))
             self.assertEqual(r2.returncode, 0, r2.stderr)
             self.assertIn("repli", r2.stderr)
             ha = (Path(d) / "a" / "table_hash.txt").read_text()
@@ -183,10 +192,12 @@ class BuildSeriesScript(unittest.TestCase):
             for name in secrets.values():
                 for p in (Path(d) / "a").iterdir():
                     self.assertNotIn(json.dumps(name["nom"], ensure_ascii=False), p.read_text(encoding="utf-8"))
-            # Liste avec catalogue_id : acceptée aussi.
+            # Liste avec catalogue_id : acceptée aussi, même table.
             sf.write_text(json.dumps([dict(v, catalogue_id=k) for k, v in secrets.items()], ensure_ascii=False), encoding="utf-8")
+            (Path(d) / "secrets" / "c.json").write_bytes((Path(d) / "secrets" / "a.json").read_bytes())
             r3 = run_script("--catalogue", str(cat), "--mythiques", str(sf), *self.out(d, "c"))
             self.assertEqual(r3.returncode, 0, r3.stderr)
+            self.assertEqual(ha, (Path(d) / "c" / "table_hash.txt").read_text())
             # Ni fichier ni champ secret : message clair.
             r4 = run_script("--catalogue", str(cat), "--mythiques", str(Path(d) / "absent.json"), *self.out(d, "e"))
             self.assertNotEqual(r4.returncode, 0)
@@ -196,6 +207,18 @@ class BuildSeriesScript(unittest.TestCase):
             r5 = run_script("--catalogue", str(cat), "--mythiques", str(sf), *self.out(d, "f"))
             self.assertNotEqual(r5.returncode, 0)
             self.assertIn("mythiques absentes", r5.stderr)
+            # Garde-fou : un vrai nom (ici fictif) recopié dans une carte visible est refusé.
+            leak = Path(d) / "leak.json"
+            params = json.loads((CONTRACT / "scripts" / "serie-exemple.json").read_text(encoding="utf-8"))
+            first_visible = next(c["id"] for c in self.catalogue if c.get("section") == "catalogue" and c["rarete"] != "mythique")
+            params.setdefault("card_overrides", {})[first_visible] = {"title": fake_secrets.FAKE[0]}
+            leak.write_text(json.dumps(params, ensure_ascii=False), encoding="utf-8")
+            sf.write_text(json.dumps(secrets, ensure_ascii=False), encoding="utf-8")
+            (Path(d) / "secrets" / "g.json").write_bytes((Path(d) / "secrets" / "a.json").read_bytes())
+            r6 = subprocess.run([sys.executable, "-I", str(CONTRACT / "scripts" / "build_series.py"), str(leak), "--catalogue", str(cat),
+                                 "--mythiques", str(sf), *self.out(d, "g")], capture_output=True, text=True)
+            self.assertNotEqual(r6.returncode, 0)
+            self.assertIn("FUITE", r6.stderr)
 
     def test_value_tables_option(self):
         with tempfile.TemporaryDirectory() as d:

@@ -71,6 +71,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(REPO, "verifier"))
 
 import gen_mythics  # noqa: E402  (canonical_content, content_json)
+import validate_series  # noqa: E402  (règles du contrat, préimages révélables)
 from memaster_verifier import canon, core  # noqa: E402
 
 # Limites du contrat (src/lib.rs)
@@ -551,6 +552,13 @@ def main(argv=None):
         raise SystemExit("--out ne doit pas être sous scripts/secrets/")
 
     table, renamed, coverage = build(params, catalogue, secrets_path, a.new_secrets, mythic_secrets)
+    # Mêmes règles que le contrat (validate_table, à l'ouverture) et préimages révélables : une table
+    # refusée l'est ici, avant d'avoir payé le chargement, et jamais après l'ouverture.
+    check = validate_series.validate_table(table)
+    if table["mythics"] and os.path.exists(secrets_path):
+        validate_series.check_preimages(table, validate_series.load_secrets(secrets_path), check)
+    if not check.ok:
+        raise SystemExit("table refusée (règles du contrat, voir validate_series.py) :\n- " + "\n- ".join(check.errors))
 
     # Hash : vérificateur Python (canon.py reproduit serde_json::to_vec).
     table_bytes = canon.table_json_bytes(table)

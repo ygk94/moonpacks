@@ -551,3 +551,131 @@ fn fuzz_generator_reaches_edge_cases() {
         assert!(seen.get(k).copied().unwrap_or(0) >= 3, "cas limite trop rare : {k} ({seen:?})");
     }
 }
+
+// ----------------------------------------------------------------- validateur hors ligne
+
+/// Mutation au hasard d'une table valide : la plupart la rendent invalide, certaines non.
+fn mutate(r: &mut Rng, t: &mut SeriesTable) -> &'static str {
+    let n = t.cards.len();
+    if n == 0 {
+        return "aucune carte";
+    }
+    let pick = |r: &mut Rng| r.below(n as u64) as usize;
+    match r.below(40) {
+        0 => { t.name = String::new(); "name vide" }
+        1 => { t.name = "é".repeat(33); "name de 66 octets" }
+        2 => { t.price = U128(0); "prix nul" }
+        3 => { t.cards_per_pack = [0, 11, 255][r.below(3) as usize]; "cards_per_pack" }
+        4 => { t.rarity_weights = RarityWeights { mythic: 0, legendary: 0, epic: 0, rare: 0, common: 0 }; "poids nuls" }
+        5 => { t.rarity_weights.common = 0; "commune à 0" }
+        6 => { t.rarity_weights.mythic = r.range(1, 10) as u32; "poids mythique" }
+        7 => { if let Some(m) = t.mythics.first_mut() { m.cap = [0, 101][r.below(2) as usize]; } "plafond mythique" }
+        8 => { if t.mythics.len() >= 2 { t.mythics[1].commitment = t.mythics[0].commitment.clone(); } "engagement en double" }
+        9 => { if let Some(m) = t.mythics.first_mut() { m.content_hash = m.content_hash.to_uppercase(); } "hex majuscule" }
+        10 => { t.royalties = vec![Royalty { account_id: "a.near".parse().unwrap(), bps: r.range(4_000, 6_000) as u16 }]; "redevances" }
+        11 => { let i = pick(r); t.cards[i].card_id = "x".repeat(r.range(64, 65) as usize); "card_id long" }
+        12 => { let i = pick(r); t.cards[i].title = String::new(); "titre vide" }
+        13 => { let i = pick(r); t.cards[i].backing = Some(Backing { asset_id: "a".into(), amount: U128(0) }); "montant nul" }
+        14 => { let i = pick(r); t.cards[i].rarity = Rarity::Mythic; "carte mythique" }
+        15 => { if n >= 2 { let id = t.cards[0].card_id.clone(); t.cards[1].card_id = id; } "card_id en double" }
+        16 => { let rr = r.rarity_visible(); for c in t.cards.iter_mut().filter(|c| c.rarity == rr) { c.weight = 0; } "rareté sans poids" }
+        17 => { for c in t.cards.iter_mut().filter(|c| c.rarity == Rarity::Common) { c.cap = Some(r.range(1, 3) as u32); } "communes plafonnées" }
+        18 => { for c in t.cards.iter_mut() { if r.chance(1, 2) { c.backing = None; } } "adossements retirés" }
+        19 => { let i = pick(r); t.cards[i].rarity = r.rarity_visible(); "rareté changée" }
+        20 => { let i = pick(r); t.cards[i].media = Some("m".repeat(r.range(255, 257) as usize)); "media long" }
+        21 => { t.rarity_weights.legendary = 0; t.rarity_weights.epic = 0; "raretés retirées" }
+        _ => {
+            let Some(m) = t.mechanics.as_mut() else { t.cards.clear(); return "aucune carte" };
+            match r.below(18) {
+                0 => { m.gold = None; "gold retiré" }
+                1 => { if let Some(b) = m.burn.as_mut() { b.floor_bps = r.range(10_000, 10_001) as u32; } "floor_bps" }
+                2 => { if let Some(b) = m.burn.as_mut() { b.prior_k = r.range(1_000_000, 1_000_001) as u32; } "prior_k" }
+                3 => { if let Some(p) = m.pity.as_mut() { p.n_max = Some([0, 10_000, 10_001][r.below(3) as usize]); } "n_max" }
+                4 => { if let Some(p) = m.pity.as_mut() { p.p0_ppb = p.p_max_ppb.saturating_add(r.below(2) as u32); } "p0 > p_max" }
+                5 => { if let Some(p) = m.pity.as_mut() { p.p_max_ppb = 0; p.p0_ppb = 0; p.n_max = None; } "pitié inatteignable" }
+                6 => { if let Some(x) = m.rush.as_mut() { x.window_blocks += r.below(2); } "window non multiple" }
+                7 => { if let Some(x) = m.rush.as_mut() { x.ratio_bps = (10_000 * (x.baseline_blocks / x.bucket_blocks) / (x.window_blocks / x.bucket_blocks)) as u32 - r.below(2) as u32; } "ratio limite" }
+                8 => { if let Some(x) = m.rush.as_mut() { x.min_packs = 0; } "min_packs" }
+                9 => { if let Some(x) = m.rush.as_mut() { x.baseline_blocks = x.bucket_blocks * r.range(95, 97); } "96 seaux" }
+                10 => { if let Some(v) = m.value.as_mut() { v.normal = vec![(r.range(1_999, 2_000) as u32, 1)]; } "value.normal bas" }
+                11 => { if let Some(v) = m.value.as_mut() { v.multipliers.rare = r.below(2) as u32; } "multiplicateur rare" }
+                12 => { if let Some(v) = m.value.as_mut() { v.multipliers.mythic = r.below(2) as u32; } "multiplicateur mythique" }
+                13 => { t.price = U128(u128::MAX / r.range(1, 1_000_000) as u128); "prix énorme" }
+                14 => { m.resurrection = Some(ResurrectionParams { eligible: vec![r.below(n as u64 + 2) as u32] }); "résurrection d'une carte au hasard" }
+                15 => { m.resurrection = Some(ResurrectionParams { eligible: vec![1, 0] }); "résurrection non triée" }
+                16 => { if let Some(g) = m.gold.as_mut() { g.slots[0].floor = Rarity::Common; g.slots[0].weights = Some(RarityWeights { mythic: 0, legendary: 0, epic: 0, rare: 0, common: 0 }); } "emplacement or nul" }
+                _ => { if let Some(g) = m.gold.as_mut() { g.slots[0].floor = Rarity::Legendary; g.slots[0].weights = Some(RarityWeights { mythic: 0, legendary: 1, epic: 1, rare: 0, common: 0 }); } "sous le plancher" }
+            }
+        }
+    }
+}
+
+thread_local! {
+    static QUIET: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+#[test]
+fn offline_validator_agrees_with_contract_validation() {
+    // Les refus du contrat paniquent : leurs messages sont tus pour ce test seulement.
+    let prev = std::sync::Arc::new(std::panic::take_hook());
+    let p2 = prev.clone();
+    std::panic::set_hook(Box::new(move |info| {
+        if !QUIET.with(|q| q.get()) {
+            p2(info);
+        }
+    }));
+    let seed: u64 = std::env::var("MEMASTER_FUZZ_SEED").ok().and_then(|s| s.parse().ok()).unwrap_or(FIXED_SEED ^ 0x5eed);
+    let n: usize = std::env::var("MEMASTER_FUZZ_CASES").ok().and_then(|s| s.parse().ok()).unwrap_or(300);
+    let mut r = Rng(seed);
+    let mut raws = Vec::new();
+    let mut expected = Vec::new();
+    let mut labels = Vec::new();
+    for _ in 0..n {
+        env_ctx();
+        let mut t = random_table(&mut r);
+        let mut what = vec![];
+        for _ in 0..r.range(1, 2) {
+            what.push(mutate(&mut r, &mut t));
+        }
+        let tt = t.clone();
+        QUIET.with(|q| q.set(true));
+        let ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            env_ctx();
+            crate::series::validate_table(&tt);
+        }))
+        .is_ok();
+        QUIET.with(|q| q.set(false));
+        raws.push(serde_json::to_string(&t).unwrap());
+        expected.push(ok);
+        labels.push(what.join(" + "));
+    }
+    let root = env!("CARGO_MANIFEST_DIR");
+    let dir = std::env::temp_dir().join(format!("memaster-validate-{}-{seed}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("tables.json");
+    std::fs::write(&path, format!("[{}]", raws.join(","))).unwrap();
+    let script = "import json,sys; sys.path.insert(0, sys.argv[1]); import validate_series as v; \
+        ts = json.load(open(sys.argv[2], encoding='utf-8')); \
+        print(json.dumps([[v.validate_table(t).ok, v.validate_table(t).errors[:1]] for t in ts]))";
+    let out = std::process::Command::new("python3")
+        .arg("-I")
+        .arg("-c")
+        .arg(script)
+        .arg(format!("{root}/scripts"))
+        .arg(&path)
+        .output()
+        .expect("python3 requis pour ce test");
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    let got: Vec<(bool, Vec<String>)> = serde_json::from_slice(&out.stdout).unwrap();
+    let mut diffs = vec![];
+    for (i, ((g, e), want)) in got.iter().zip(&expected).enumerate() {
+        if g != want {
+            diffs.push(format!("cas {i} ({}) : contrat {}, validateur {} {:?}", labels[i], if *want { "accepte" } else { "refuse" }, if *g { "accepte" } else { "refuse" }, e));
+        }
+    }
+    let refused = expected.iter().filter(|x| !**x).count();
+    assert!(diffs.is_empty(), "graine {seed} :\n{}", diffs.join("\n"));
+    assert!(refused > n / 3 && refused < n, "mutations peu variées : {refused} refus sur {n}");
+    println!("graine {seed} : {n} tables, {refused} refusées, accord complet");
+}
