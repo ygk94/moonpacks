@@ -1,0 +1,85 @@
+{
+ "points": [
+  {
+   "couverture": 0.5,
+   "delta": 0.05,
+   "horizon": 10000,
+   "trajectoires": 10000,
+   "r0_5_x_prix": 153.83970187959974,
+   "r0_1_x_prix": 207.8706204959615
+  },
+  {
+   "couverture": 0.5,
+   "delta": 0.05,
+   "horizon": 100000,
+   "trajectoires": 2000,
+   "r0_5_x_prix": 150.28258496886514,
+   "r0_1_x_prix": 217.87221938799988
+  },
+  {
+   "couverture": 0.65,
+   "delta": 0.02,
+   "horizon": 10000,
+   "trajectoires": 10000,
+   "r0_5_x_prix": 336.489187968078,
+   "r0_1_x_prix": 463.5028707871685
+  },
+  {
+   "couverture": 0.65,
+   "delta": 0.05,
+   "horizon": 10000,
+   "trajectoires": 10000,
+   "r0_5_x_prix": 204.74692902667266,
+   "r0_1_x_prix": 287.1853197575166
+  },
+  {
+   "couverture": 0.65,
+   "delta": 0.1,
+   "horizon": 10000,
+   "trajectoires": 10000,
+   "r0_5_x_prix": 137.95008891779696,
+   "r0_1_x_prix": 179.35921422974442
+  },
+  {
+   "couverture": 0.65,
+   "delta": 0.02,
+   "horizon": 100000,
+   "trajectoires": 2000,
+   "r0_5_x_prix": 411.9152104161295,
+   "r0_1_x_prix": 564.7763356391571
+  },
+  {
+   "couverture": 0.65,
+   "delta": 0.05,
+   "horizon": 100000,
+   "trajectoires": 2000,
+   "r0_5_x_prix": 202.41313757647077,
+   "r0_1_x_prix": 307.57955293197426
+  },
+  {
+   "couverture": 0.65,
+   "delta": 0.1,
+   "horizon": 100000,
+   "trajectoires": 2000,
+   "r0_5_x_prix": 136.66449455356755,
+   "r0_1_x_prix": 182.71766605481417
+  },
+  {
+   "couverture": 0.7,
+   "delta": 0.05,
+   "horizon": 10000,
+   "trajectoires": 10000,
+   "r0_5_x_prix": 223.4263142092358,
+   "r0_1_x_prix": 318.2811744785021
+  },
+  {
+   "couverture": 0.7,
+   "delta": 0.05,
+   "horizon": 100000,
+   "trajectoires": 2000,
+   "r0_5_x_prix": 221.90659335314945,
+   "r0_1_x_prix": 340.5295389993005
+  }
+ ],
+ "verification_1usd_r0_1_x_prix": 273.504577063386
+}

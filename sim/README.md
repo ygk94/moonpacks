@@ -30,6 +30,11 @@ python3 -m venv .venv
 .venv/bin/python -m memaster_sim.serie2 run --boosters 2000000 --trajectoires 20000
 .venv/bin/python -m memaster_sim.serie2 sensibilite --total 150 --prix 5 --trajectoires 20000
 
+# série 3 (packs à bas prix et mécaniques) : régénérer les configs, tout simuler (environ 10 min, --rapide pour essayer)
+.venv/bin/python -m memaster_sim.serie3 configs
+.venv/bin/python -m memaster_sim.serie3 run
+.venv/bin/python -m memaster_sim.serie3 run --rapide --sections pitie rush
+
 # tests
 .venv/bin/python -m pytest -q tests
 ```
@@ -45,10 +50,19 @@ python3 -m venv .venv
 | `configs/serie2-NNNbrul-PPnear.yaml` | Série 2 : catalogue v2, NNN brûlables, PP NEAR (générées, ne pas éditer ; `tout` les ignore) |
 | `memaster_sim/catalogue.py` | Chargeur de `docs/data/catalogue-v2.json` : effectifs par rareté, choix des brûlables à graine fixe |
 | `memaster_sim/serie2.py` | Génération des configs et grille de la série 2, résultats dans `resultats/serie2/` |
+| `configs/serie3-PPPc-CCcouv.yaml` | Série 3 : pack à PPP centimes, couverture CC % (générées, ne pas éditer ; `tout` les ignore) |
+| `configs/serie3-mecaniques.yaml` | Série 3 : cours du NEAR, coûts mesurés, paramètres de la pitié, du rush, de la rareté par les burns, de la résurrection |
+| `memaster_sim/serie3.py` | Configs et exécution de la série 3, résultats dans `resultats/serie3/` (une page par section, plus `serie3.md`) |
+| `memaster_sim/couts.py` | Coûts réels d'un pack (gaz, stockage, achat groupé), marge, prix de seuil, packs pour les coûts fixes |
+| `memaster_sim/gold.py` | Table « or », mélange de tables avec un κ commun, réserve avec des gold packs (indépendants ou groupés) |
+| `memaster_sim/pitie.py` | Compteur de pitié : loi du cycle, g stationnaire, population de joueurs |
+| `memaster_sim/rush.py` | Gold rush : flux d'achats de Poisson avec pics, fenêtre glissante, palier fixe ou relatif, pause |
+| `memaster_sim/rarete_burn.py` | Rareté pilotée par les burns : poids × en circulation / émises, trois renormalisations, plancher |
+| `memaster_sim/resurrection.py` | Résurrection des coins morts : coût des exemplaires existants, enveloppe et fonds |
 | `memaster_sim/modele.py` | Config, tables d'issues, κ, formules exactes (espérance, variance, borne β, R₀ normale) |
 | `memaster_sim/simulation.py` | Tirages vectorisés, statistiques, borne β simulée, simulation de ruine |
 | `memaster_sim/rapport.py` | Sorties markdown et JSON, grilles de sensibilité |
-| `tests/` | Pytest : tirages, exemple 4.4, contraintes de la série 1, chargeur du catalogue v2 et configs de la série 2 |
+| `tests/` | Pytest : tirages, exemple 4.4, contraintes de la série 1, chargeur du catalogue v2 et configs de la série 2, coûts et mécaniques de la série 3 |
 | `resultats/` | Sorties générées (régénérables) |
 
 ## Écrire une config

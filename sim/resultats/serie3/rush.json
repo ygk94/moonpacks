@@ -1,0 +1,370 @@
+{
+ "grille": [
+  {
+   "regle": "fixe",
+   "trafic": 0.5,
+   "packs": 76027.8,
+   "packs_par_jour": 2534.26,
+   "g_rush": 0.0023722629728132614,
+   "temps_en_rush": 0.00041666666666666664,
+   "rush_par_jour": 0.02,
+   "g_rush_p95": 0.012268677241095904
+  },
+  {
+   "regle": "fixe",
+   "trafic": 1,
+   "packs": 157996.25,
+   "packs_par_jour": 5266.541666666667,
+   "g_rush": 0.08002657360464978,
+   "temps_en_rush": 0.01923611111111111,
+   "rush_par_jour": 0.9233333333333335,
+   "g_rush_p95": 0.11788369430830029
+  },
+  {
+   "regle": "fixe",
+   "trafic": 2,
+   "packs": 461790.95,
+   "packs_par_jour": 15393.031666666668,
+   "g_rush": 0.6857637937339113,
+   "temps_en_rush": 0.4257037037037037,
+   "rush_par_jour": 20.434999999999995,
+   "g_rush_p95": 0.6977974462650842
+  },
+  {
+   "regle": "fixe",
+   "trafic": 4,
+   "packs": 1204366.25,
+   "packs_par_jour": 40145.54166666667,
+   "g_rush": 0.9912715583084448,
+   "temps_en_rush": 0.9826550925925925,
+   "rush_par_jour": 47.18500000000001,
+   "g_rush_p95": 0.9913933097200027
+  },
+  {
+   "regle": "fixe_cooldown_6h",
+   "trafic": 0.5,
+   "packs": 76177.3,
+   "packs_par_jour": 2539.2433333333333,
+   "g_rush": 0.0036218286640661243,
+   "temps_en_rush": 0.00020833333333333332,
+   "rush_par_jour": 0.01,
+   "g_rush_p95": 0.024354893009926867
+  },
+  {
+   "regle": "fixe_cooldown_6h",
+   "trafic": 1,
+   "packs": 155945.5,
+   "packs_par_jour": 5198.183333333333,
+   "g_rush": 0.04538776853520699,
+   "temps_en_rush": 0.006076388888888888,
+   "rush_par_jour": 0.29166666666666663,
+   "g_rush_p95": 0.06911604099957688
+  },
+  {
+   "regle": "fixe_cooldown_6h",
+   "trafic": 2,
+   "packs": 319660.95,
+   "packs_par_jour": 10655.365000000002,
+   "g_rush": 0.10586628905329723,
+   "temps_en_rush": 0.026354166666666668,
+   "rush_par_jour": 1.2650000000000001,
+   "g_rush_p95": 0.1247037119395903
+  },
+  {
+   "regle": "fixe_cooldown_6h",
+   "trafic": 4,
+   "packs": 655417.8,
+   "packs_par_jour": 21847.260000000002,
+   "g_rush": 0.13894419587173656,
+   "temps_en_rush": 0.06333333333333332,
+   "rush_par_jour": 3.04,
+   "g_rush_p95": 0.1457725144537928
+  },
+  {
+   "regle": "relatif_2x5_cooldown_6h",
+   "trafic": 0.5,
+   "packs": 78120.75,
+   "packs_par_jour": 2604.0249999999996,
+   "g_rush": 0.049312492694634134,
+   "temps_en_rush": 0.006493055555555556,
+   "rush_par_jour": 0.31166666666666665,
+   "g_rush_p95": 0.06501876825898657
+  },
+  {
+   "regle": "relatif_2x5_cooldown_6h",
+   "trafic": 1,
+   "packs": 153578.75,
+   "packs_par_jour": 5119.291666666666,
+   "g_rush": 0.03942618942069094,
+   "temps_en_rush": 0.005208333333333334,
+   "rush_par_jour": 0.25,
+   "g_rush_p95": 0.05379906498892212
+  },
+  {
+   "regle": "relatif_2x5_cooldown_6h",
+   "trafic": 2,
+   "packs": 312377.15,
+   "packs_par_jour": 10412.571666666667,
+   "g_rush": 0.052022641032023156,
+   "temps_en_rush": 0.006493055555555556,
+   "rush_par_jour": 0.31166666666666665,
+   "g_rush_p95": 0.07933472664363674
+  },
+  {
+   "regle": "relatif_2x5_cooldown_6h",
+   "trafic": 4,
+   "packs": 626182.1,
+   "packs_par_jour": 20872.736666666668,
+   "g_rush": 0.052367893662765466,
+   "temps_en_rush": 0.005806134259259259,
+   "rush_par_jour": 0.27999999999999997,
+   "g_rush_p95": 0.08527947413083195
+  }
+ ],
+ "table_rush": {
+  "facteurs": {
+   "rare": 1.171161405638486,
+   "epique": 1.342322811276972,
+   "legendaire": 1.513484216915458,
+   "mythique": 1.513484216915458
+  },
+  "echelle": 0.17116140563848603,
+  "g_rush_prevu": 0.03942618942069094,
+  "kappa": 0.10211763643913352,
+  "couverture_std": 0.5858308058665065,
+  "couverture_or": 1.8371011686801664,
+  "couverture_rush": 0.7999999999994711,
+  "gain_rush_sur_prix": 0.8047918304507773,
+  "gain_or_sur_prix": 1.8085216525124952
+ },
+ "marges": [
+  {
+   "regle": "fixe",
+   "table": "or",
+   "trafic": 0.5,
+   "g_rush": 0.0023722629728132614,
+   "couverture": 0.5685007384242527,
+   "marge_near": 0.029329940926059783,
+   "marge_30j_near": 2229.890882738288
+  },
+  {
+   "regle": "fixe",
+   "table": "or",
+   "trafic": 1,
+   "g_rush": 0.08002657360464978,
+   "couverture": 0.65,
+   "marge_near": 0.022809999999999997,
+   "marge_30j_near": 3603.8944624999995
+  },
+  {
+   "regle": "fixe",
+   "table": "or",
+   "trafic": 2,
+   "g_rush": 0.6857637937339113,
+   "couverture": 1.2857295010129322,
+   "marge_near": -0.028048360081034573,
+   "marge_30j_near": -12952.478847763032
+  },
+  {
+   "regle": "fixe",
+   "table": "or",
+   "trafic": 4,
+   "g_rush": 0.9912715583084448,
+   "couverture": 1.606364080289898,
+   "marge_near": -0.053699126423191836,
+   "marge_30j_near": -64673.415518575464
+  },
+  {
+   "regle": "fixe",
+   "table": "rush",
+   "trafic": 0.5,
+   "g_rush": 0.0023722629728132614,
+   "couverture": 0.6379904948565037,
+   "marge_near": 0.023770760411479703,
+   "marge_30j_near": 1807.2386184118966
+  },
+  {
+   "regle": "fixe",
+   "table": "rush",
+   "trafic": 1,
+   "g_rush": 0.08002657360464978,
+   "couverture": 0.6499999999999999,
+   "marge_near": 0.022810000000000007,
+   "marge_30j_near": 3603.8944625000013
+  },
+  {
+   "regle": "fixe",
+   "table": "rush",
+   "trafic": 2,
+   "g_rush": 0.6857637937339113,
+   "couverture": 0.7436793360414812,
+   "marge_near": 0.015315653116681507,
+   "marge_30j_near": 7072.630002622814
+  },
+  {
+   "regle": "fixe",
+   "table": "rush",
+   "trafic": 4,
+   "g_rush": 0.9912715583084448,
+   "couverture": 0.7909271583475831,
+   "marge_near": 0.011535827332193351,
+   "marge_30j_near": 13893.36110472121
+  },
+  {
+   "regle": "fixe_cooldown_6h",
+   "table": "or",
+   "trafic": 0.5,
+   "g_rush": 0.0036218286640661243,
+   "couverture": 0.6035787874198036,
+   "marge_near": 0.026523697006415707,
+   "marge_30j_near": 2020.5036239668314
+  },
+  {
+   "regle": "fixe_cooldown_6h",
+   "table": "or",
+   "trafic": 1,
+   "g_rush": 0.04538776853520699,
+   "couverture": 0.65,
+   "marge_near": 0.022809999999999997,
+   "marge_30j_near": 3557.1168549999993
+  },
+  {
+   "regle": "fixe_cooldown_6h",
+   "table": "or",
+   "trafic": 2,
+   "g_rush": 0.10586628905329723,
+   "couverture": 0.7172195158583259,
+   "marge_near": 0.01743243873133393,
+   "marge_30j_near": 5572.469925674999
+  },
+  {
+   "regle": "fixe_cooldown_6h",
+   "table": "or",
+   "trafic": 4,
+   "g_rush": 0.13894419587173656,
+   "couverture": 0.7539843186824496,
+   "marge_near": 0.01449125450540403,
+   "marge_30j_near": 9497.826147171998
+  },
+  {
+   "regle": "fixe_cooldown_6h",
+   "table": "rush",
+   "trafic": 0.5,
+   "g_rush": 0.0036218286640661243,
+   "couverture": 0.6434872655159175,
+   "marge_near": 0.0233310187587266,
+   "marge_30j_near": 1777.294015289144
+  },
+  {
+   "regle": "fixe_cooldown_6h",
+   "table": "rush",
+   "trafic": 1,
+   "g_rush": 0.04538776853520699,
+   "couverture": 0.65,
+   "marge_near": 0.022809999999999997,
+   "marge_30j_near": 3557.1168549999993
+  },
+  {
+   "regle": "fixe_cooldown_6h",
+   "table": "rush",
+   "trafic": 2,
+   "g_rush": 0.10586628905329723,
+   "couverture": 0.659430664013301,
+   "marge_near": 0.022055546878935923,
+   "marge_30j_near": 7050.297068090193
+  },
+  {
+   "regle": "fixe_cooldown_6h",
+   "table": "rush",
+   "trafic": 4,
+   "g_rush": 0.13894419587173656,
+   "couverture": 0.6645886378326948,
+   "marge_near": 0.021642908973384414,
+   "marge_30j_near": 14185.147784935873
+  },
+  {
+   "regle": "relatif_2x5_cooldown_6h",
+   "table": "or",
+   "trafic": 0.5,
+   "g_rush": 0.049312492694634134,
+   "couverture": 0.6611010107766186,
+   "marge_near": 0.021921919137870508,
+   "marge_30j_near": 1712.5567644897976
+  },
+  {
+   "regle": "relatif_2x5_cooldown_6h",
+   "table": "or",
+   "trafic": 1,
+   "g_rush": 0.03942618942069094,
+   "couverture": 0.65,
+   "marge_near": 0.022809999999999997,
+   "marge_30j_near": 3503.1312874999994
+  },
+  {
+   "regle": "relatif_2x5_cooldown_6h",
+   "table": "or",
+   "trafic": 2,
+   "g_rush": 0.052022641032023156,
+   "couverture": 0.6641441488501679,
+   "marge_near": 0.021678468091986567,
+   "marge_30j_near": 6771.858078940702
+  },
+  {
+   "regle": "relatif_2x5_cooldown_6h",
+   "table": "or",
+   "trafic": 4,
+   "g_rush": 0.052367893662765466,
+   "couverture": 0.6645318218830827,
+   "marge_near": 0.021647454249353385,
+   "marge_30j_near": 13555.248361514026
+  },
+  {
+   "regle": "relatif_2x5_cooldown_6h",
+   "table": "rush",
+   "trafic": 0.5,
+   "g_rush": 0.049312492694634134,
+   "couverture": 0.6515438121201658,
+   "marge_near": 0.02268649503038674,
+   "marge_30j_near": 1772.2860066450849
+  },
+  {
+   "regle": "relatif_2x5_cooldown_6h",
+   "table": "rush",
+   "trafic": 1,
+   "g_rush": 0.03942618942069094,
+   "couverture": 0.6499999999999999,
+   "marge_near": 0.022810000000000007,
+   "marge_30j_near": 3503.1312875000012
+  },
+  {
+   "regle": "relatif_2x5_cooldown_6h",
+   "table": "rush",
+   "trafic": 2,
+   "g_rush": 0.052022641032023156,
+   "couverture": 0.6519670198384376,
+   "marge_near": 0.02265263841292499,
+   "marge_30j_near": 7076.166627410032
+  },
+  {
+   "regle": "relatif_2x5_cooldown_6h",
+   "table": "rush",
+   "trafic": 4,
+   "g_rush": 0.052367893662765466,
+   "couverture": 0.6520209333368496,
+   "marge_near": 0.02264832533305203,
+   "marge_30j_near": 14181.975918533719
+  }
+ ],
+ "reserve": {
+  "relatif_2x5_cooldown_6h_x1": {
+   "g_rush": 0.039581322285798005,
+   "r0_1_groupes": 25.842266447662055,
+   "r0_1_independants": 21.384361805679543
+  },
+  "fixe_x2": {
+   "g_rush": 0.6858934762580341,
+   "r0_1_groupes": 32.76357030956653,
+   "r0_1_independants": 19.706208226333843
+  }
+ }
+}
