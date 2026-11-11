@@ -290,9 +290,10 @@ fn backed_tokens(c: &Contract, who: &AccountId, card_id: &str) -> Vec<String> {
 
 fn burn(c: &mut Contract, who: AccountId, tid: &str) -> bool {
     set(who.clone(), 1, 40);
+    let b = c.get_backing(tid.to_string()).unwrap();
     let _ = c.redeem(tid.to_string());
     set_result(PromiseResult::Successful(vec![]));
-    c.on_redeem_complete(tid.to_string(), who)
+    c.on_redeem_complete(tid.to_string(), who, b)
 }
 
 fn burn_mech() -> Mechanics {
@@ -837,4 +838,35 @@ fn rush_packs_are_capped_per_account() {
     // Un autre compte a son propre plafond.
     let p = buy_at(&mut c, alice(), 70);
     assert_eq!(pack(&c, p)["rush"], true);
+}
+
+/// Fin du burn telle que le contrat la programme (adossement figé au lancement du burn).
+fn complete_redeem(c: &mut Contract, tid: &str, who: AccountId, delivered: &Backing) -> bool {
+    set_result(PromiseResult::Successful(vec![]));
+    c.on_redeem_complete(tid.to_string(), who, delivered.clone())
+}
+
+/// Revue, point 4 : l'oracle remplace l'adossement d'une carte ressuscitée pendant un burn. Le
+/// redeemer a livré l'adossement lu au lancement : c'est lui que `card_redeemed` journalise.
+#[test]
+fn redeem_logs_the_backing_actually_delivered() {
+    let mut c = contract_with(epic_table(Some(res_mech(&[6]))));
+    for k in 0..6u8 {
+        buy_reveal(&mut c, alice(), k, 20 + 10 * k as u64);
+    }
+    install_oracle(&mut c, 100);
+    let a = Backing { asset_id: "nep141:a.near".into(), amount: U128(11) };
+    set(oracle(), NEAR, 101);
+    c.set_resurrected(0, 6, a.clone());
+    let tid = backed_tokens(&c, &alice(), "epic_b")[0].clone();
+    set(alice(), 1, 102);
+    let _ = c.redeem(tid.clone());
+    // Pendant le burn, l'oracle change l'adossement.
+    set(oracle(), NEAR, 103);
+    c.set_resurrected(0, 6, Backing { asset_id: "nep141:b.near".into(), amount: U128(99) });
+    assert!(complete_redeem(&mut c, &tid, alice(), &a));
+    let logs = near_sdk::test_utils::get_logs();
+    let ev = logs.iter().find(|l| l.contains("card_redeemed")).expect("card_redeemed");
+    assert!(ev.contains("\"asset_id\":\"nep141:a.near\"") && ev.contains("\"amount\":\"11\""), "{ev}");
+    assert!(ev.contains("\"replaced_by\":{\"asset_id\":\"nep141:b.near\""), "remplacement journalisé : {ev}");
 }

@@ -502,10 +502,11 @@ fn redeem_success_burns_card() {
     let tid = pack_with_backed_card(&mut c);
     let supply = c.nft_supply_for_owner_internal(&alice());
     set(alice(), 1, 40);
+    let b = c.get_backing(tid.clone()).unwrap();
     let _ = c.redeem(tid.clone());
     assert_eq!(c.get_card(tid.clone()).unwrap().state, CardState::Redeeming);
     set_with_result(contract_id(), PromiseResult::Successful(b"true".to_vec()));
-    assert!(c.on_redeem_complete(tid.clone(), alice()));
+    assert!(c.on_redeem_complete(tid.clone(), alice(), b));
     assert!(c.get_card(tid.clone()).is_none());
     assert!(c.get_backing(tid.clone()).is_none());
     assert!(c.nft_token(tid).is_none());
@@ -517,9 +518,10 @@ fn redeem_failure_restores_card() {
     let mut c = setup();
     let tid = pack_with_backed_card(&mut c);
     set(alice(), 1, 40);
+    let b = c.get_backing(tid.clone()).unwrap();
     let _ = c.redeem(tid.clone());
     set_with_result(contract_id(), PromiseResult::Failed);
-    assert!(!c.on_redeem_complete(tid.clone(), alice()));
+    assert!(!c.on_redeem_complete(tid.clone(), alice(), b));
     assert_eq!(c.get_card(tid.clone()).unwrap().state, CardState::Normal);
     assert!(c.get_backing(tid).is_some());
 }
@@ -716,9 +718,10 @@ fn approvals_storage_is_refunded_on_transfer_sale_and_burn() {
     // burn
     approve(&mut c, alice(), &tid);
     set(alice(), 1, 44);
+    let b = c.get_backing(tid.clone()).unwrap();
     let _ = c.redeem(tid.clone());
     set_with_result(contract_id(), PromiseResult::Successful(vec![]));
-    assert!(c.on_redeem_complete(tid, alice()));
+    assert!(c.on_redeem_complete(tid, alice(), b));
     assert!(has_transfer_to(&alice()), "remboursement des approbations au burn");
 }
 

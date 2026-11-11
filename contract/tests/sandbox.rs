@@ -716,7 +716,7 @@ async fn burn_success_and_failure() -> Result<()> {
     assert!(env.alice.call(cid, "redeem").args_json(json!({ "token_id": ids[2] }))
         .deposit(NearToken::from_yoctonear(1)).gas(Gas::from_tgas(100)).transact().await?.is_failure());
     // Le callback est privé.
-    assert!(env.alice.call(cid, "on_redeem_complete").args_json(json!({ "token_id": ids[3], "owner": env.alice.id() }))
+    assert!(env.alice.call(cid, "on_redeem_complete").args_json(json!({ "token_id": ids[3], "owner": env.alice.id(), "backing": { "asset_id": "x", "amount": "1" } }))
         .transact().await?.is_failure());
     Ok(())
 }

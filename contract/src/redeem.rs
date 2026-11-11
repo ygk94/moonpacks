@@ -3,7 +3,9 @@
 //! 1. `redeem(token_id)` : la carte passe en `Redeeming` (transfert, vente et nouveau burn refusés),
 //!    puis appel `redeemer.redeem(owner, asset_id, amount)` à gaz fixe ;
 //! 2. `on_redeem_complete` : succès du reçu → `nft_burn` et suppression de l'adossement ;
-//!    échec → retour à `Normal`.
+//!    échec → retour à `Normal`. L'adossement envoyé au redeemer est passé en argument au callback
+//!    et c'est lui que `card_redeemed` journalise : un remplacement par l'oracle pendant le burn
+//!    (carte ressuscitée) ne change pas ce qui a été livré.
 //!
 //! Contrat d'interface : le redeemer **panique** s'il ne livre pas ; tout retour sans panique vaut succès.
 
@@ -21,7 +23,7 @@ pub trait Redeemer {
 #[allow(dead_code)]
 #[ext_contract(ext_self)]
 pub trait SelfCallbacks {
-    fn on_redeem_complete(&mut self, token_id: TokenId, owner: AccountId);
+    fn on_redeem_complete(&mut self, token_id: TokenId, owner: AccountId, backing: Backing);
 }
 
 #[near]
@@ -51,21 +53,23 @@ impl Contract {
         ext_redeemer::ext(redeemer)
             .with_static_gas(REDEEMER_GAS)
             .with_unused_gas_weight(0)
-            .redeem(owner.clone(), backing.asset_id, backing.amount)
+            .redeem(owner.clone(), backing.asset_id.clone(), backing.amount)
             .then(
                 ext_self::ext(env::current_account_id())
                     .with_static_gas(REDEEM_CALLBACK_GAS)
                     .with_unused_gas_weight(0)
-                    .on_redeem_complete(token_id, owner),
+                    .on_redeem_complete(token_id, owner, backing),
             )
     }
 
-    /// Callback du burn. Ne panique pas : finalise ou restaure.
+    /// Callback du burn. Ne panique pas : finalise ou restaure. `backing` = adossement envoyé au
+    /// redeemer par `redeem` (journalisé tel quel, même si l'oracle l'a remplacé entre-temps).
     #[private]
     pub fn on_redeem_complete(
         &mut self,
         token_id: TokenId,
         owner: AccountId,
+        backing: Backing,
     ) -> bool {
         // Tout reçu réussi vaut succès, quelle que soit la valeur renvoyée.
         let ok = env::promise_results_count() == 1
@@ -84,7 +88,7 @@ impl Contract {
             events::emit("redeem_failed", json!({ "token_id": token_id, "owner_id": owner }));
             return false;
         }
-        let backing = self.backing_of(series_id, d.kind, d.index);
+        let current = self.backing_of(series_id, d.kind, d.index);
         self.internal_burn(&token_id, &owner);
         // Rareté pilotée par les burns : compteur de la carte et numéro d'ordre du burn.
         let burn_seq = self.record_burn(series_id, d.kind, d.index);
@@ -92,8 +96,10 @@ impl Contract {
             "card_redeemed",
             json!({
                 "token_id": token_id, "owner_id": owner,
-                "asset_id": backing.as_ref().map(|b| b.asset_id.clone()),
-                "amount": backing.map(|b| b.amount),
+                // Adossement livré par le redeemer (celui du lancement du burn).
+                "asset_id": backing.asset_id, "amount": backing.amount,
+                // Adossement courant s'il a changé pendant le burn (remplacement par l'oracle).
+                "replaced_by": current.filter(|c| *c != backing),
                 "series_id": series_id, "kind": d.kind, "index": d.index,
                 "burn_seq": burn_seq,
             }),
