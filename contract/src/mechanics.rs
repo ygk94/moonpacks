@@ -1,7 +1,8 @@
 //! Mécaniques de série (spécification complète : `docs/mecaniques-spec.md`).
 //!
 //! - **Pitié** : compteur on-chain `(compte, série) → n`, lu et mis à jour par le dernier reçu du
-//!   tirage ; gold pack si `n + 1 ≥ N` ou `gold_roll < p0 + k × n` (`draw::pity_is_gold`).
+//!   tirage ; gold pack si `gold_roll < min(p_max, p0 + k × n)` en ppb (`draw::pity_is_gold`), sans
+//!   garantie (sauf `n_max` optionnel) ; le compteur ne repart à 0 qu'après un gold pack.
 //! - **Rareté pilotée par les burns** : `BurnState` par série, mis à jour dans
 //!   `on_redeem_complete` ; poids dans la rareté renormalisés entre brûlables (`draw::in_rarity_weight`),
 //!   avec un plancher (25 % du poids de base par défaut). Le tirage de rareté ne change pas.
@@ -129,8 +130,16 @@ pub(crate) fn validate_mechanics(t: &SeriesTable) {
     }
     if let Some(p) = &m.pity {
         require!(m.gold.is_some(), "pity exige gold");
-        require!(p.n_max >= 1 && p.n_max <= MAX_PITY_N, "pity.n_max hors bornes (1 à 10 000)");
-        require!(p.p0_ppm as u64 <= PPM && p.k_ppm as u64 <= PPM, "pity : probabilités en ppm (≤ 10⁶)");
+        require!(
+            p.n_max.is_none_or(|n| (1..=MAX_PITY_N).contains(&n)),
+            "pity.n_max hors bornes (absent, ou 1 à 10 000)"
+        );
+        require!(
+            p.p0_ppb as u64 <= PPB && p.k_ppb as u64 <= PPB && p.p_max_ppb as u64 <= PPB,
+            "pity : probabilités en ppb (≤ 10⁹)"
+        );
+        require!(p.p0_ppb <= p.p_max_ppb, "pity : p0_ppb ≤ p_max_ppb");
+        require!(p.p_max_ppb > 0 || p.n_max.is_some(), "pity : gold pack inatteignable (p_max_ppb = 0 sans n_max)");
     }
     if let Some(r) = &m.resurrection {
         require!(r.eligible.len() <= MAX_RESURRECTABLE, "resurrection.eligible : 200 cartes au plus");
@@ -256,16 +265,24 @@ impl Contract {
     }
 
     /// Compteur de pitié d'un compte pour une série : `n` packs consécutifs sans gold pack,
-    /// probabilité du prochain (`p_ppm`) et packs restants avant la garantie.
+    /// probabilité du prochain (`p_ppb`, parties par milliard), packs restants avant le plafond
+    /// (`packs_to_max`, 0 s'il est atteint) et avant la garantie (`guaranteed_in`, `null` sans `n_max`).
     pub fn get_pity(&self, account_id: AccountId, series_id: u32) -> Value {
         let s = self.series_ref(series_id);
         let Some(p) = s.table.mechanics.as_ref().and_then(|m| m.pity.as_ref()) else {
             return json!({ "enabled": false });
         };
         let n = self.pity.get(&(account_id, series_id)).copied().unwrap_or(0);
+        let packs_to_max = if p.k_ppb == 0 {
+            0
+        } else {
+            let gap = (p.p_max_ppb as u64).saturating_sub(draw::pity_p_ppb(p, n));
+            gap.div_ceil(p.k_ppb as u64)
+        };
         json!({
-            "enabled": true, "n": n, "p_ppm": draw::pity_p_ppm(p, n),
-            "guaranteed_in": p.n_max.saturating_sub(n).max(1),
+            "enabled": true, "n": n, "p_ppb": draw::pity_p_ppb(p, n),
+            "packs_to_max": packs_to_max,
+            "guaranteed_in": p.n_max.map(|m| m.saturating_sub(n).max(1)),
             "params": p,
         })
     }

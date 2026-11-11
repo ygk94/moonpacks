@@ -277,14 +277,17 @@ def pack_normal(cfg: dict, table: TableValeur, tables_rarete: dict | None = None
 
 
 def pack_gold(cfg: dict, table: TableValeur, minimums=("rare", "rare", "epique", "epique"),
-              dernier: dict[str, float] | None = None) -> TypePack:
+              dernier: dict[str, float] | None = None, brulable: int | None = None) -> TypePack:
     """Gold pack redéfini : aucune commune ; emplacements 1-4 « rareté minimale ou mieux » dans la table standard ;
-    emplacement 5 légendaire 80 % / mythique 20 %, brûlable."""
+    emplacement 5 légendaire 80 % / mythique 20 %. `brulable` = indice de l'emplacement tiré parmi les brûlables
+    (défaut, série 4 : le dernier ; série 5 : le 2ᵉ, comme le contrat, car une mythique n'est jamais brûlable)."""
     std = cfg["emplacements"]["tables"][cfg["emplacements"]["ordre"][0]]
     dernier = dernier or {"legendaire": 0.8, "mythique": 0.2}
     brul = {r: cfg["raretes"][r].get("brulables", 0) for r in RARETES}
-    emp = [restreindre(_complete(std), m) for m in minimums] + [retombee(_complete(dernier), brul)]
-    return TypePack("gold", emp, [False] * len(minimums) + [True], table)
+    emp = [restreindre(_complete(std), m) for m in minimums] + [_complete(dernier)]
+    b = len(emp) - 1 if brulable is None else brulable
+    emp[b] = retombee(emp[b], brul)
+    return TypePack("gold", emp, [i == b for i in range(len(emp))], table)
 
 
 def proba_brulable(cfg: dict) -> np.ndarray:

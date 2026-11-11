@@ -643,3 +643,47 @@ est possible et ne coûte rien, mais le rush ne rapporterait alors rien de plus 
 - Pitié et rush combinés comme en série 3 (un pack est gold, sinon rush avec 5 %). Packs indépendants pour la réserve.
 - Les stocks par carte (10 par mythique, 50 par légendaire) sont ceux, illustratifs, de `serie-exemple.json`.
 - La rareté pilotée par les burns et la résurrection ne sont pas reprises : une carte ressuscitée n'entre pas dans V.
+
+## Série 5 (pitié sans garantie, mythique 1 pour 10⁶, gold 99/1, V moyenne 75 %)
+
+`python -m memaster_sim.serie5`, paramètres `configs/serie5.yaml`, résultats `resultats/serie5/` (`serie5.md`,
+`serie5.json`, `tables-valeur.json`). Décisions du porteur appliquées par le contrat ; le calcul reprend la série 4.
+
+### Ce qui change
+
+- **Pitié sans garantie** : p(n) = min(p_max, p0 + k·n), p0 = 1/50 000, p_max = 1/25 000, k = 1/50 000 000 (plafond en
+  1 000 packs). Le compteur revient à 0 seulement après un gold pack ; un pack rush compte comme un pack sans gold.
+  `pitie.py` accepte `N = None` et `p_max` : au-delà du plafond, la queue du cycle est géométrique, donc
+  E[T] = Σ_{j<m} S(j) + S(m) / p_max, exact (les séries 3 et 4 ne changent pas).
+- **Mythique** : 5 / 2·10⁷ par emplacement (poids du contrat), sur les emplacements 1 à 4 ; le 5e, tiré parmi les
+  brûlables, ne peut pas être mythique (une mythique n'est jamais brûlable, multiplicateur 0). Table rush : mythique × 1.
+  Seule la mythique est alignée sur le contrat : les autres raretés gardent les tables d'emplacement de la série 3, qui
+  ne jouent pas sur V.
+- **Gold pack** : 5e emplacement légendaire 99 %, mythique 1 %. L'emplacement tiré parmi les brûlables est le 2e (rare
+  ou mieux), comme dans le contrat, puisque le 5e peut être une mythique.
+- **V** : normal et rush, même table (20 % à 200 %, σ = 0,6), moyenne 7 500 bps exacte ; gold inchangé (200 %).
+- Coûts de la série 4, sauf 971 octets par pack ; gaz gardé à 48 Tgas faute de meilleure mesure.
+
+### Résultats
+
+| Grandeur | Valeur |
+|---|---|
+| V moyenne : normal / rush / gold | 75,00 % / 75,00 % / 200,00 % |
+| V moyenne du flux réel (g_pop, rush 5 %) | 75,003 % (75,005 % avec g_∞) |
+| 1 gold pack pour | 25 248 packs (g_∞ exact ; Monte-Carlo 25 227 ± 25 sur 10⁶ cycles, 25 417 ± 0,9 % sur 3·10⁸ packs) ; 48 230 packs avec la population de la série 4 (g_pop exact) |
+| 1 mythique pour | 1 000 000 packs classiques ; 827 919 packs sur le flux avec gold (g_pop), 715 799 avec g_∞ |
+| Marge à 0,20 $ | 0,037 $ (18 %) ; 0,049 $ (24 %) si l'acheteur paie le gaz |
+| Marge à 0,50 $ | 0,110 $ (22 %) ; 0,122 $ (24 %) si l'acheteur paie le gaz |
+| Arbitrage « brûle tout » : normal / rush / cycle de pitié | 73,3 % / 73,3 % / 73,3 % (borne 85 %) |
+
+Le gold pack devient négligeable : moins de 0,01 point de couverture. 99,98 % des joueurs de la population de la série 4
+n'en voient jamais. Le gold pack seul rapporterait 197 % du prix, mais il n'est plus choisissable (aucune garantie).
+
+### Limites
+
+- Une simulation de la population de la série 4 ne voit que 17 gold packs : g_pop vient de l'espérance exacte
+  (équation de renouvellement), et la marge est calculée avec elle.
+- Le format de `tables-valeur.json` est celui de la série 4 (`value_tables.{base,gold,rush}`, `split_multipliers`).
+  Il ne dit pas quel emplacement du gold pack est tiré parmi les brûlables.
+- `contract/scripts/build_series.py --tables-valeur` attend `normale`/`gold`/`rush`/`multiplicateurs` au premier niveau :
+  il ne lit pas ce fichier tel quel (ni celui de la série 4) à la date de la série 5.

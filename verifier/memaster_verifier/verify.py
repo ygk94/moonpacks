@@ -290,8 +290,12 @@ def verify_mechanics(rep: Report, ev: dict, table: dict, acc: bytes, mech: dict 
             rep.check(n == mech["pity_before"], f"compteur de pitié avant le tirage : {n}", f"compteur de pitié journalisé {n} ≠ rejoué {mech['pity_before']}")
         if isinstance(n, int):
             g, r, pp = core.pity_is_gold(m["pity"], n, acc)
-            rep.check(pe.get("gold_roll") == r, f"gold_roll = roll(acc, 0, 2) mod 10⁶ = {r}", f"gold_roll {pe.get('gold_roll')} ≠ {r}")
-            rep.check(pe.get("p_ppm") == pp, f"p = min(10⁶, p0 + k × {n}) = {pp} ppm", f"p journalisé {pe.get('p_ppm')} ≠ {pp}")
+            if core.pity_legacy(m["pity"]):
+                rep.check(pe.get("gold_roll") == r, f"gold_roll = roll(acc, 0, 2) mod 10⁶ = {r}", f"gold_roll {pe.get('gold_roll')} ≠ {r}")
+                rep.check(pe.get("p_ppm") == pp, f"p = min(10⁶, p0 + k × {n}) = {pp} ppm", f"p journalisé {pe.get('p_ppm')} ≠ {pp}")
+            else:
+                rep.check(pe.get("gold_roll") == r, f"gold_roll = roll(acc, 0, 2) mod 10⁹ = {r}", f"gold_roll {pe.get('gold_roll')} ≠ {r}")
+                rep.check(pe.get("p_ppb") == pp, f"p = min(p_max, p0 + k × {n}) = {pp} ppb", f"p journalisé {pe.get('p_ppb')} ≠ {pp}")
             rep.check(pe.get("gold") == g, f"gold pack (pitié) : {g}", f"décision de pitié {pe.get('gold')} ≠ {g}")
             pity_gold = g
         else:
@@ -300,7 +304,7 @@ def verify_mechanics(rep: Report, ev: dict, table: dict, acc: bytes, mech: dict 
     rep.check(em.get("mode") == mode, f"table de taux : {mode}", f"table de taux journalisée {em.get('mode')} ≠ {mode}")
     if m.get("pity") and isinstance((em.get("pity") or {}).get("before"), int):
         n = em["pity"]["before"]
-        after = n + 1 if mode == "base" else 0
+        after = core.pity_after(m["pity"], n, mode)
         rep.check(em["pity"].get("after") == after, f"compteur de pitié après : {after}", f"compteur après {em['pity'].get('after')} ≠ {after}")
     for k in ("burn_seq", "resurrect_seq"):
         if k in mech:

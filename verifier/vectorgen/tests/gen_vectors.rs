@@ -364,10 +364,14 @@ fn mech_vectors() {
         let mut table = rand_table(&mut rng);
         let mech = Mechanics {
             gold: rng.chance(4, 5).then(|| rand_gold(&mut rng)),
-            pity: rng.chance(4, 5).then(|| PityParams {
-                p0_ppm: rng.below(300_000) as u32,
-                k_ppm: rng.below(100_000) as u32,
-                n_max: 1 + rng.below(30) as u32,
+            pity: rng.chance(4, 5).then(|| {
+                let p0_ppb = rng.below(300_000_000) as u32;
+                PityParams {
+                    p0_ppb,
+                    k_ppb: rng.below(100_000_000) as u32,
+                    p_max_ppb: p0_ppb + rng.below(700_000_001) as u32,
+                    n_max: rng.chance(1, 2).then(|| 1 + rng.below(30) as u32),
+                }
             }),
             burn: rng.chance(3, 4).then(|| BurnParams {
                 floor_bps: rng.below(10_001) as u32,
@@ -400,7 +404,7 @@ fn mech_vectors() {
         let acc = rng.bytes32();
         let pity_n = rng.below(35) as u32;
         let rush = mech.rush.is_some() && rng.chance(1, 3);
-        let (pity_gold, gold_roll, p_ppm) = match &mech.pity {
+        let (pity_gold, gold_roll, p_ppb) = match &mech.pity {
             Some(p) => draw::pity_is_gold(p, pity_n, &acc),
             None => (false, draw::gold_roll(&acc), 0),
         };
@@ -452,8 +456,9 @@ fn mech_vectors() {
             "pity_n": pity_n,
             "rush": rush,
             "gold_roll": gold_roll,
-            "p_ppm": p_ppm,
+            "p_ppb": p_ppb,
             "pity_gold": pity_gold,
+            "pity_after": draw::pity_after(pity_n, pity_gold),
             "mode": mode,
             "minted": minted_before,
             "mythic_minted": mythic_before,

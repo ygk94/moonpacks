@@ -110,7 +110,7 @@ def construire_types(cfg: dict, tables: dict, par: dict) -> dict[str, V.TypePack
     gp = par["gold_pack"]
     return {
         "normal": V.pack_normal(cfg, tables["normal"]),
-        "gold": V.pack_gold(cfg, tables["gold"], tuple(gp["minimums"]), gp["dernier"]),
+        "gold": V.pack_gold(cfg, tables["gold"], tuple(gp["minimums"]), gp["dernier"], gp.get("brulable")),
         "rush": V.pack_normal(cfg, tables["rush"], cfg_rush["emplacements"]["tables"], "rush"),
     }
 
@@ -118,8 +118,9 @@ def construire_types(cfg: dict, tables: dict, par: dict) -> dict[str, V.TypePack
 def population(par: dict, seed: int = 31) -> dict:
     pp, pi = par["population"], par["pitie"]
     pk = Pi.packs_par_joueur(pp["joueurs"], np.random.default_rng(seed), pp["mediane"], pp["sigma"], pp["maximum"])
-    pop = Pi.simuler_population(pk, pi["p0"], pi["k"], pi["N"], np.random.default_rng(seed + 1))
-    pop["g_inf"] = Pi.g_stationnaire(pi["p0"], pi["k"], pi["N"])
+    N, p_max = pi.get("N"), pi.get("p_max", 1.0)   # série 5 : N = None (pas de garantie), plafond p_max
+    pop = Pi.simuler_population(pk, pi["p0"], pi["k"], N, np.random.default_rng(seed + 1), p_max)
+    pop["g_inf"] = Pi.g_stationnaire(pi["p0"], pi["k"], N, p_max)
     return pop
 
 

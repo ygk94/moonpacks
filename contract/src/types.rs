@@ -231,15 +231,22 @@ pub struct ResurrectionParams {
     pub eligible: Vec<u32>,
 }
 
-/// Pitié : probabilité d'un gold pack `min(10⁶, p0_ppm + k_ppm × n)` ppm, `n` = packs consécutifs
-/// sans gold pack ; gold pack garanti quand `n = n_max − 1` ; `n` repart à 0 après un gold pack.
+/// Pitié : probabilité d'un gold pack `min(p_max_ppb, p0_ppb + k_ppb × n)` en parties par milliard
+/// (10⁹), `n` = packs consécutifs sans gold pack du compte dans la série. `n` repart à 0 après un gold
+/// pack, et seulement après un gold pack (un pack rush compte comme un pack sans gold pack).
+/// Sans `n_max`, aucun gold pack n'est garanti ; avec `n_max = N`, le N-ième pack sans gold pack en est
+/// un (garantie optionnelle, gardée pour les tests).
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PityParams {
-    pub p0_ppm: u32,
-    pub k_ppm: u32,
-    /// N : le N-ième pack sans gold pack est un gold pack (N = 1 : tous les packs sont or).
-    pub n_max: u32,
+    /// Probabilité de départ (n = 0), en ppb : 20 000 = 1 sur 50 000.
+    pub p0_ppb: u32,
+    /// Hausse par pack sans gold pack, en ppb.
+    pub k_ppb: u32,
+    /// Plafond de la probabilité, en ppb (≥ `p0_ppb`) : 40 000 = 1 sur 25 000.
+    pub p_max_ppb: u32,
+    /// Garantie optionnelle : `Some(N)` = le N-ième pack sans gold pack est un gold pack (N = 1 : tous).
+    pub n_max: Option<u32>,
 }
 
 /// Rareté pilotée par les burns : poids brut d'une brûlable
@@ -368,11 +375,11 @@ pub struct Series {
     /// `mythic_minted[j]` pour `table.mythics[j]`.
     pub mythic_minted: Vec<u32>,
     pub revealed_mythics: Vec<Option<RevealedMythic>>,
-    /// Horodatage (ms) de la révélation de chaque mythique (0 tant qu'elle est scellée).
+    /// Horodatage (ms) de la révélation de chaque mythique (0 tant qu'elle est scellée). Plus lu par
+    /// les métadonnées (anonymes, sans `updated_at`) ; gardé pour les vues et la disposition borsh.
     pub mythic_revealed_ms: Vec<u64>,
     /// Cartes mythiques créées scellées (bornées par le plafond), listées dans `mythic_revealed`
-    /// puis vidées à la révélation. Leurs métadonnées portent `updated_at` (date de révélation),
-    /// déduit de la date du tirage, sans relire cette liste.
+    /// puis vidées à la révélation.
     pub sealed_tokens: Vec<Vec<TokenId>>,
     /// Stockage du pire cas d'un booster, en octets, calculé à l'ouverture.
     pub storage_per_pack: u64,

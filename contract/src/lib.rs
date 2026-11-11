@@ -101,6 +101,11 @@ pub const PITY_ENTRY_BYTES: u64 = 120;
 pub const RUSH_ENTRY_BYTES: u64 = 130;
 /// Marge.
 pub const PACK_MARGIN_BYTES: u64 = 64;
+/// Métadonnées publiques de toute mythique (scellée ou révélée) : rien qui trahisse le coin.
+pub const MYTHIC_TITLE: &str = "?";
+pub const MYTHIC_DESCRIPTION: &str = "?";
+/// Image « ? » (SVG en URI `data:`, 500 × 700 comme les cartes), identique pour toutes les mythiques.
+pub const MYTHIC_MEDIA: &str = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20500%20700'%3E%3Crect%20width='500'%20height='700'%20rx='24'%20fill='%230b0507'/%3E%3Ctext%20x='250'%20y='470'%20font-size='360'%20font-family='serif'%20font-weight='700'%20fill='%23ffcf4a'%20text-anchor='middle'%3E%3F%3C/text%3E%3C/svg%3E";
 /// Dépôt d'une annonce de marché.
 pub const LISTING_DEPOSIT: NearToken = NearToken::from_millinear(5);
 
@@ -119,6 +124,8 @@ pub const DEFAULT_ORACLE_DELAY_BLOCKS: u64 = 144_000;
 /// Borne de l'a priori des burns (`BurnParams::prior_k`).
 pub const MAX_BURN_PRIOR_K: u32 = 1_000_000;
 pub const PPM: u64 = 1_000_000;
+/// Résolution de la pitié (parties par milliard).
+pub const PPB: u64 = 1_000_000_000;
 /// Paliers au plus par table de valeur.
 pub const MAX_VALUE_TIERS: usize = 32;
 /// Bornes de la table de valeur normale (20 % à 200 % du prix).
@@ -398,69 +405,23 @@ impl Contract {
         }
     }
 
-    /// Métadonnées NEP-177 d'une mythique : scellée tant que l'engagement n'est pas révélé, puis
-    /// révélée (avec `updated_at` = date de révélation pour une carte créée scellée, c'est-à-dire
-    /// tirée au plus tard à la date de la révélation ; une carte tirée dans la même milliseconde
-    /// prend `updated_at = issued_at`).
-    pub(crate) fn mythic_metadata(
-        series_id: u32,
-        series: &Series,
-        index: u32,
-        pack_id: u64,
-        issued_at_ms: u64,
-    ) -> TokenMetadata {
-        let issued_at = Some(issued_at_ms.to_string());
-        let j = index as usize;
-        let m = &series.table.mythics[j];
-        match &series.revealed_mythics[j] {
-            Some(r) => {
-                let mut meta = Self::revealed_mythic_metadata(series_id, m, r, pack_id, issued_at);
-                if issued_at_ms <= series.mythic_revealed_ms[j] {
-                    meta.updated_at = Some(series.mythic_revealed_ms[j].to_string());
-                }
-                meta
-            }
-            None => {
-                let extra = near_sdk::serde_json::json!({
-                    "series_id": series_id,
-                    "rarity": "mythic",
-                    "sealed": true,
-                    "mythic_index": index,
-                    "commitment": m.commitment,
-                    "pack_id": pack_id,
-                });
-                TokenMetadata {
-                    title: Some("Mythique scellée".to_string()),
-                    copies: Some(m.cap as u64),
-                    issued_at,
-                    extra: Some(extra.to_string()),
-                    ..Default::default()
-                }
-            }
-        }
-    }
-
-    pub(crate) fn revealed_mythic_metadata(
-        series_id: u32,
-        m: &MythicCommitment,
-        r: &RevealedMythic,
-        pack_id: u64,
-        issued_at: Option<String>,
-    ) -> TokenMetadata {
+    /// Métadonnées NEP-177 d'une mythique : **anonymes, avant comme après la révélation**. Titre
+    /// « ? », description « ? », image « ? » (`MYTHIC_MEDIA`, la même pour toutes les mythiques),
+    /// ni référence, ni `card_id`, ni engagement, ni index de mythique, ni adossement, ni
+    /// `updated_at` : les mythiques d'une série sont indiscernables entre elles dans leurs
+    /// métadonnées, et rien n'y trahit le coin. (L'engagement, lui, reste vérifiable : voir
+    /// `get_mythic_commitments` et l'événement `mythic_revealed`.)
+    pub(crate) fn mythic_metadata(series_id: u32, pack_id: u64, issued_at_ms: u64) -> TokenMetadata {
         let extra = near_sdk::serde_json::json!({
             "series_id": series_id,
-            "card_id": r.card_id,
             "rarity": "mythic",
-            "burnable": r.content.backing.is_some(),
-            "commitment": m.commitment,
             "pack_id": pack_id,
         });
         TokenMetadata {
-            title: Some(r.content.title.clone()),
-            media: r.content.media.clone(),
-            reference: r.content.reference.clone(),
-            copies: Some(m.cap as u64),
-            issued_at,
+            title: Some(MYTHIC_TITLE.to_string()),
+            description: Some(MYTHIC_DESCRIPTION.to_string()),
+            media: Some(MYTHIC_MEDIA.to_string()),
+            issued_at: Some(issued_at_ms.to_string()),
             extra: Some(extra.to_string()),
             ..Default::default()
         }

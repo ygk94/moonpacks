@@ -11,7 +11,7 @@
 //!
 //! Mécaniques (`docs/mecaniques-spec.md`), toutes désactivées pour une table sans `mechanics` :
 //! - la table de poids de rareté du pack (base, or, rush) est choisie avant les emplacements ;
-//!   pitié : `gold_roll = u128_be(sha256(acc || 0x00 || 0x02)[0..16]) mod 10⁶` ;
+//!   pitié : `gold_roll = u128_be(sha256(acc || 0x00 || 0x02)[0..16]) mod 10⁹` ;
 //! - rareté pilotée par les burns : le tirage de rareté ne change pas ; dans la rareté, les
 //!   brûlables prennent un poids brut `max(⌊w × (e − b + K) / (e + K)⌋, ⌊w × plancher⌋, 1)` renormalisé pour
 //!   que leur part totale reste celle de leurs poids de base (`in_rarity_weight`) ;
@@ -33,6 +33,8 @@ pub const TAG_CARD: u8 = 1;
 pub const TAG_GOLD: u8 = 2;
 pub const TAG_VALUE: u8 = 3;
 pub const PPM: u64 = 1_000_000;
+/// Résolution de la pitié : parties par milliard (1 sur 50 000 = 20 000 ppb).
+pub const PPB: u64 = 1_000_000_000;
 
 pub fn roll(acc: &[u8; 32], slot: u8, tag: u8) -> u128 {
     let mut buf = Vec::with_capacity(34);
@@ -371,21 +373,34 @@ fn first_unlimited_common(cards: &[DrawCard]) -> u32 {
 
 // ------------------------------------------------------------------ mécaniques
 
-/// Probabilité (ppm) d'un gold pack après `n` packs consécutifs sans gold pack.
-pub fn pity_p_ppm(p: &PityParams, n: u32) -> u64 {
-    (p.p0_ppm as u64 + p.k_ppm as u64 * n as u64).min(PPM)
+/// Probabilité (ppb) d'un gold pack après `n` packs consécutifs sans gold pack :
+/// `min(p_max_ppb, p0_ppb + k_ppb × n)` (calcul en u128, sans dépassement ; ≤ 10⁹ par validation).
+pub fn pity_p_ppb(p: &PityParams, n: u32) -> u64 {
+    let x = p.p0_ppb as u128 + p.k_ppb as u128 * n as u128;
+    x.min(p.p_max_ppb as u128).min(PPB as u128) as u64
 }
 
-/// `gold_roll = u128_be(sha256(acc || 0x00 || 0x02)[0..16]) mod 10⁶`.
+/// `gold_roll = u128_be(sha256(acc || 0x00 || 0x02)[0..16]) mod 10⁹`.
 pub fn gold_roll(acc: &[u8; 32]) -> u64 {
-    (roll(acc, 0, TAG_GOLD) % PPM as u128) as u64
+    (roll(acc, 0, TAG_GOLD) % PPB as u128) as u64
 }
 
-/// Pitié : (gold pack ?, gold_roll, probabilité en ppm). Garanti quand `n + 1 ≥ n_max`.
+/// Pitié : (gold pack ?, gold_roll, probabilité en ppb). Gold pack si `gold_roll < p(n)`, ou si la
+/// garantie optionnelle `n_max` est atteinte (`n + 1 ≥ n_max`).
 pub fn pity_is_gold(p: &PityParams, n: u32, acc: &[u8; 32]) -> (bool, u64, u64) {
     let r = gold_roll(acc);
-    let pp = pity_p_ppm(p, n);
-    (n.saturating_add(1) >= p.n_max || r < pp, r, pp)
+    let pp = pity_p_ppb(p, n);
+    let guaranteed = p.n_max.is_some_and(|m| n.saturating_add(1) >= m);
+    (guaranteed || r < pp, r, pp)
+}
+
+/// Compteur après le tirage : 0 après un gold pack, `n + 1` sinon (pack normal ou rush).
+pub fn pity_after(n: u32, gold: bool) -> u32 {
+    if gold {
+        0
+    } else {
+        n.saturating_add(1)
+    }
 }
 
 /// Table de taux du pack : la pitié prime (table or), puis le rush (sa propre table), sinon la base.

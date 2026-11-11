@@ -76,15 +76,14 @@ def metadonnees_carte(carte: Carte, svg: bytes, base_url: str = "") -> tuple[dic
 
 
 def metadonnees_dos(svg: bytes, base_url: str = "", carte: Carte | None = None) -> dict:
-    """Métadonnées d'une mythique avant révélation : rien sur le recto.
-
-    Avec `carte` (mythique scellée v2), seuls son id stable et son N° (« M1 ») sont ajoutés."""
-    extra = {"rarete": "mythique", "scellee": True, "non_affiliation": MENTION}
-    if carte is not None:
-        extra.update(identifiant=carte.identifiant, numero=carte.numero)
+    """Métadonnées de toute mythique, avant comme après la révélation : titre « ? », description
+    « ? », image « ? » (le dos commun). Rien qui trahisse le coin, et rien qui distingue une mythique
+    d'une autre : `carte` est ignorée (ni id, ni N°), les JSON des mythiques sont identiques."""
+    del carte
+    extra = {"rarete": "mythique", "non_affiliation": MENTION}
     return {
-        "title": "Carte mythique scellée",
-        "description": f"Carte Memaster mythique, scellée jusqu'à la révélation. {MENTION}",
+        "title": "?",
+        "description": "?",
         "media": f"{base_url}dos-mythique.svg",
         "media_hash": hash_b64(svg),
         "extra": json.dumps(extra, ensure_ascii=False, sort_keys=True),

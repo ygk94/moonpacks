@@ -407,20 +407,45 @@ fn mint_sealed(c: &mut Contract) -> String {
     c.internal_mint_slot(pid, &alice())
 }
 
+/// Métadonnées publiques d'une mythique : « ? » partout, sans rien qui trahisse le coin.
+fn assert_anonymous_mythic(c: &Contract, tid: &str) {
+    let meta = c.nft_token(tid.to_string()).unwrap().metadata.unwrap();
+    assert_eq!(meta.title.as_deref(), Some("?"));
+    assert_eq!(meta.description.as_deref(), Some("?"));
+    assert_eq!(meta.media.as_deref(), Some(crate::MYTHIC_MEDIA));
+    assert!(meta.reference.is_none() && meta.media_hash.is_none() && meta.copies.is_none());
+    assert!(meta.updated_at.is_none());
+    let extra: near_sdk::serde_json::Value = near_sdk::serde_json::from_str(meta.extra.as_deref().unwrap()).unwrap();
+    let mut keys: Vec<&str> = extra.as_object().unwrap().keys().map(|k| k.as_str()).collect();
+    keys.sort();
+    assert_eq!(keys, ["pack_id", "rarity", "series_id"], "{extra}");
+    let card = c.get_card(tid.to_string()).unwrap();
+    assert!(card.card_id.is_none() && card.backing.is_none());
+    let all = format!("{:?}{:?}", c.nft_token(tid.to_string()).unwrap().metadata, near_sdk::serde_json::to_string(&card).unwrap());
+    let commitment = &c.get_mythic_commitments(0)[0].commitment;
+    for leak in ["secret", "SECRET", commitment.as_str()] {
+        assert!(!all.contains(leak), "{leak} visible : {all}");
+    }
+}
+
 #[test]
-fn mythic_reveal_verifies_and_updates_sealed_cards() {
+fn mythic_reveal_verifies_and_metadata_stays_anonymous() {
     let mut c = setup();
     let tid = mint_sealed(&mut c);
     assert!(c.get_card(tid.clone()).unwrap().sealed);
     assert!(c.get_backing(tid.clone()).is_none());
+    assert_anonymous_mythic(&c, &tid);
+    let before = c.nft_token(tid.clone()).unwrap().metadata;
     set(owner(), NEAR, 30);
     c.reveal_mythic(0, 0, "secret".into(), SEL.into(), mythic_content());
     let card = c.get_card(tid.clone()).unwrap();
-    assert!(!card.sealed);
-    assert_eq!(card.card_id.as_deref(), Some("secret"));
+    assert!(!card.sealed, "l'engagement est ouvert");
+    // Le contenu révélé sert au burn (vue `get_backing`) et à la vérification de l'engagement…
     assert_eq!(c.get_backing(tid.clone()).unwrap().amount, U128(42));
-    let tok = c.nft_token(tid).unwrap();
-    assert_eq!(tok.metadata.unwrap().title.as_deref(), Some("SECRET"));
+    assert_eq!(c.get_mythic_commitments(0)[0].revealed.as_ref().unwrap().card_id, "secret");
+    // … mais aucune métadonnée affichée ne change.
+    assert_anonymous_mythic(&c, &tid);
+    assert_eq!(c.nft_token(tid).unwrap().metadata, before);
 }
 
 #[test]
@@ -765,10 +790,10 @@ impl Contract {
 }
 
 /// Revue, point 7 : `sealed_tokens[j]` est vidé à la révélation de la mythique j (plus rien ne le
-/// lit). `updated_at` (date de révélation) reste sur les cartes créées scellées, et seulement sur
-/// elles : il se déduit de la date du tirage du pack.
+/// lit). Les métadonnées ne changent pas (pas d'`updated_at`) : une mythique tirée avant et une
+/// tirée après la révélation ont les mêmes métadonnées, au pack et à la date près.
 #[test]
-fn reveal_clears_sealed_tokens_and_keeps_updated_at() {
+fn reveal_clears_sealed_tokens_metadata_unchanged() {
     let mut c = setup();
     let sealed = mint_sealed(&mut c);
     let pid = parse_token_id(&sealed).unwrap() / 10;
@@ -778,11 +803,13 @@ fn reveal_clears_sealed_tokens_and_keeps_updated_at() {
     testing_env!(b.build());
     c.reveal_mythic(0, 0, "secret".into(), SEL.into(), mythic_content());
     assert!(c.series_ref(0).sealed_tokens[0].is_empty(), "liste vidée à la révélation");
-    let meta = c.nft_token(sealed).unwrap().metadata.unwrap();
-    assert_eq!(meta.updated_at.as_deref(), Some("1000000"));
-    // Mythique tirée après la révélation : pas d'updated_at.
+    let meta = c.nft_token(sealed.clone()).unwrap().metadata.unwrap();
+    assert_eq!(meta.updated_at, None);
     let later = mint_sealed(&mut c);
     let lp = parse_token_id(&later).unwrap() / 10;
     c.packs.get_mut(&lp).unwrap().revealed_at_ms = 2_000_000;
-    assert_eq!(c.nft_token(later).unwrap().metadata.unwrap().updated_at, None);
+    let m2 = c.nft_token(later.clone()).unwrap().metadata.unwrap();
+    assert_eq!((m2.title, m2.description, m2.media), (meta.title, meta.description, meta.media));
+    assert_anonymous_mythic(&c, &sealed);
+    assert_anonymous_mythic(&c, &later);
 }

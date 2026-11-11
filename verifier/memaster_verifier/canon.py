@@ -120,7 +120,11 @@ def _u64(x) -> str:
 
 
 def pity_json(p: dict) -> str:
-    return _obj([("p0_ppm", _u32(p["p0_ppm"])), ("k_ppm", _u32(p["k_ppm"])), ("n_max", _u32(p["n_max"]))])
+    if "p0_ppm" in p:
+        # Ancien format (contrat d'avant le 11/11/2026, déployé sur testnet) : ppm et garantie à N.
+        return _obj([("p0_ppm", _u32(p["p0_ppm"])), ("k_ppm", _u32(p["k_ppm"])), ("n_max", _u32(p["n_max"]))])
+    return _obj([("p0_ppb", _u32(p["p0_ppb"])), ("k_ppb", _u32(p["k_ppb"])), ("p_max_ppb", _u32(p["p_max_ppb"])),
+                 ("n_max", _opt(p.get("n_max"), _u32))])
 
 
 def burn_json(b: dict) -> str:

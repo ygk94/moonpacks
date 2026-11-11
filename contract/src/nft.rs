@@ -129,13 +129,7 @@ impl Contract {
                 let burnable = c.backing.is_some() || self.resurrected.contains_key(&(sid, d.index));
                 Self::card_metadata(sid, &c, pack_id, burnable, pack.revealed_at_ms)
             }
-            CardKind::Mythic => Self::mythic_metadata(
-                sid,
-                self.series_ref(sid),
-                d.index,
-                pack_id,
-                pack.revealed_at_ms,
-            ),
+            CardKind::Mythic => Self::mythic_metadata(sid, pack_id, pack.revealed_at_ms),
         }
     }
 

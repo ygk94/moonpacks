@@ -1,6 +1,6 @@
 {
   "source": "tests/sandbox.rs mechanics_end_to_end (contrat déployé dans near-sandbox, événements réels)",
-  "table_raw": "{\"name\":\"Mécaniques\",\"price\":\"100000000000000000000000\",\"cards_per_pack\":5,\"rarity_weights\":{\"mythic\":0,\"legendary\":20,\"epic\":100,\"rare\":200,\"common\":680},\"cards\":[{\"card_id\":\"leg_a\",\"title\":\"LEG_A\",\"rarity\":\"legendary\",\"weight\":1,\"cap\":null,\"media\":\"ipfs://bafy/leg_a.png\",\"reference\":null,\"backing\":{\"asset_id\":\"nep141:leg_a.tkn.near\",\"amount\":\"1000000\"}},{\"card_id\":\"leg_b\",\"title\":\"LEG_B\",\"rarity\":\"legendary\",\"weight\":1,\"cap\":null,\"media\":\"ipfs://bafy/leg_b.png\",\"reference\":null,\"backing\":null},{\"card_id\":\"epic_a\",\"title\":\"EPIC_A\",\"rarity\":\"epic\",\"weight\":1,\"cap\":null,\"media\":\"ipfs://bafy/epic_a.png\",\"reference\":null,\"backing\":{\"asset_id\":\"nep141:epic_a.tkn.near\",\"amount\":\"1000000\"}},{\"card_id\":\"epic_b\",\"title\":\"EPIC_B\",\"rarity\":\"epic\",\"weight\":1,\"cap\":null,\"media\":\"ipfs://bafy/epic_b.png\",\"reference\":null,\"backing\":{\"asset_id\":\"nep141:epic_b.tkn.near\",\"amount\":\"1000000\"}},{\"card_id\":\"epic_c\",\"title\":\"EPIC_C\",\"rarity\":\"epic\",\"weight\":1,\"cap\":null,\"media\":\"ipfs://bafy/epic_c.png\",\"reference\":null,\"backing\":null},{\"card_id\":\"rare\",\"title\":\"RARE\",\"rarity\":\"rare\",\"weight\":1,\"cap\":null,\"media\":\"ipfs://bafy/rare.png\",\"reference\":null,\"backing\":null},{\"card_id\":\"com_a\",\"title\":\"COM_A\",\"rarity\":\"common\",\"weight\":10,\"cap\":null,\"media\":\"ipfs://bafy/com_a.png\",\"reference\":null,\"backing\":{\"asset_id\":\"nep141:com_a.tkn.near\",\"amount\":\"1000000\"}},{\"card_id\":\"com_b\",\"title\":\"COM_B\",\"rarity\":\"common\",\"weight\":10,\"cap\":null,\"media\":\"ipfs://bafy/com_b.png\",\"reference\":null,\"backing\":{\"asset_id\":\"nep141:com_b.tkn.near\",\"amount\":\"1000000\"}},{\"card_id\":\"com_c\",\"title\":\"COM_C\",\"rarity\":\"common\",\"weight\":10,\"cap\":null,\"media\":\"ipfs://bafy/com_c.png\",\"reference\":null,\"backing\":null}],\"mythics\":[],\"royalties\":[{\"account_id\":\"owner.test.near\",\"bps\":500}],\"mechanics\":{\"gold\":{\"slots\":[{\"floor\":\"rare\",\"weights\":null,\"burnable\":false},{\"floor\":\"rare\",\"weights\":null,\"burnable\":true},{\"floor\":\"epic\",\"weights\":null,\"burnable\":false},{\"floor\":\"epic\",\"weights\":null,\"burnable\":false},{\"floor\":\"legendary\",\"weights\":{\"mythic\":0,\"legendary\":80,\"epic\":0,\"rare\":0,\"common\":0},\"burnable\":false}]},\"pity\":{\"p0_ppm\":100000,\"k_ppm\":50000,\"n_max\":3},\"burn\":{\"floor_bps\":2500,\"prior_k\":2},\"rush\":{\"ratio_bps\":15000,\"min_packs\":2,\"window_blocks\":10,\"baseline_blocks\":50,\"bucket_blocks\":5,\"duration_blocks\":20,\"cooldown_blocks\":20,\"max_per_account\":3,\"weights\":{\"mythic\":0,\"legendary\":30,\"epic\":150,\"rare\":250,\"common\":570}},\"resurrection\":{\"eligible\":[1,4]},\"value\":{\"normal\":[[2000,15],[3000,13],[4000,10],[5000,10],[6000,10],[8000,10],[10000,10],[12000,8],[15000,5],[20000,9]],\"gold\":[[10000,30],[15000,25],[20000,20],[30000,13],[50000,8],[80000,4]],\"rush\":[[2000,13],[3000,12],[4000,10],[5000,10],[6000,10],[8000,10],[10000,10],[12000,9],[15000,7],[20000,9]],\"multipliers\":{\"mythic\":0,\"legendary\":20,\"epic\":5,\"rare\":2,\"common\":1}}}}",
+  "table_raw": "{\"name\":\"Mécaniques\",\"price\":\"100000000000000000000000\",\"cards_per_pack\":5,\"rarity_weights\":{\"mythic\":0,\"legendary\":20,\"epic\":100,\"rare\":200,\"common\":680},\"cards\":[{\"card_id\":\"leg_a\",\"title\":\"LEG_A\",\"rarity\":\"legendary\",\"weight\":1,\"cap\":null,\"media\":\"ipfs://bafy/leg_a.png\",\"reference\":null,\"backing\":{\"asset_id\":\"nep141:leg_a.tkn.near\",\"amount\":\"1000000\"}},{\"card_id\":\"leg_b\",\"title\":\"LEG_B\",\"rarity\":\"legendary\",\"weight\":1,\"cap\":null,\"media\":\"ipfs://bafy/leg_b.png\",\"reference\":null,\"backing\":null},{\"card_id\":\"epic_a\",\"title\":\"EPIC_A\",\"rarity\":\"epic\",\"weight\":1,\"cap\":null,\"media\":\"ipfs://bafy/epic_a.png\",\"reference\":null,\"backing\":{\"asset_id\":\"nep141:epic_a.tkn.near\",\"amount\":\"1000000\"}},{\"card_id\":\"epic_b\",\"title\":\"EPIC_B\",\"rarity\":\"epic\",\"weight\":1,\"cap\":null,\"media\":\"ipfs://bafy/epic_b.png\",\"reference\":null,\"backing\":{\"asset_id\":\"nep141:epic_b.tkn.near\",\"amount\":\"1000000\"}},{\"card_id\":\"epic_c\",\"title\":\"EPIC_C\",\"rarity\":\"epic\",\"weight\":1,\"cap\":null,\"media\":\"ipfs://bafy/epic_c.png\",\"reference\":null,\"backing\":null},{\"card_id\":\"rare\",\"title\":\"RARE\",\"rarity\":\"rare\",\"weight\":1,\"cap\":null,\"media\":\"ipfs://bafy/rare.png\",\"reference\":null,\"backing\":null},{\"card_id\":\"com_a\",\"title\":\"COM_A\",\"rarity\":\"common\",\"weight\":10,\"cap\":null,\"media\":\"ipfs://bafy/com_a.png\",\"reference\":null,\"backing\":{\"asset_id\":\"nep141:com_a.tkn.near\",\"amount\":\"1000000\"}},{\"card_id\":\"com_b\",\"title\":\"COM_B\",\"rarity\":\"common\",\"weight\":10,\"cap\":null,\"media\":\"ipfs://bafy/com_b.png\",\"reference\":null,\"backing\":{\"asset_id\":\"nep141:com_b.tkn.near\",\"amount\":\"1000000\"}},{\"card_id\":\"com_c\",\"title\":\"COM_C\",\"rarity\":\"common\",\"weight\":10,\"cap\":null,\"media\":\"ipfs://bafy/com_c.png\",\"reference\":null,\"backing\":null}],\"mythics\":[],\"royalties\":[{\"account_id\":\"owner.test.near\",\"bps\":500}],\"mechanics\":{\"gold\":{\"slots\":[{\"floor\":\"rare\",\"weights\":null,\"burnable\":false},{\"floor\":\"rare\",\"weights\":null,\"burnable\":true},{\"floor\":\"epic\",\"weights\":null,\"burnable\":false},{\"floor\":\"epic\",\"weights\":null,\"burnable\":false},{\"floor\":\"legendary\",\"weights\":{\"mythic\":0,\"legendary\":99,\"epic\":0,\"rare\":0,\"common\":0},\"burnable\":false}]},\"pity\":{\"p0_ppb\":100000000,\"k_ppb\":50000000,\"p_max_ppb\":1000000000,\"n_max\":3},\"burn\":{\"floor_bps\":2500,\"prior_k\":2},\"rush\":{\"ratio_bps\":15000,\"min_packs\":2,\"window_blocks\":10,\"baseline_blocks\":50,\"bucket_blocks\":5,\"duration_blocks\":20,\"cooldown_blocks\":20,\"max_per_account\":3,\"weights\":{\"mythic\":0,\"legendary\":30,\"epic\":150,\"rare\":250,\"common\":570}},\"resurrection\":{\"eligible\":[1,4]},\"value\":{\"normal\":[[2000,15],[3000,13],[4000,10],[5000,10],[6000,10],[8000,10],[10000,10],[12000,8],[15000,5],[20000,9]],\"gold\":[[10000,30],[15000,25],[20000,20],[30000,13],[50000,8],[80000,4]],\"rush\":[[2000,15],[3000,13],[4000,10],[5000,10],[6000,10],[8000,10],[10000,10],[12000,8],[15000,5],[20000,9]],\"multipliers\":{\"mythic\":0,\"legendary\":20,\"epic\":5,\"rare\":2,\"common\":1}}}}",
   "events": [
     {
       "standard": "memaster",
@@ -13,7 +13,7 @@
           "owner_id": "alice.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 81,
+          "block_height": 500,
           "rush": {
             "active": false,
             "window_count": 1,
@@ -37,80 +37,80 @@
           "pack_id": 0,
           "series_id": 0,
           "owner_id": "alice.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "ea46203f21d1868f2efaeec231f4f1502fa61f23f546bb7769c55241a7229521",
+          "initial_acc": "70f02e5121635248cb8602f98da2411cdd23490ae654b6536bd164d5cabcb2b6",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 82,
-              "seed": "47da51747ef05a88c8b37f6e43b712265e0546d01f482a776418f6fe0038298d",
-              "acc": "c9535448c65ebd3d302d5a997cdd475233f92ee793ccd38b4b5df3038fd974bb"
+              "block_height": 501,
+              "seed": "457d399f6ff6eb3f950a39b3c9aa0fe65cbc8e2a87697e7bac74923ce405074a",
+              "acc": "6ca68d18d06c82c532dada482c5e2e1c054e7b1b460dfc164d94f00bbc5922b1"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 83,
-              "seed": "bf3c99f9cce5c1c6a5a054a6a1edafb7b3195fd36b064647c9d5a9496f797649",
-              "acc": "c69ad928cf2bbcdd754b564559872e52c7047c697d54ae8ce23261f6599a964f"
+              "block_height": 502,
+              "seed": "daea01e6a8b3eb337b32d817a0ed6d8f0c6176815ba72bcbdaa266439643393e",
+              "acc": "867495ff8594e2783d82f6047b0c0f6e9f04c7bf4d6d40e8d1dca0de68e0773f"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 84,
-              "seed": "b754af9d9ba6e270fa98438099a906a2cc40479e4eca62655fc05bf56a8594a7",
-              "acc": "4b8bd3ead7ea120eaa00ed22f88c0757038da01549e89bcb90c4c84eaa6d5c2a"
+              "block_height": 503,
+              "seed": "881551b2a156a892a8ce40712c70c027a1122d342fa670d9a0cf8de1c6aa6ab4",
+              "acc": "8bc2bfcdade93d21210e4d491e9f74e115a7c3d25f97885b04d509baa72d52d7"
             }
           ],
-          "acc": "4b8bd3ead7ea120eaa00ed22f88c0757038da01549e89bcb90c4c84eaa6d5c2a",
+          "acc": "8bc2bfcdade93d21210e4d491e9f74e115a7c3d25f97885b04d509baa72d52d7",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "451",
+              "rarity_roll": "580",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "374",
+              "card_roll": "195",
               "kind": "visible",
-              "index": 7,
+              "index": 6,
               "token_id": "0"
             },
             {
               "slot": 1,
-              "rarity_roll": "301",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "634",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "351",
               "kind": "visible",
-              "index": 5,
+              "index": 7,
               "token_id": "1"
             },
             {
               "slot": 2,
-              "rarity_roll": "470",
+              "rarity_roll": "658",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "466",
+              "card_roll": "382",
               "kind": "visible",
-              "index": 8,
+              "index": 7,
               "token_id": "2"
             },
             {
               "slot": 3,
-              "rarity_roll": "509",
+              "rarity_roll": "839",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "152",
+              "card_roll": "196",
               "kind": "visible",
               "index": 6,
               "token_id": "3"
             },
             {
               "slot": 4,
-              "rarity_roll": "137",
+              "rarity_roll": "252",
               "rolled_rarity": "rare",
               "final_rarity": "common",
-              "card_roll": "146",
+              "card_roll": "173",
               "kind": "visible",
               "index": 6,
               "token_id": "4"
@@ -121,24 +121,24 @@
             "rush": false,
             "pity": {
               "before": 0,
-              "gold_roll": 397132,
-              "p_ppm": 100000,
+              "gold_roll": 247007411,
+              "p_ppb": 100000000,
               "gold": false,
               "after": 1
             },
             "burn_seq": 0,
             "resurrect_seq": 0,
             "value": {
-              "roll": 61,
-              "tier": 5,
-              "bps": 8000,
-              "total": "80000000000000000000000",
+              "roll": 75,
+              "tier": 6,
+              "bps": 10000,
+              "total": "100000000000000000000000",
               "amounts": [
-                "26666666666666666666668",
-                null,
-                null,
-                "26666666666666666666666",
-                "26666666666666666666666"
+                "20000000000000000000000",
+                "20000000000000000000000",
+                "20000000000000000000000",
+                "20000000000000000000000",
+                "20000000000000000000000"
               ]
             }
           }
@@ -156,7 +156,7 @@
           "owner_id": "bob.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 87,
+          "block_height": 506,
           "rush": {
             "active": false,
             "window_count": 2,
@@ -180,108 +180,108 @@
           "pack_id": 1,
           "series_id": 0,
           "owner_id": "bob.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "667e7df6495886ce4b5fcedf17550fd8d8c7353c53d391eea0c23a55c9298985",
+          "initial_acc": "ec9132018e2148ae876c8de2e7395eb1dee6ed475e93767a9ac38e17ab69fc99",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 88,
-              "seed": "4e622dd102647ab9f72ad4fd52df11c1331ee7a96869159f677cac6424b44599",
-              "acc": "1534a303675bd82d1dabff5275e6a554e1f5c927a98a6c50a92d3786f1ec183c"
+              "block_height": 507,
+              "seed": "cedbf02d5c6beb370f925617afb62b7ce545593e9a0f66ab8d1aab7235e680cd",
+              "acc": "44e6cffd83d3641d7e95aab16ec39f357e5af132c08e231137a5a67d67b09ea1"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 89,
-              "seed": "e89871e9b40540f42300ebb96994b4d2fe0843ac27876a1cca80cbb05d8cea5b",
-              "acc": "0a780e49bb1052aee8aa539ee35a1c737815e86baaf40450c190e02ddd7a87bc"
+              "block_height": 508,
+              "seed": "630f55c9f81188224de2aeb7b507c55b3d3e3143f7c7803f989b7532d51b9a50",
+              "acc": "0350811f9e63a00175dba02915d92b4f5c92d70271539b6e68144b8fe795a58b"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 90,
-              "seed": "ce2f67a86104fac32b1ff02e83bbf6a2f366b65f45e179cb270c53f4432e7330",
-              "acc": "1e02a7adda8b5ad1e5e9ce3b569e08b9a2cc4a86981c8678b745284405b240b6"
+              "block_height": 509,
+              "seed": "55caee50f5bdc2f6f0ad0308e3e34ff72b4614d1f581f8f352a4fbe2d6c30fd8",
+              "acc": "c87dfae1a6980429a25097afb2825535528dd0fce9c5162868a0f90d3e480c32"
             }
           ],
-          "acc": "1e02a7adda8b5ad1e5e9ce3b569e08b9a2cc4a86981c8678b745284405b240b6",
+          "acc": "c87dfae1a6980429a25097afb2825535528dd0fce9c5162868a0f90d3e480c32",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "798",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "312",
+              "rarity_roll": "123",
+              "rolled_rarity": "rare",
+              "final_rarity": "rare",
+              "card_roll": "0",
               "kind": "visible",
-              "index": 7,
+              "index": 5,
               "token_id": "10"
             },
             {
               "slot": 1,
-              "rarity_roll": "14",
+              "rarity_roll": "20",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "2",
+              "kind": "visible",
+              "index": 3,
+              "token_id": "11"
+            },
+            {
+              "slot": 2,
+              "rarity_roll": "94",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "5",
+              "kind": "visible",
+              "index": 4,
+              "token_id": "12"
+            },
+            {
+              "slot": 3,
+              "rarity_roll": "45",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "1",
+              "kind": "visible",
+              "index": 2,
+              "token_id": "13"
+            },
+            {
+              "slot": 4,
+              "rarity_roll": "37",
               "rolled_rarity": "legendary",
               "final_rarity": "legendary",
               "card_roll": "1",
               "kind": "visible",
               "index": 1,
-              "token_id": "11"
-            },
-            {
-              "slot": 2,
-              "rarity_roll": "550",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "409",
-              "kind": "visible",
-              "index": 8,
-              "token_id": "12"
-            },
-            {
-              "slot": 3,
-              "rarity_roll": "451",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "474",
-              "kind": "visible",
-              "index": 8,
-              "token_id": "13"
-            },
-            {
-              "slot": 4,
-              "rarity_roll": "411",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "228",
-              "kind": "visible",
-              "index": 7,
               "token_id": "14"
             }
           ],
           "mechanics": {
-            "mode": "base",
+            "mode": "gold",
             "rush": false,
             "pity": {
               "before": 0,
-              "gold_roll": 361367,
-              "p_ppm": 100000,
-              "gold": false,
-              "after": 1
+              "gold_roll": 20269556,
+              "p_ppb": 100000000,
+              "gold": true,
+              "after": 0
             },
             "burn_seq": 0,
             "resurrect_seq": 0,
             "value": {
-              "roll": 39,
+              "roll": 85,
               "tier": 3,
-              "bps": 5000,
-              "total": "50000000000000000000000",
+              "bps": 30000,
+              "total": "300000000000000000000000",
               "amounts": [
-                "25000000000000000000000",
                 null,
+                "150000000000000000000000",
                 null,
-                null,
-                "25000000000000000000000"
+                "150000000000000000000000",
+                null
               ]
             }
           }
@@ -299,7 +299,7 @@
           "owner_id": "carol.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 93,
+          "block_height": 512,
           "rush": {
             "active": false,
             "window_count": 2,
@@ -323,57 +323,57 @@
           "pack_id": 2,
           "series_id": 0,
           "owner_id": "carol.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "cf023b7a42e7d460e877b04ad7fb2d4e3068de6514ae98dc56b0e7d06ee6bc28",
+          "initial_acc": "ef5482a6e772a17412fdc1ccbf58d7afbdf38257b1d1542b3c9a5ca901ecaa01",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 94,
-              "seed": "5348b484c6164efba78cc6d75623fc69d5c34177e2a9e2769abefa192b868d38",
-              "acc": "931d61097ef17b625ce1a8f4487d566cb03438a13a4f48df5b8783daeae5b797"
+              "block_height": 513,
+              "seed": "fe13d7ed9e7e7891a006b184448563a3813be0593e3290f176fd18bcf0538e8b",
+              "acc": "aec2f39d4a3cca271ce1ff0468f41ae8861fcf90ec435c0fb7b4a4fd3ee7b9cf"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 95,
-              "seed": "15fbc6fca0a027e4e5992b086f1b0cc7d4768618fcff6c0720303deb9c66a801",
-              "acc": "fb502dce1e860afb2e3c5ce7377baadb1f6c4aeb25b10e60899c234f2fa8df49"
+              "block_height": 514,
+              "seed": "9c6d08d11d06c8ceaefcccdd455593bd64819a5a6af179e9406c57415ebc266b",
+              "acc": "6e39192b5705e60342c8e5a3c8466bd8afc4b387889ef3f19bdb14a4ef63a8dd"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 96,
-              "seed": "b5000ab8991e2e9f280f1472f4e58e03eaa03a6b39594e14742de3b2cc6d3342",
-              "acc": "428fba38d309d2a97234d3800313ce4dd0a278c26cd42df18aa482e0113d0b89"
+              "block_height": 515,
+              "seed": "8a4a13094fd80481d17d4c7348ca4ceb6e4ce023a1e6bab163c8eef997fd527c",
+              "acc": "f3d7f73d4463969e7afcfeb65cab3ff4e3f5bb03499f4dea012f56ff43dcfa61"
             }
           ],
-          "acc": "428fba38d309d2a97234d3800313ce4dd0a278c26cd42df18aa482e0113d0b89",
+          "acc": "f3d7f73d4463969e7afcfeb65cab3ff4e3f5bb03499f4dea012f56ff43dcfa61",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "288",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "963",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "54",
               "kind": "visible",
-              "index": 5,
+              "index": 6,
               "token_id": "20"
             },
             {
               "slot": 1,
-              "rarity_roll": "191",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "366",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "16",
               "kind": "visible",
-              "index": 5,
+              "index": 6,
               "token_id": "21"
             },
             {
               "slot": 2,
-              "rarity_roll": "223",
+              "rarity_roll": "295",
               "rolled_rarity": "rare",
               "final_rarity": "rare",
               "card_roll": "0",
@@ -383,20 +383,20 @@
             },
             {
               "slot": 3,
-              "rarity_roll": "785",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "593",
+              "rarity_roll": "49",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "1",
               "kind": "visible",
-              "index": 8,
+              "index": 2,
               "token_id": "23"
             },
             {
               "slot": 4,
-              "rarity_roll": "725",
+              "rarity_roll": "548",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "133",
+              "card_roll": "178",
               "kind": "visible",
               "index": 6,
               "token_id": "24"
@@ -407,24 +407,24 @@
             "rush": false,
             "pity": {
               "before": 0,
-              "gold_roll": 566283,
-              "p_ppm": 100000,
+              "gold_roll": 419566088,
+              "p_ppb": 100000000,
               "gold": false,
               "after": 1
             },
             "burn_seq": 0,
             "resurrect_seq": 0,
             "value": {
-              "roll": 96,
-              "tier": 9,
-              "bps": 20000,
-              "total": "200000000000000000000000",
+              "roll": 66,
+              "tier": 5,
+              "bps": 8000,
+              "total": "80000000000000000000000",
               "amounts": [
+                "10000000000000000000000",
+                "10000000000000000000000",
                 null,
-                null,
-                null,
-                null,
-                "200000000000000000000000"
+                "50000000000000000000000",
+                "10000000000000000000000"
               ]
             }
           }
@@ -442,7 +442,7 @@
           "owner_id": "alice.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 161,
+          "block_height": 580,
           "rush": {
             "active": false,
             "window_count": 1,
@@ -466,82 +466,82 @@
           "pack_id": 3,
           "series_id": 0,
           "owner_id": "alice.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "e7b7a45a036679c8cc2f5c1bd4c64c340bc0aa18dacbda3744794e16e73b6762",
+          "initial_acc": "f09da960a48bf22b18b5e35f2dff6b612b466d8c5b327808d8b667a4ace9b839",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 162,
-              "seed": "e7f0b3b84ad08094f48bb108d8ec302518bb995a0e964180d82b701fe923bac9",
-              "acc": "680a5a1145da2157a88a5130c25f78934ff45dfa9ae5e2bbe610c9415b39de89"
+              "block_height": 581,
+              "seed": "cff3fda2edc0ab5013ef3f258126080d222222738ea4fc7719cafca87de84af4",
+              "acc": "6c3adab1c8255f8fd2caf3e2d86fa39a656ecfaa4571f58874053e4348aa8cb4"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 163,
-              "seed": "d07ed83f4e3b036eb61404855c7fc64966e56a732e825ad98e33ebc17f8dc2a1",
-              "acc": "4abd43f64739e5956dbe7c2a91a761a52fc5b8c57745a12f05ea507b96ae0dac"
+              "block_height": 582,
+              "seed": "f84c2b782d09516afc793dc8194671d4ea89731040c549952e15efe3034eabd3",
+              "acc": "ff29ef43f366dcd055e38804cc65cec9a0073430deb744cf8b1269589fff9f24"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 164,
-              "seed": "27071431993c5096f21eec9ce3d332a60708ae4b14140c751dfe7799dc871fcb",
-              "acc": "684202fb408c65e3bce0244e12620349284feda2f53564ed6b70bbba3997fe4e"
+              "block_height": 583,
+              "seed": "588b69cab475f44dd7073f48ab9f6098c2eac8cf5e49b943adfbf0395fd94e44",
+              "acc": "1be4b145faf7fb5117444122f647254ea05446f52d53fd81ea5c589fb7faac18"
             }
           ],
-          "acc": "684202fb408c65e3bce0244e12620349284feda2f53564ed6b70bbba3997fe4e",
+          "acc": "1be4b145faf7fb5117444122f647254ea05446f52d53fd81ea5c589fb7faac18",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "286",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "646",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "94",
               "kind": "visible",
-              "index": 5,
+              "index": 6,
               "token_id": "30"
             },
             {
               "slot": 1,
-              "rarity_roll": "128",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "773",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "215",
               "kind": "visible",
-              "index": 5,
+              "index": 7,
               "token_id": "31"
             },
             {
               "slot": 2,
-              "rarity_roll": "794",
+              "rarity_roll": "492",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "385",
+              "card_roll": "275",
               "kind": "visible",
               "index": 7,
               "token_id": "32"
             },
             {
               "slot": 3,
-              "rarity_roll": "885",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "442",
+              "rarity_roll": "134",
+              "rolled_rarity": "rare",
+              "final_rarity": "rare",
+              "card_roll": "0",
               "kind": "visible",
-              "index": 8,
+              "index": 5,
               "token_id": "33"
             },
             {
               "slot": 4,
-              "rarity_roll": "106",
-              "rolled_rarity": "epic",
-              "final_rarity": "epic",
-              "card_roll": "0",
+              "rarity_roll": "365",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "25",
               "kind": "visible",
-              "index": 2,
+              "index": 6,
               "token_id": "34"
             }
           ],
@@ -550,24 +550,24 @@
             "rush": false,
             "pity": {
               "before": 1,
-              "gold_roll": 207637,
-              "p_ppm": 150000,
+              "gold_roll": 299387268,
+              "p_ppb": 150000000,
               "gold": false,
               "after": 2
             },
             "burn_seq": 0,
             "resurrect_seq": 0,
             "value": {
-              "roll": 19,
-              "tier": 1,
-              "bps": 3000,
-              "total": "30000000000000000000000",
+              "roll": 12,
+              "tier": 0,
+              "bps": 2000,
+              "total": "20000000000000000000000",
               "amounts": [
-                null,
-                null,
+                "5000000000000000000000",
+                "5000000000000000000000",
                 "5000000000000000000000",
                 null,
-                "25000000000000000000000"
+                "5000000000000000000000"
               ]
             }
           }
@@ -585,14 +585,14 @@
           "owner_id": "bob.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 167,
+          "block_height": 586,
           "rush": {
             "active": false,
             "window_count": 2,
             "baseline_count": 2,
             "triggered": true,
-            "last_trigger": 167,
-            "rush_until": 187,
+            "last_trigger": 586,
+            "rush_until": 606,
             "rush": false,
             "capped": false,
             "account_rush_packs": null
@@ -609,80 +609,80 @@
           "pack_id": 4,
           "series_id": 0,
           "owner_id": "bob.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "9b0087073871f08e1edb1af37c326935b4bee389505784e197346464f3d3d2ad",
+          "initial_acc": "f59ed2bb072614d4b507f8ce6a17ba574f50028ea69e76e0aa3afe4bb151c3d1",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 168,
-              "seed": "e6e4d98d5a95ccd328c2bb3b6470c05dd0ce34f7bfa5d8d68ceabc7091b92c98",
-              "acc": "4695fa2882c44c1d5181faa4ff3389b86a834b3289e4efc785d9337621f6157b"
+              "block_height": 587,
+              "seed": "3c1d671d425c006bef5f6ceb5ae23e66efafa8b8a3ea0123dc9f924d0e5c384d",
+              "acc": "f83ce7dc8bfdf88f777aa1336d2c47dad076476c70bfced62ddc42cf3de7bf75"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 169,
-              "seed": "5dd2ba843de7e39ed998487d449b331a3d56378927fb953aee85dcd6a2ba7916",
-              "acc": "2bdccdc78e617b2852ef367ece4286405a3f5df7adc79808302c10f46846dffb"
+              "block_height": 588,
+              "seed": "05f1d8acbff914a63668aa1e0376a85711ed4e40c567233307442b979ae7a6cd",
+              "acc": "a8070b061cc0ee967d97197386b953b0331e3a129b02479d798b3380bd4fee30"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 170,
-              "seed": "ed0e1a0aaa5683885a48df40b8fda8d4fd40a8b79527828676141efdfd184d87",
-              "acc": "3496f941686a7ef29bb68f073a4ad22b8952f845eca5646cd206526b8a6c590f"
+              "block_height": 589,
+              "seed": "2ee854e226d702d26f01354048e467f8e0b69dc276b3e7f447ac7d1e297b2279",
+              "acc": "01f934c41eba5a8c82e04de74cc00ce66931d140eac4af156aef4870b6b5c210"
             }
           ],
-          "acc": "3496f941686a7ef29bb68f073a4ad22b8952f845eca5646cd206526b8a6c590f",
+          "acc": "01f934c41eba5a8c82e04de74cc00ce66931d140eac4af156aef4870b6b5c210",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "144",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "448",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "376",
               "kind": "visible",
-              "index": 5,
+              "index": 7,
               "token_id": "40"
             },
             {
               "slot": 1,
-              "rarity_roll": "315",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "368",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "492",
               "kind": "visible",
-              "index": 5,
+              "index": 8,
               "token_id": "41"
             },
             {
               "slot": 2,
-              "rarity_roll": "345",
+              "rarity_roll": "825",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "64",
+              "card_roll": "428",
               "kind": "visible",
-              "index": 6,
+              "index": 8,
               "token_id": "42"
             },
             {
               "slot": 3,
-              "rarity_roll": "399",
+              "rarity_roll": "935",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "28",
+              "card_roll": "94",
               "kind": "visible",
               "index": 6,
               "token_id": "43"
             },
             {
               "slot": 4,
-              "rarity_roll": "827",
+              "rarity_roll": "339",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "35",
+              "card_roll": "119",
               "kind": "visible",
               "index": 6,
               "token_id": "44"
@@ -692,23 +692,23 @@
             "mode": "base",
             "rush": false,
             "pity": {
-              "before": 1,
-              "gold_roll": 920256,
-              "p_ppm": 150000,
+              "before": 0,
+              "gold_roll": 588486937,
+              "p_ppb": 100000000,
               "gold": false,
-              "after": 2
+              "after": 1
             },
             "burn_seq": 0,
             "resurrect_seq": 0,
             "value": {
-              "roll": 13,
+              "roll": 0,
               "tier": 0,
               "bps": 2000,
               "total": "20000000000000000000000",
               "amounts": [
-                null,
-                null,
                 "6666666666666666666668",
+                null,
+                null,
                 "6666666666666666666666",
                 "6666666666666666666666"
               ]
@@ -728,14 +728,14 @@
           "owner_id": "carol.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 173,
+          "block_height": 592,
           "rush": {
             "active": true,
             "window_count": 2,
             "baseline_count": 3,
             "triggered": false,
-            "last_trigger": 167,
-            "rush_until": 187,
+            "last_trigger": 586,
+            "rush_until": 606,
             "rush": true,
             "capped": false,
             "account_rush_packs": 1
@@ -752,47 +752,47 @@
           "pack_id": 5,
           "series_id": 0,
           "owner_id": "carol.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "1f6d88dc833a8946ceab7beb05bbf17be123629743a1d1c13566681ecdea39c0",
+          "initial_acc": "fbc79271402ee536d9fcf74fa4092dec2a385d13827b75e159126e2e1e4e6dc4",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 174,
-              "seed": "cdf7f2911ec8b4f718750bd34cd8199d5b7eee66446a5d7fcbde312c07f40e32",
-              "acc": "8221af7f27c8f662044bcaef7129e01cb00b0aa24ce267fd618d7656cbfacd1a"
+              "block_height": 593,
+              "seed": "a28f784b1c23953c59ac95383cbadd058b6371ec6ccc8ce67265127758b7fb1b",
+              "acc": "8560230f000cbad6bea2841d7cb2c3fe168e10fec1f206cf6ce48fc91ccaeec6"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 175,
-              "seed": "1845607fb3e280061218dddbcd54f74e52c320220578e138c048c7a448c1c97e",
-              "acc": "792c7f61b84af6c3366d839c62e8cbb3291e94f5d620a10c53ba7cee270321ac"
+              "block_height": 594,
+              "seed": "fb84ffb44c4ef4feb4fd01c485924119b7daa1374b846bcef1dc5f26c8eaaf36",
+              "acc": "08af2b0047b7a79e29d96925fd25466a01cbd56e5ddb70400fb0a6ffc29cb489"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 176,
-              "seed": "f9e08389dab8b4f8626e979912b7ec6e51a159a860a11bd0cfc516a2b0cfadf3",
-              "acc": "c74feb10911ad19cf97973d2677f9a45e18a244030d912c100628869efcf2814"
+              "block_height": 595,
+              "seed": "2395b73811730ffeae4aff4ece248d6588540d1f202173efb64464ab7b7835f8",
+              "acc": "aafbd3bb780ba485e8e63211f398024acccf0df40cff319d785d47e029233d2a"
             }
           ],
-          "acc": "c74feb10911ad19cf97973d2677f9a45e18a244030d912c100628869efcf2814",
+          "acc": "aafbd3bb780ba485e8e63211f398024acccf0df40cff319d785d47e029233d2a",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "334",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "555",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "425",
               "kind": "visible",
-              "index": 5,
+              "index": 8,
               "token_id": "50"
             },
             {
               "slot": 1,
-              "rarity_roll": "303",
+              "rarity_roll": "393",
               "rolled_rarity": "rare",
               "final_rarity": "rare",
               "card_roll": "0",
@@ -802,30 +802,30 @@
             },
             {
               "slot": 2,
-              "rarity_roll": "755",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "193",
+              "rarity_roll": "4",
+              "rolled_rarity": "legendary",
+              "final_rarity": "legendary",
+              "card_roll": "1",
               "kind": "visible",
-              "index": 6,
+              "index": 1,
               "token_id": "52"
             },
             {
               "slot": 3,
-              "rarity_roll": "181",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "799",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "74",
               "kind": "visible",
-              "index": 5,
+              "index": 6,
               "token_id": "53"
             },
             {
               "slot": 4,
-              "rarity_roll": "277",
-              "rolled_rarity": "rare",
+              "rarity_roll": "691",
+              "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "132",
+              "card_roll": "23",
               "kind": "visible",
               "index": 6,
               "token_id": "54"
@@ -836,24 +836,24 @@
             "rush": true,
             "pity": {
               "before": 1,
-              "gold_roll": 616230,
-              "p_ppm": 150000,
+              "gold_roll": 975545113,
+              "p_ppb": 150000000,
               "gold": false,
-              "after": 0
+              "after": 2
             },
             "burn_seq": 0,
             "resurrect_seq": 0,
             "value": {
-              "roll": 65,
-              "tier": 6,
-              "bps": 10000,
-              "total": "100000000000000000000000",
+              "roll": 10,
+              "tier": 0,
+              "bps": 2000,
+              "total": "20000000000000000000000",
               "amounts": [
                 null,
                 null,
-                "50000000000000000000000",
                 null,
-                "50000000000000000000000"
+                "10000000000000000000000",
+                "10000000000000000000000"
               ]
             }
           }
@@ -871,14 +871,14 @@
           "owner_id": "alice.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 179,
+          "block_height": 598,
           "rush": {
             "active": true,
             "window_count": 2,
             "baseline_count": 4,
             "triggered": false,
-            "last_trigger": 167,
-            "rush_until": 187,
+            "last_trigger": 586,
+            "rush_until": 606,
             "rush": true,
             "capped": false,
             "account_rush_packs": 1
@@ -895,82 +895,82 @@
           "pack_id": 6,
           "series_id": 0,
           "owner_id": "alice.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "3b794b80d04a9b9d950808ca1683b9d31ff0793a313716c505b71ada1e931089",
+          "initial_acc": "8eca0928c71f840ce147b6e1a9c0c77f84aeb07d1d81d913ad4a970f0c4bd12b",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 180,
-              "seed": "b1c5d90421e3b2679412d4e5081dfd011acd0b9b4650a9229f6bf22e3857f5aa",
-              "acc": "378738cf20ab354656ca6ff124cd7cdf4cf4b02ff6b1932fc8a5338988282c6a"
+              "block_height": 599,
+              "seed": "e5634fdd00b348b7a846f47cbdcf89e28a15a0cd6c74ad29ea6e9b79f28f21b2",
+              "acc": "a9e42239798cde59746c687440871fede89a378901eba04117391ff226383df8"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 181,
-              "seed": "3c6e1af700c1b50ee0375ea6f6993c768cb3e98c46baca5a0faca8d90ad55ba4",
-              "acc": "12cc6ac6867c2b4166ab3fceffd89365761ef7204282a0f2edf451a5ccafee9a"
+              "block_height": 600,
+              "seed": "6707baf3e11081aa6ae1a74e8523dc85b711fd0575bb8b74aa0a6814ad9ea296",
+              "acc": "490cc20b359e96a54ef4afcb3d7a1d299bd0bda62ec9bdd065c83564c2af4841"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 182,
-              "seed": "3e59e4b3ad7ce1bb8630674c5ea988c2f1041e3f119c8857f4eeeaf317c4efc1",
-              "acc": "70676d6a06cb2c1e591ddbbc33e888ae767971df751d8890f8cec6a3ec5a33d1"
+              "block_height": 601,
+              "seed": "558b8953a10a06b9cb74778e4160fac29c1b42f3f2fab5868fec1e4f8e2e7fca",
+              "acc": "9c824498faf735cb3f10d820aef94616ffa78d938c9973dd58368084ae676280"
             }
           ],
-          "acc": "70676d6a06cb2c1e591ddbbc33e888ae767971df751d8890f8cec6a3ec5a33d1",
+          "acc": "9c824498faf735cb3f10d820aef94616ffa78d938c9973dd58368084ae676280",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "161",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "55",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "1",
               "kind": "visible",
-              "index": 5,
+              "index": 2,
               "token_id": "60"
             },
             {
               "slot": 1,
-              "rarity_roll": "181",
+              "rarity_roll": "180",
               "rolled_rarity": "rare",
               "final_rarity": "epic",
-              "card_roll": "3",
+              "card_roll": "1",
               "kind": "visible",
-              "index": 3,
+              "index": 2,
               "token_id": "61"
             },
             {
               "slot": 2,
-              "rarity_roll": "115",
+              "rarity_roll": "113",
               "rolled_rarity": "epic",
               "final_rarity": "epic",
-              "card_roll": "2",
+              "card_roll": "5",
               "kind": "visible",
-              "index": 3,
+              "index": 4,
               "token_id": "62"
             },
             {
               "slot": 3,
-              "rarity_roll": "42",
-              "rolled_rarity": "epic",
-              "final_rarity": "epic",
-              "card_roll": "2",
-              "kind": "visible",
-              "index": 3,
-              "token_id": "63"
-            },
-            {
-              "slot": 4,
-              "rarity_roll": "58",
+              "rarity_roll": "3",
               "rolled_rarity": "legendary",
               "final_rarity": "legendary",
               "card_roll": "1",
               "kind": "visible",
               "index": 1,
+              "token_id": "63"
+            },
+            {
+              "slot": 4,
+              "rarity_roll": "45",
+              "rolled_rarity": "legendary",
+              "final_rarity": "legendary",
+              "card_roll": "0",
+              "kind": "visible",
+              "index": 0,
               "token_id": "64"
             }
           ],
@@ -979,24 +979,24 @@
             "rush": true,
             "pity": {
               "before": 2,
-              "gold_roll": 453230,
-              "p_ppm": 200000,
+              "gold_roll": 195662208,
+              "p_ppb": 200000000,
               "gold": true,
               "after": 0
             },
             "burn_seq": 0,
             "resurrect_seq": 0,
             "value": {
-              "roll": 50,
+              "roll": 39,
               "tier": 1,
               "bps": 15000,
               "total": "150000000000000000000000",
               "amounts": [
+                "25000000000000000000000",
+                "25000000000000000000000",
                 null,
-                "50000000000000000000000",
-                "50000000000000000000000",
-                "50000000000000000000000",
-                null
+                null,
+                "100000000000000000000000"
               ]
             }
           }
@@ -1014,14 +1014,14 @@
           "owner_id": "bob.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 185,
+          "block_height": 604,
           "rush": {
             "active": true,
-            "window_count": 1,
+            "window_count": 2,
             "baseline_count": 5,
             "triggered": false,
-            "last_trigger": 167,
-            "rush_until": 187,
+            "last_trigger": 586,
+            "rush_until": 606,
             "rush": true,
             "capped": false,
             "account_rush_packs": 1
@@ -1038,251 +1038,251 @@
           "pack_id": 7,
           "series_id": 0,
           "owner_id": "bob.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "ab7b5a83b4bb5d0312fb9d65b080e0a8d35b0b21bb9668e4974004d5308e9286",
+          "initial_acc": "abcc819bc611184f2e3ac74d3e60defbba4647fcb1a161662e065c2678452650",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 186,
-              "seed": "be47a44d5113793352831c1566fcbf1aaa837f10b8bcb597ed8244b02881d2ce",
-              "acc": "7edc03e5cacb7df06326de7c8f8e5fc4ba9145597208d58182382ee412bc2eb2"
+              "block_height": 605,
+              "seed": "7c46e379676094bab31fdc8a571d6a7feeb63165121b7f11d8040049cac1dbd3",
+              "acc": "290f2749b2a870fabe35dc8ccc98f769a04e99036a076c0ced8329c12c6d6e67"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 187,
-              "seed": "cc3a713ae63d5cbc5cc7f99f034fd32cb1efcae53b77f2a3f6e6bca05a613452",
-              "acc": "4f3d039b55de465063dc0488fd59b30914cbd8077b03d804c546641a6768bb3e"
+              "block_height": 606,
+              "seed": "7487b6406e8a7f6793166e16b08da598a7af2c9e401716e2a5eaf96c9d1cf42a",
+              "acc": "4b8dcdf3df1aa3ac0e38a830d2dd8ac1cfd1afc226b338d72dea86c4e8286b2b"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 188,
-              "seed": "4c142bfbafb795b8ce86fac5ce1a9aed844b1ad6c5ad4f4d9bf829878b64e959",
-              "acc": "d19504bced0b0796c831eede3cd72d95e88edb0bb322a6e4d6b43a47bed4963d"
+              "block_height": 607,
+              "seed": "62a4c643d5d5abdd8e6b74326f95ec92c231f896bfa1851a5b0d4ce5c2df238f",
+              "acc": "475498717396a59e4acce4835a2d6f1c06dbc8bd2b45b2528d046906f824e3d6"
             }
           ],
-          "acc": "d19504bced0b0796c831eede3cd72d95e88edb0bb322a6e4d6b43a47bed4963d",
+          "acc": "475498717396a59e4acce4835a2d6f1c06dbc8bd2b45b2528d046906f824e3d6",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "8",
-              "rolled_rarity": "legendary",
-              "final_rarity": "legendary",
-              "card_roll": "0",
+              "rarity_roll": "762",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "31",
               "kind": "visible",
-              "index": 0,
+              "index": 6,
               "token_id": "70"
             },
             {
               "slot": 1,
-              "rarity_roll": "41",
-              "rolled_rarity": "epic",
-              "final_rarity": "epic",
-              "card_roll": "1",
+              "rarity_roll": "988",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "49",
               "kind": "visible",
-              "index": 2,
+              "index": 6,
               "token_id": "71"
             },
             {
               "slot": 2,
-              "rarity_roll": "115",
-              "rolled_rarity": "epic",
-              "final_rarity": "epic",
-              "card_roll": "5",
+              "rarity_roll": "390",
+              "rolled_rarity": "rare",
+              "final_rarity": "rare",
+              "card_roll": "0",
               "kind": "visible",
-              "index": 4,
+              "index": 5,
               "token_id": "72"
             },
             {
               "slot": 3,
-              "rarity_roll": "57",
+              "rarity_roll": "740",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "82",
+              "kind": "visible",
+              "index": 6,
+              "token_id": "73"
+            },
+            {
+              "slot": 4,
+              "rarity_roll": "686",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "62",
+              "kind": "visible",
+              "index": 6,
+              "token_id": "74"
+            }
+          ],
+          "mechanics": {
+            "mode": "rush",
+            "rush": true,
+            "pity": {
+              "before": 1,
+              "gold_roll": 930543528,
+              "p_ppb": 150000000,
+              "gold": false,
+              "after": 2
+            },
+            "burn_seq": 0,
+            "resurrect_seq": 0,
+            "value": {
+              "roll": 89,
+              "tier": 8,
+              "bps": 15000,
+              "total": "150000000000000000000000",
+              "amounts": [
+                "37500000000000000000000",
+                "37500000000000000000000",
+                null,
+                "37500000000000000000000",
+                "37500000000000000000000"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "pack_bought",
+      "data": [
+        {
+          "pack_id": 8,
+          "series_id": 0,
+          "owner_id": "carol.test.near",
+          "price": "100000000000000000000000",
+          "storage_prepaid": "14850000000000000000000",
+          "block_height": 610,
+          "rush": {
+            "active": false,
+            "window_count": 1,
+            "baseline_count": 6,
+            "triggered": false,
+            "last_trigger": 586,
+            "rush_until": 606,
+            "rush": false,
+            "capped": false,
+            "account_rush_packs": null
+          }
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "pack_revealed",
+      "data": [
+        {
+          "pack_id": 8,
+          "series_id": 0,
+          "owner_id": "carol.test.near",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
+          "attempt": 0,
+          "initial_acc": "07f3fd69d5f73c5193f756fe1719b4b68c2e7de2d6c123482751d2f2c524787a",
+          "seeds": [
+            {
+              "attempt": 0,
+              "step": 1,
+              "block_height": 611,
+              "seed": "6eb61dd77e8ac280254456f6e277d2980ff59b04f01d38a1a6c9a2bbbef03974",
+              "acc": "8e14b6a0e1d662237edc3ad581e02ec3fdf57052d7dfc241012923f6fc7d9036"
+            },
+            {
+              "attempt": 0,
+              "step": 2,
+              "block_height": 612,
+              "seed": "3980ea8f6825089bd50cbbe2ce7e909f9f3ff8e80c11a1df0b784a6a5e163e79",
+              "acc": "cd63ed44b58a051ff607a115a391306c29276ceeacff7081e6c5d17eb4402169"
+            },
+            {
+              "attempt": 0,
+              "step": 3,
+              "block_height": 613,
+              "seed": "320b5ef61a2a9aa7c9d3f3ba32a194ec965f48879047f75a7478bbf75ec36394",
+              "acc": "2d9fde5cbf84d667b4061e58c9fe7ddf5e3a5e08f9102b35a321733ad134805c"
+            }
+          ],
+          "acc": "2d9fde5cbf84d667b4061e58c9fe7ddf5e3a5e08f9102b35a321733ad134805c",
+          "draws": [
+            {
+              "slot": 0,
+              "rarity_roll": "65",
               "rolled_rarity": "epic",
               "final_rarity": "epic",
               "card_roll": "4",
               "kind": "visible",
               "index": 4,
-              "token_id": "73"
+              "token_id": "80"
+            },
+            {
+              "slot": 1,
+              "rarity_roll": "118",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "3",
+              "kind": "visible",
+              "index": 3,
+              "token_id": "81"
+            },
+            {
+              "slot": 2,
+              "rarity_roll": "79",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "1",
+              "kind": "visible",
+              "index": 2,
+              "token_id": "82"
+            },
+            {
+              "slot": 3,
+              "rarity_roll": "65",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "4",
+              "kind": "visible",
+              "index": 4,
+              "token_id": "83"
             },
             {
               "slot": 4,
-              "rarity_roll": "73",
+              "rarity_roll": "34",
               "rolled_rarity": "legendary",
               "final_rarity": "legendary",
               "card_roll": "0",
               "kind": "visible",
               "index": 0,
-              "token_id": "74"
+              "token_id": "84"
             }
           ],
           "mechanics": {
             "mode": "gold",
-            "rush": true,
+            "rush": false,
             "pity": {
               "before": 2,
-              "gold_roll": 299702,
-              "p_ppm": 200000,
+              "gold_roll": 697676628,
+              "p_ppb": 200000000,
               "gold": true,
               "after": 0
             },
             "burn_seq": 0,
             "resurrect_seq": 0,
             "value": {
-              "roll": 34,
+              "roll": 36,
               "tier": 1,
               "bps": 15000,
               "total": "150000000000000000000000",
               "amounts": [
-                "66666666666666666666668",
-                "16666666666666666666666",
                 null,
+                "25000000000000000000000",
+                "25000000000000000000000",
                 null,
-                "66666666666666666666666"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "standard": "memaster",
-      "version": "1.0.0",
-      "event": "pack_bought",
-      "data": [
-        {
-          "pack_id": 8,
-          "series_id": 0,
-          "owner_id": "carol.test.near",
-          "price": "100000000000000000000000",
-          "storage_prepaid": "14850000000000000000000",
-          "block_height": 191,
-          "rush": {
-            "active": false,
-            "window_count": 2,
-            "baseline_count": 6,
-            "triggered": false,
-            "last_trigger": 167,
-            "rush_until": 187,
-            "rush": false,
-            "capped": false,
-            "account_rush_packs": null
-          }
-        }
-      ]
-    },
-    {
-      "standard": "memaster",
-      "version": "1.0.0",
-      "event": "pack_revealed",
-      "data": [
-        {
-          "pack_id": 8,
-          "series_id": 0,
-          "owner_id": "carol.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
-          "attempt": 0,
-          "initial_acc": "3977fcf924caa6d8961d3b18ea3ebb7f6df7a649c8aa051443b07a01cc9d520b",
-          "seeds": [
-            {
-              "attempt": 0,
-              "step": 1,
-              "block_height": 192,
-              "seed": "e4c641898f86f552d0f8eb0179d4c56bd4e1ae296ac4464bf1f006f07c353502",
-              "acc": "306713e2654eb5e6a6512aca79eeaa894f6c6869cab6124ba3bca2bad6d1f73a"
-            },
-            {
-              "attempt": 0,
-              "step": 2,
-              "block_height": 193,
-              "seed": "255fe394e6e39e5ee2029435dd5a2984e18507fd6a4f9671d765c79041dbb5e7",
-              "acc": "24af1edb1a72814841f89cc2b8e781920ffde0334b225f4311f27adae45968ba"
-            },
-            {
-              "attempt": 0,
-              "step": 3,
-              "block_height": 194,
-              "seed": "d3f6d6fdba5c122eadabb763b4cae06a6d82bd32d96234c992d15666253c89f2",
-              "acc": "d020d1ce21c449130dfabdcc98fe3446abe8cbb2c8a70db0c40a71f1b75b0e79"
-            }
-          ],
-          "acc": "d020d1ce21c449130dfabdcc98fe3446abe8cbb2c8a70db0c40a71f1b75b0e79",
-          "draws": [
-            {
-              "slot": 0,
-              "rarity_roll": "798",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "394",
-              "kind": "visible",
-              "index": 7,
-              "token_id": "80"
-            },
-            {
-              "slot": 1,
-              "rarity_roll": "92",
-              "rolled_rarity": "epic",
-              "final_rarity": "epic",
-              "card_roll": "4",
-              "kind": "visible",
-              "index": 4,
-              "token_id": "81"
-            },
-            {
-              "slot": 2,
-              "rarity_roll": "461",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "439",
-              "kind": "visible",
-              "index": 8,
-              "token_id": "82"
-            },
-            {
-              "slot": 3,
-              "rarity_roll": "327",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "462",
-              "kind": "visible",
-              "index": 8,
-              "token_id": "83"
-            },
-            {
-              "slot": 4,
-              "rarity_roll": "218",
-              "rolled_rarity": "rare",
-              "final_rarity": "common",
-              "card_roll": "36",
-              "kind": "visible",
-              "index": 6,
-              "token_id": "84"
-            }
-          ],
-          "mechanics": {
-            "mode": "base",
-            "rush": false,
-            "pity": {
-              "before": 0,
-              "gold_roll": 436342,
-              "p_ppm": 100000,
-              "gold": false,
-              "after": 1
-            },
-            "burn_seq": 0,
-            "resurrect_seq": 0,
-            "value": {
-              "roll": 86,
-              "tier": 8,
-              "bps": 15000,
-              "total": "150000000000000000000000",
-              "amounts": [
-                "75000000000000000000000",
-                null,
-                null,
-                null,
-                "75000000000000000000000"
+                "100000000000000000000000"
               ]
             }
           }
@@ -1300,14 +1300,14 @@
           "owner_id": "alice.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 197,
+          "block_height": 616,
           "rush": {
             "active": false,
             "window_count": 2,
             "baseline_count": 7,
             "triggered": false,
-            "last_trigger": 167,
-            "rush_until": 187,
+            "last_trigger": 586,
+            "rush_until": 606,
             "rush": false,
             "capped": false,
             "account_rush_packs": null
@@ -1324,82 +1324,82 @@
           "pack_id": 9,
           "series_id": 0,
           "owner_id": "alice.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "4090fe89687185e059354f4a92136c7fcb9f0c6e69e9e1598296c19133674835",
+          "initial_acc": "8ac4cf4e722db95f500f7046811317e4e11cdee5f9a55b9b9879df284328b84b",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 198,
-              "seed": "cf2c0b63f732b6637f9f2149ade841cec513c83d7801a925a267d6ba317d9964",
-              "acc": "d3751389ed0f709028312363d3014dc61688a8644d4ae14f745742f7e4171ed5"
+              "block_height": 617,
+              "seed": "0b90a8962d74e8f89dce8e62f25a8606b95c107868557737dc9e74fd31eae422",
+              "acc": "b11b0ef6058112721150af752f08f203b51c053377d8676b9195ff3341dae820"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 199,
-              "seed": "ad1be4878dc558094fab37b8fed7e96702357c72e8c9e07ae74aeca81392f1b7",
-              "acc": "a4fe0541f2b3fd9bce316c607dd5707bbe1c588ec943faa6e9c108955b2ab5c0"
+              "block_height": 618,
+              "seed": "eaf5f9af61c9b5c80b34b574be663c2953be99b9c2a2901867028d11b40e9eac",
+              "acc": "f295b2d420e71409a54a6741c3a3d2ea26d2f03143dcd5bd831f88b29a4568da"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 200,
-              "seed": "2a23a1e43d881bae8faf53ef37e7c2629c5c96b075cac44dbc44d6818258e86b",
-              "acc": "7e53db6fb69f79a4128e61e0518561f7b02aab2eede9821b1f48dd4328750b9b"
+              "block_height": 619,
+              "seed": "d3e165be7154ad6db989c0d226db2bc08a86f542fd742ab9b8089c370dece17b",
+              "acc": "f5edc30410470095b777b68a6dc92a41b182edfae8141a91926670ef9aa7fc8d"
             }
           ],
-          "acc": "7e53db6fb69f79a4128e61e0518561f7b02aab2eede9821b1f48dd4328750b9b",
+          "acc": "f5edc30410470095b777b68a6dc92a41b182edfae8141a91926670ef9aa7fc8d",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "371",
+              "rarity_roll": "842",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "30",
+              "card_roll": "344",
               "kind": "visible",
-              "index": 6,
+              "index": 7,
               "token_id": "90"
             },
             {
               "slot": 1,
-              "rarity_roll": "767",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "157",
+              "rarity_roll": "222",
+              "rolled_rarity": "rare",
+              "final_rarity": "rare",
+              "card_roll": "0",
               "kind": "visible",
-              "index": 6,
+              "index": 5,
               "token_id": "91"
             },
             {
               "slot": 2,
-              "rarity_roll": "23",
+              "rarity_roll": "84",
               "rolled_rarity": "epic",
               "final_rarity": "epic",
-              "card_roll": "0",
+              "card_roll": "1",
               "kind": "visible",
               "index": 2,
               "token_id": "92"
             },
             {
               "slot": 3,
-              "rarity_roll": "123",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "338",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "217",
               "kind": "visible",
-              "index": 5,
+              "index": 7,
               "token_id": "93"
             },
             {
               "slot": 4,
-              "rarity_roll": "398",
+              "rarity_roll": "366",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "290",
+              "card_roll": "40",
               "kind": "visible",
-              "index": 7,
+              "index": 6,
               "token_id": "94"
             }
           ],
@@ -1408,24 +1408,24 @@
             "rush": false,
             "pity": {
               "before": 0,
-              "gold_roll": 970654,
-              "p_ppm": 100000,
+              "gold_roll": 669546550,
+              "p_ppb": 100000000,
               "gold": false,
               "after": 1
             },
             "burn_seq": 0,
             "resurrect_seq": 0,
             "value": {
-              "roll": 57,
-              "tier": 4,
-              "bps": 6000,
-              "total": "60000000000000000000000",
+              "roll": 76,
+              "tier": 6,
+              "bps": 10000,
+              "total": "100000000000000000000000",
               "amounts": [
-                "7500000000000000000000",
-                "7500000000000000000000",
-                "37500000000000000000000",
+                "12500000000000000000000",
                 null,
-                "7500000000000000000000"
+                "62500000000000000000000",
+                "12500000000000000000000",
+                "12500000000000000000000"
               ]
             }
           }
@@ -1443,14 +1443,14 @@
           "owner_id": "bob.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 203,
+          "block_height": 622,
           "rush": {
             "active": false,
             "window_count": 2,
             "baseline_count": 8,
             "triggered": false,
-            "last_trigger": 167,
-            "rush_until": 187,
+            "last_trigger": 586,
+            "rush_until": 606,
             "rush": false,
             "capped": false,
             "account_rush_packs": null
@@ -1467,108 +1467,108 @@
           "pack_id": 10,
           "series_id": 0,
           "owner_id": "bob.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "a7605922c184327082ba82d7243392f725796f1266ba51b1b7d2fbaf3bb98e41",
+          "initial_acc": "be32b695360cbb12765750d3b328097644c6cd97dc1f0ae9e7a5c3a4d60303f8",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 204,
-              "seed": "ce99d56f3697d541407759e52cf80302628c708e4a1ceeba92582c20292d8e48",
-              "acc": "d96dbc2a071822b6c4c830d22e7f9655ab6fc29ee1f2e732dffc3fa55390f061"
+              "block_height": 623,
+              "seed": "65a937e54b2627755419611997b1db222e05724e5a69ea2b6a9f6642bc820468",
+              "acc": "bd7da40a5ae42cc682251ebfeceef9f971a0cd57df23413e7100965ee27d4666"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 205,
-              "seed": "2fc10b005d106f838b6ca95e0075c764ed89bfa9b0ce3236260bdb6923da814f",
-              "acc": "a120cc261061ef2dcf30deb17aea8bc67b15fac069fadc0e75f944dfbdeac061"
+              "block_height": 624,
+              "seed": "e0ecb0d46abe731530e2e58d591ce9524c187d0a7e76807fc8c9d79cea41cbd6",
+              "acc": "fc5fbfb352ad7785e75ae65e05364a0252ff2384844a0f5d261036ffd8d977ae"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 206,
-              "seed": "8c7729b37c6f0d72716b7c9fa8107449e11e6f0df90400f883b8496f6f1c6b02",
-              "acc": "9fe189cbfa0af2ced1055d45896481c57a3a59f04b80fac4c683b36c7d966d17"
+              "block_height": 625,
+              "seed": "1c65953438f58888fd8b4ff14fda20eeca0e9bc23eea36265f1ecdbd6025caf3",
+              "acc": "5a966bd5cd6a79f3f8c2ccf0b52a03b0da36ae6a97e327365ef139b919535a67"
             }
           ],
-          "acc": "9fe189cbfa0af2ced1055d45896481c57a3a59f04b80fac4c683b36c7d966d17",
+          "acc": "5a966bd5cd6a79f3f8c2ccf0b52a03b0da36ae6a97e327365ef139b919535a67",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "509",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "546",
+              "rarity_roll": "118",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "2",
               "kind": "visible",
-              "index": 8,
+              "index": 3,
               "token_id": "100"
             },
             {
               "slot": 1,
-              "rarity_roll": "651",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "403",
+              "rarity_roll": "42",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "3",
               "kind": "visible",
-              "index": 8,
+              "index": 3,
               "token_id": "101"
             },
             {
               "slot": 2,
-              "rarity_roll": "238",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "52",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "3",
               "kind": "visible",
-              "index": 5,
+              "index": 3,
               "token_id": "102"
             },
             {
               "slot": 3,
-              "rarity_roll": "279",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "16",
+              "rolled_rarity": "legendary",
+              "final_rarity": "legendary",
+              "card_roll": "1",
               "kind": "visible",
-              "index": 5,
+              "index": 1,
               "token_id": "103"
             },
             {
               "slot": 4,
-              "rarity_roll": "812",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "258",
+              "rarity_roll": "76",
+              "rolled_rarity": "legendary",
+              "final_rarity": "legendary",
+              "card_roll": "1",
               "kind": "visible",
-              "index": 7,
+              "index": 1,
               "token_id": "104"
             }
           ],
           "mechanics": {
-            "mode": "base",
+            "mode": "gold",
             "rush": false,
             "pity": {
-              "before": 0,
-              "gold_roll": 546641,
-              "p_ppm": 100000,
-              "gold": false,
-              "after": 1
+              "before": 2,
+              "gold_roll": 536498841,
+              "p_ppb": 200000000,
+              "gold": true,
+              "after": 0
             },
             "burn_seq": 0,
             "resurrect_seq": 0,
             "value": {
-              "roll": 96,
-              "tier": 9,
-              "bps": 20000,
-              "total": "200000000000000000000000",
+              "roll": 22,
+              "tier": 0,
+              "bps": 10000,
+              "total": "100000000000000000000000",
               "amounts": [
+                "33333333333333333333334",
+                "33333333333333333333333",
+                "33333333333333333333333",
                 null,
-                null,
-                null,
-                null,
-                "200000000000000000000000"
+                null
               ]
             }
           }
@@ -1581,10 +1581,10 @@
       "event": "card_redeemed",
       "data": [
         {
-          "token_id": "3",
+          "token_id": "0",
           "owner_id": "alice.test.near",
           "asset_id": "nep141:com_a.tkn.near",
-          "amount": "26666666666666666666666",
+          "amount": "20000000000000000000000",
           "replaced_by": null,
           "series_id": 0,
           "kind": "visible",
@@ -1599,10 +1599,10 @@
       "event": "card_redeemed",
       "data": [
         {
-          "token_id": "4",
+          "token_id": "3",
           "owner_id": "alice.test.near",
           "asset_id": "nep141:com_a.tkn.near",
-          "amount": "26666666666666666666666",
+          "amount": "20000000000000000000000",
           "replaced_by": null,
           "series_id": 0,
           "kind": "visible",
@@ -1617,10 +1617,10 @@
       "event": "card_redeemed",
       "data": [
         {
-          "token_id": "24",
-          "owner_id": "carol.test.near",
+          "token_id": "4",
+          "owner_id": "alice.test.near",
           "asset_id": "nep141:com_a.tkn.near",
-          "amount": "200000000000000000000000",
+          "amount": "20000000000000000000000",
           "replaced_by": null,
           "series_id": 0,
           "kind": "visible",
@@ -1635,10 +1635,10 @@
       "event": "card_redeemed",
       "data": [
         {
-          "token_id": "34",
-          "owner_id": "alice.test.near",
+          "token_id": "13",
+          "owner_id": "bob.test.near",
           "asset_id": "nep141:epic_a.tkn.near",
-          "amount": "25000000000000000000000",
+          "amount": "150000000000000000000000",
           "replaced_by": null,
           "series_id": 0,
           "kind": "visible",
@@ -1653,15 +1653,105 @@
       "event": "card_redeemed",
       "data": [
         {
-          "token_id": "42",
-          "owner_id": "bob.test.near",
+          "token_id": "20",
+          "owner_id": "carol.test.near",
           "asset_id": "nep141:com_a.tkn.near",
-          "amount": "6666666666666666666668",
+          "amount": "10000000000000000000000",
           "replaced_by": null,
           "series_id": 0,
           "kind": "visible",
           "index": 6,
           "burn_seq": 5
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "21",
+          "owner_id": "carol.test.near",
+          "asset_id": "nep141:com_a.tkn.near",
+          "amount": "10000000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 6,
+          "burn_seq": 6
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "23",
+          "owner_id": "carol.test.near",
+          "asset_id": "nep141:epic_a.tkn.near",
+          "amount": "50000000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 2,
+          "burn_seq": 7
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "24",
+          "owner_id": "carol.test.near",
+          "asset_id": "nep141:com_a.tkn.near",
+          "amount": "10000000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 6,
+          "burn_seq": 8
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "30",
+          "owner_id": "alice.test.near",
+          "asset_id": "nep141:com_a.tkn.near",
+          "amount": "5000000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 6,
+          "burn_seq": 9
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "34",
+          "owner_id": "alice.test.near",
+          "asset_id": "nep141:com_a.tkn.near",
+          "amount": "5000000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 6,
+          "burn_seq": 10
         }
       ]
     },
@@ -1679,7 +1769,7 @@
           "series_id": 0,
           "kind": "visible",
           "index": 6,
-          "burn_seq": 6
+          "burn_seq": 11
         }
       ]
     },
@@ -1697,96 +1787,6 @@
           "series_id": 0,
           "kind": "visible",
           "index": 6,
-          "burn_seq": 7
-        }
-      ]
-    },
-    {
-      "standard": "memaster",
-      "version": "1.0.0",
-      "event": "card_redeemed",
-      "data": [
-        {
-          "token_id": "52",
-          "owner_id": "carol.test.near",
-          "asset_id": "nep141:com_a.tkn.near",
-          "amount": "50000000000000000000000",
-          "replaced_by": null,
-          "series_id": 0,
-          "kind": "visible",
-          "index": 6,
-          "burn_seq": 8
-        }
-      ]
-    },
-    {
-      "standard": "memaster",
-      "version": "1.0.0",
-      "event": "card_redeemed",
-      "data": [
-        {
-          "token_id": "54",
-          "owner_id": "carol.test.near",
-          "asset_id": "nep141:com_a.tkn.near",
-          "amount": "50000000000000000000000",
-          "replaced_by": null,
-          "series_id": 0,
-          "kind": "visible",
-          "index": 6,
-          "burn_seq": 9
-        }
-      ]
-    },
-    {
-      "standard": "memaster",
-      "version": "1.0.0",
-      "event": "card_redeemed",
-      "data": [
-        {
-          "token_id": "71",
-          "owner_id": "bob.test.near",
-          "asset_id": "nep141:epic_a.tkn.near",
-          "amount": "16666666666666666666666",
-          "replaced_by": null,
-          "series_id": 0,
-          "kind": "visible",
-          "index": 2,
-          "burn_seq": 10
-        }
-      ]
-    },
-    {
-      "standard": "memaster",
-      "version": "1.0.0",
-      "event": "card_redeemed",
-      "data": [
-        {
-          "token_id": "84",
-          "owner_id": "carol.test.near",
-          "asset_id": "nep141:com_a.tkn.near",
-          "amount": "75000000000000000000000",
-          "replaced_by": null,
-          "series_id": 0,
-          "kind": "visible",
-          "index": 6,
-          "burn_seq": 11
-        }
-      ]
-    },
-    {
-      "standard": "memaster",
-      "version": "1.0.0",
-      "event": "card_redeemed",
-      "data": [
-        {
-          "token_id": "90",
-          "owner_id": "alice.test.near",
-          "asset_id": "nep141:com_a.tkn.near",
-          "amount": "7500000000000000000000",
-          "replaced_by": null,
-          "series_id": 0,
-          "kind": "visible",
-          "index": 6,
           "burn_seq": 12
         }
       ]
@@ -1797,10 +1797,10 @@
       "event": "card_redeemed",
       "data": [
         {
-          "token_id": "91",
-          "owner_id": "alice.test.near",
+          "token_id": "53",
+          "owner_id": "carol.test.near",
           "asset_id": "nep141:com_a.tkn.near",
-          "amount": "7500000000000000000000",
+          "amount": "10000000000000000000000",
           "replaced_by": null,
           "series_id": 0,
           "kind": "visible",
@@ -1815,15 +1815,177 @@
       "event": "card_redeemed",
       "data": [
         {
-          "token_id": "92",
+          "token_id": "54",
+          "owner_id": "carol.test.near",
+          "asset_id": "nep141:com_a.tkn.near",
+          "amount": "10000000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 6,
+          "burn_seq": 14
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "60",
           "owner_id": "alice.test.near",
           "asset_id": "nep141:epic_a.tkn.near",
-          "amount": "37500000000000000000000",
+          "amount": "25000000000000000000000",
           "replaced_by": null,
           "series_id": 0,
           "kind": "visible",
           "index": 2,
-          "burn_seq": 14
+          "burn_seq": 15
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "61",
+          "owner_id": "alice.test.near",
+          "asset_id": "nep141:epic_a.tkn.near",
+          "amount": "25000000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 2,
+          "burn_seq": 16
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "70",
+          "owner_id": "bob.test.near",
+          "asset_id": "nep141:com_a.tkn.near",
+          "amount": "37500000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 6,
+          "burn_seq": 17
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "71",
+          "owner_id": "bob.test.near",
+          "asset_id": "nep141:com_a.tkn.near",
+          "amount": "37500000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 6,
+          "burn_seq": 18
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "73",
+          "owner_id": "bob.test.near",
+          "asset_id": "nep141:com_a.tkn.near",
+          "amount": "37500000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 6,
+          "burn_seq": 19
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "74",
+          "owner_id": "bob.test.near",
+          "asset_id": "nep141:com_a.tkn.near",
+          "amount": "37500000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 6,
+          "burn_seq": 20
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "82",
+          "owner_id": "carol.test.near",
+          "asset_id": "nep141:epic_a.tkn.near",
+          "amount": "25000000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 2,
+          "burn_seq": 21
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "92",
+          "owner_id": "alice.test.near",
+          "asset_id": "nep141:epic_a.tkn.near",
+          "amount": "62500000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 2,
+          "burn_seq": 22
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "card_redeemed",
+      "data": [
+        {
+          "token_id": "94",
+          "owner_id": "alice.test.near",
+          "asset_id": "nep141:com_a.tkn.near",
+          "amount": "12500000000000000000000",
+          "replaced_by": null,
+          "series_id": 0,
+          "kind": "visible",
+          "index": 6,
+          "burn_seq": 23
         }
       ]
     },
@@ -1843,7 +2005,7 @@
           "previous": null,
           "oracle_id": "oracle.test.near",
           "resurrect_seq": 1,
-          "block_height": 280
+          "block_height": 744
         }
       ]
     },
@@ -1858,14 +2020,14 @@
           "owner_id": "carol.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 302,
+          "block_height": 766,
           "rush": {
             "active": false,
             "window_count": 1,
             "baseline_count": 1,
             "triggered": false,
-            "last_trigger": 167,
-            "rush_until": 187,
+            "last_trigger": 586,
+            "rush_until": 606,
             "rush": false,
             "capped": false,
             "account_rush_packs": null
@@ -1882,82 +2044,82 @@
           "pack_id": 11,
           "series_id": 0,
           "owner_id": "carol.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "a9741ac955bcb9203eb1503bbe465e2653bf607b27d3657e0d8d6dde6f8c6cbe",
+          "initial_acc": "d376033bebe6cc945def707d1c5b8f215308dbc7d0e760404f0d0c2a266937af",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 303,
-              "seed": "9100dd1498c106c0ff98ad7a30525214e84ea769a6b286a569959aca0d5e4f01",
-              "acc": "79291c6711075fa8e7547a7e955ebe1e42cb986f7ce7070051fa8c10bc6d1d41"
+              "block_height": 767,
+              "seed": "8bc57609412d398bcd896b179d43971c1fc5b8a7a6b996dd312301bfc834900d",
+              "acc": "161ccfc4744601cf0b360cb8ce3add97678467b89143c3b62dbcb6187a9185a0"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 304,
-              "seed": "b3a5ae2c02fc9276f0b5d6053333c262d9dae4c0b84485524ff686befcac56d3",
-              "acc": "a75732e118215d8c9e33aa4781cae27cc2853ee71ffa6983df050f45afbe5cd4"
+              "block_height": 768,
+              "seed": "c8dd84adf758af91f8d8de07c5889aff0f288645c59a7abfc01466b99e2dc50a",
+              "acc": "a83cd7f1d7046b656111423db24aa35a6a1fd68fd1b528ebcea457b9a6b1d242"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 305,
-              "seed": "e459f8336e8e1f859c82fc1fc46279a53f582990c1c49bc8ef7fba8d3e88932b",
-              "acc": "e51a9e282e55ace8cb2b71c035780f2e91cc193a414d0703fa26baf8e9e33ac7"
+              "block_height": 769,
+              "seed": "417b0c7dab1c924b13238a73b07be1f06e35e4c4fcda8d73715b15bca8ec20e1",
+              "acc": "feeffc89f200bb8e727a8504a14a10f361c4e0a1fad40955f4991a781193eaad"
             }
           ],
-          "acc": "e51a9e282e55ace8cb2b71c035780f2e91cc193a414d0703fa26baf8e9e33ac7",
+          "acc": "feeffc89f200bb8e727a8504a14a10f361c4e0a1fad40955f4991a781193eaad",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "835",
+              "rarity_roll": "522",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "287",
+              "card_roll": "177",
               "kind": "visible",
-              "index": 8,
+              "index": 7,
               "token_id": "110"
             },
             {
               "slot": 1,
-              "rarity_roll": "491",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "294",
+              "rarity_roll": "56",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "3",
               "kind": "visible",
-              "index": 8,
+              "index": 3,
               "token_id": "111"
             },
             {
               "slot": 2,
-              "rarity_roll": "587",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "63",
+              "rarity_roll": "160",
+              "rolled_rarity": "rare",
+              "final_rarity": "rare",
+              "card_roll": "0",
               "kind": "visible",
-              "index": 7,
+              "index": 5,
               "token_id": "112"
             },
             {
               "slot": 3,
-              "rarity_roll": "900",
+              "rarity_roll": "687",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "204",
+              "card_roll": "63",
               "kind": "visible",
               "index": 7,
               "token_id": "113"
             },
             {
               "slot": 4,
-              "rarity_roll": "987",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "22",
+              "rarity_roll": "44",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "8",
               "kind": "visible",
-              "index": 6,
+              "index": 4,
               "token_id": "114"
             }
           ],
@@ -1965,23 +2127,309 @@
             "mode": "base",
             "rush": false,
             "pity": {
-              "before": 1,
-              "gold_roll": 266006,
-              "p_ppm": 150000,
+              "before": 0,
+              "gold_roll": 582686697,
+              "p_ppb": 100000000,
               "gold": false,
-              "after": 2
+              "after": 1
             },
-            "burn_seq": 14,
+            "burn_seq": 23,
             "resurrect_seq": 1,
             "value": {
-              "roll": 17,
-              "tier": 1,
-              "bps": 3000,
-              "total": "30000000000000000000000",
+              "roll": 83,
+              "tier": 7,
+              "bps": 12000,
+              "total": "120000000000000000000000",
+              "amounts": [
+                "10000000000000000000000",
+                "50000000000000000000000",
+                null,
+                "10000000000000000000000",
+                "50000000000000000000000"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "pack_bought",
+      "data": [
+        {
+          "pack_id": 12,
+          "series_id": 0,
+          "owner_id": "alice.test.near",
+          "price": "100000000000000000000000",
+          "storage_prepaid": "14850000000000000000000",
+          "block_height": 772,
+          "rush": {
+            "active": false,
+            "window_count": 2,
+            "baseline_count": 2,
+            "triggered": true,
+            "last_trigger": 772,
+            "rush_until": 792,
+            "rush": false,
+            "capped": false,
+            "account_rush_packs": null
+          }
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "pack_revealed",
+      "data": [
+        {
+          "pack_id": 12,
+          "series_id": 0,
+          "owner_id": "alice.test.near",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
+          "attempt": 0,
+          "initial_acc": "cebae3d0f8a6a16086d57e38dabe492eda60f8bc7fcf411e62105b5c4b509d37",
+          "seeds": [
+            {
+              "attempt": 0,
+              "step": 1,
+              "block_height": 773,
+              "seed": "fbce3ad03832b23e4ac19bd89497824763a946060024a448b45a12d1f9329f95",
+              "acc": "e29e17a729348852486701b9de7273b5a7395555fc4ffc17d7863932e234445c"
+            },
+            {
+              "attempt": 0,
+              "step": 2,
+              "block_height": 774,
+              "seed": "a1f4aadc511d5ef85372723585fce127f4a8f09d63bf30421ad93809ea05fd2c",
+              "acc": "7a593b8e377824c22f4d8ca41573d295f8b54e22646ee26af3053e7d8afcb869"
+            },
+            {
+              "attempt": 0,
+              "step": 3,
+              "block_height": 775,
+              "seed": "a180a74881b38bc72f6a5fe46256b7ada17edbcb67e9c6ffe36095d97be49dd4",
+              "acc": "bbe8cbd01daea16ed0837ada670fe2a60e09409743286c60c2dcf3f6a2890bb3"
+            }
+          ],
+          "acc": "bbe8cbd01daea16ed0837ada670fe2a60e09409743286c60c2dcf3f6a2890bb3",
+          "draws": [
+            {
+              "slot": 0,
+              "rarity_roll": "213",
+              "rolled_rarity": "rare",
+              "final_rarity": "rare",
+              "card_roll": "0",
+              "kind": "visible",
+              "index": 5,
+              "token_id": "120"
+            },
+            {
+              "slot": 1,
+              "rarity_roll": "284",
+              "rolled_rarity": "rare",
+              "final_rarity": "epic",
+              "card_roll": "2",
+              "kind": "visible",
+              "index": 2,
+              "token_id": "121"
+            },
+            {
+              "slot": 2,
+              "rarity_roll": "70",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "4",
+              "kind": "visible",
+              "index": 3,
+              "token_id": "122"
+            },
+            {
+              "slot": 3,
+              "rarity_roll": "67",
+              "rolled_rarity": "epic",
+              "final_rarity": "epic",
+              "card_roll": "0",
+              "kind": "visible",
+              "index": 2,
+              "token_id": "123"
+            },
+            {
+              "slot": 4,
+              "rarity_roll": "54",
+              "rolled_rarity": "legendary",
+              "final_rarity": "legendary",
+              "card_roll": "1",
+              "kind": "visible",
+              "index": 1,
+              "token_id": "124"
+            }
+          ],
+          "mechanics": {
+            "mode": "gold",
+            "rush": false,
+            "pity": {
+              "before": 1,
+              "gold_roll": 48168262,
+              "p_ppb": 150000000,
+              "gold": true,
+              "after": 0
+            },
+            "burn_seq": 23,
+            "resurrect_seq": 1,
+            "value": {
+              "roll": 25,
+              "tier": 0,
+              "bps": 10000,
+              "total": "100000000000000000000000",
+              "amounts": [
+                null,
+                "33333333333333333333334",
+                "33333333333333333333333",
+                "33333333333333333333333",
+                null
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "pack_bought",
+      "data": [
+        {
+          "pack_id": 13,
+          "series_id": 0,
+          "owner_id": "bob.test.near",
+          "price": "100000000000000000000000",
+          "storage_prepaid": "14850000000000000000000",
+          "block_height": 778,
+          "rush": {
+            "active": true,
+            "window_count": 2,
+            "baseline_count": 3,
+            "triggered": false,
+            "last_trigger": 772,
+            "rush_until": 792,
+            "rush": true,
+            "capped": false,
+            "account_rush_packs": 1
+          }
+        }
+      ]
+    },
+    {
+      "standard": "memaster",
+      "version": "1.0.0",
+      "event": "pack_revealed",
+      "data": [
+        {
+          "pack_id": 13,
+          "series_id": 0,
+          "owner_id": "bob.test.near",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
+          "attempt": 0,
+          "initial_acc": "5493e3e3f3861b3ac42c2a1a8ee5a7e967ddd768c62b94ca9a42cad386616060",
+          "seeds": [
+            {
+              "attempt": 0,
+              "step": 1,
+              "block_height": 779,
+              "seed": "dc2978f8f06e5737932fb632a83166aedf70c57c0f6029965ef4a251dfbf8219",
+              "acc": "6aaa95a6f47704073acb062d69f820f161f0f68b2dd3a420b894bf5350c41e05"
+            },
+            {
+              "attempt": 0,
+              "step": 2,
+              "block_height": 780,
+              "seed": "13ba9e4bf8eda40916c729348908f2ff3fa1d8a215a9bc4ee9211af39bc3d927",
+              "acc": "6dd1c8900e50c1911d465110da62f7dead577fbf930b82767225c1eb96c245a8"
+            },
+            {
+              "attempt": 0,
+              "step": 3,
+              "block_height": 781,
+              "seed": "bed5c332bf2de1389334ef10adfb4b875ffa682e2cd0377fb71a1a4757e78ef2",
+              "acc": "51c0fe8788ca9c110021ca0e526ad41f7971725dae40815aa9f1289a94dd9b09"
+            }
+          ],
+          "acc": "51c0fe8788ca9c110021ca0e526ad41f7971725dae40815aa9f1289a94dd9b09",
+          "draws": [
+            {
+              "slot": 0,
+              "rarity_roll": "235",
+              "rolled_rarity": "rare",
+              "final_rarity": "rare",
+              "card_roll": "0",
+              "kind": "visible",
+              "index": 5,
+              "token_id": "130"
+            },
+            {
+              "slot": 1,
+              "rarity_roll": "322",
+              "rolled_rarity": "rare",
+              "final_rarity": "rare",
+              "card_roll": "0",
+              "kind": "visible",
+              "index": 5,
+              "token_id": "131"
+            },
+            {
+              "slot": 2,
+              "rarity_roll": "969",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "335",
+              "kind": "visible",
+              "index": 8,
+              "token_id": "132"
+            },
+            {
+              "slot": 3,
+              "rarity_roll": "515",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "54",
+              "kind": "visible",
+              "index": 7,
+              "token_id": "133"
+            },
+            {
+              "slot": 4,
+              "rarity_roll": "445",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "122",
+              "kind": "visible",
+              "index": 7,
+              "token_id": "134"
+            }
+          ],
+          "mechanics": {
+            "mode": "rush",
+            "rush": true,
+            "pity": {
+              "before": 0,
+              "gold_roll": 133642861,
+              "p_ppb": 100000000,
+              "gold": false,
+              "after": 1
+            },
+            "burn_seq": 23,
+            "resurrect_seq": 1,
+            "value": {
+              "roll": 2,
+              "tier": 0,
+              "bps": 2000,
+              "total": "20000000000000000000000",
               "amounts": [
                 null,
                 null,
-                "10000000000000000000000",
+                null,
                 "10000000000000000000000",
                 "10000000000000000000000"
               ]
@@ -1996,162 +2444,19 @@
       "event": "pack_bought",
       "data": [
         {
-          "pack_id": 12,
+          "pack_id": 14,
           "series_id": 0,
-          "owner_id": "alice.test.near",
+          "owner_id": "carol.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 308,
-          "rush": {
-            "active": false,
-            "window_count": 2,
-            "baseline_count": 2,
-            "triggered": true,
-            "last_trigger": 308,
-            "rush_until": 328,
-            "rush": false,
-            "capped": false,
-            "account_rush_packs": null
-          }
-        }
-      ]
-    },
-    {
-      "standard": "memaster",
-      "version": "1.0.0",
-      "event": "pack_revealed",
-      "data": [
-        {
-          "pack_id": 12,
-          "series_id": 0,
-          "owner_id": "alice.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
-          "attempt": 0,
-          "initial_acc": "73ae05b47ba3bc4a5413b23180b4b5fc84f42ec618da4480a1b8032dc39a88a0",
-          "seeds": [
-            {
-              "attempt": 0,
-              "step": 1,
-              "block_height": 309,
-              "seed": "98ed8b7fd7e11ed45918c8ab13b9c9226dd72e1f302496b526fef10933da2de2",
-              "acc": "bcc15e9e6e898887587556a476197ccb1e1671f6b068c9f1de9f868f5c4c9f04"
-            },
-            {
-              "attempt": 0,
-              "step": 2,
-              "block_height": 310,
-              "seed": "a0dc9b90342d77e11e755a392245d89779ca5604f2d701680727f1a5216e17ee",
-              "acc": "f3b00d31390aff811eee7e961f0c5c2d190e5bbf0c5bd34a22335234c21a4e6e"
-            },
-            {
-              "attempt": 0,
-              "step": 3,
-              "block_height": 311,
-              "seed": "cf54f9524c3d08d8993b5b63e873c1af72bb2483a9725f9ae118938dccf9f757",
-              "acc": "2270165a49e4006fe3e27eb6ef2229e685e29fd219e971826e7baeaeaedb1f04"
-            }
-          ],
-          "acc": "2270165a49e4006fe3e27eb6ef2229e685e29fd219e971826e7baeaeaedb1f04",
-          "draws": [
-            {
-              "slot": 0,
-              "rarity_roll": "968",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "45",
-              "kind": "visible",
-              "index": 7,
-              "token_id": "120"
-            },
-            {
-              "slot": 1,
-              "rarity_roll": "71",
-              "rolled_rarity": "epic",
-              "final_rarity": "epic",
-              "card_roll": "7",
-              "kind": "visible",
-              "index": 4,
-              "token_id": "121"
-            },
-            {
-              "slot": 2,
-              "rarity_roll": "781",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "65",
-              "kind": "visible",
-              "index": 7,
-              "token_id": "122"
-            },
-            {
-              "slot": 3,
-              "rarity_roll": "257",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
-              "kind": "visible",
-              "index": 5,
-              "token_id": "123"
-            },
-            {
-              "slot": 4,
-              "rarity_roll": "567",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "229",
-              "kind": "visible",
-              "index": 7,
-              "token_id": "124"
-            }
-          ],
-          "mechanics": {
-            "mode": "base",
-            "rush": false,
-            "pity": {
-              "before": 1,
-              "gold_roll": 983156,
-              "p_ppm": 150000,
-              "gold": false,
-              "after": 2
-            },
-            "burn_seq": 14,
-            "resurrect_seq": 1,
-            "value": {
-              "roll": 12,
-              "tier": 0,
-              "bps": 2000,
-              "total": "20000000000000000000000",
-              "amounts": [
-                "2500000000000000000000",
-                "12500000000000000000000",
-                "2500000000000000000000",
-                null,
-                "2500000000000000000000"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "standard": "memaster",
-      "version": "1.0.0",
-      "event": "pack_bought",
-      "data": [
-        {
-          "pack_id": 13,
-          "series_id": 0,
-          "owner_id": "bob.test.near",
-          "price": "100000000000000000000000",
-          "storage_prepaid": "14850000000000000000000",
-          "block_height": 314,
+          "block_height": 784,
           "rush": {
             "active": true,
             "window_count": 2,
-            "baseline_count": 3,
+            "baseline_count": 4,
             "triggered": false,
-            "last_trigger": 308,
-            "rush_until": 328,
+            "last_trigger": 772,
+            "rush_until": 792,
             "rush": true,
             "capped": false,
             "account_rush_packs": 1
@@ -2165,86 +2470,86 @@
       "event": "pack_revealed",
       "data": [
         {
-          "pack_id": 13,
+          "pack_id": 14,
           "series_id": 0,
-          "owner_id": "bob.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "owner_id": "carol.test.near",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "8ff83ebcf9e4ead75d38cf9d36a441d89a7c820dffbe4ce777038e3f3df5f021",
+          "initial_acc": "a1392bb61d8245708155e6147b51b959c85aaebf530e617ef09e07afaa256024",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 315,
-              "seed": "4d8a795c3dab2da0ff053cd00cbb57e375ee672e2a5c2c7e879db6a5dcd338ea",
-              "acc": "de80ccbf290564a10ee688dfe731255a7a158d51664a3a24befaac14a3154db0"
+              "block_height": 785,
+              "seed": "8690845d600513742d2bd40771cdfd2e6d9bf3e1be97e8d654a8219ae4e1cc40",
+              "acc": "8a4e0ef9ffd8c7cb7cdebe0ff2e6005a0dcce8937f5d4f24dab86e376b791b33"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 316,
-              "seed": "3fd14fb7aa73a1258a300de5cbb5c6d74816394222326e7c95dd06e797e88e4d",
-              "acc": "2a21668df4f176330142e5201c988f708461614d2c0f5641d1b09a09040898ca"
+              "block_height": 786,
+              "seed": "64795f3ffb47dc4cbe87dfbba79abeebbf941d51db17906a1d2cacedcba3ae0d",
+              "acc": "497913495409f89aa9d155ad45e91987f4e98c540fcf8530c1b5b16a5d2a6b98"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 317,
-              "seed": "45dc6629e5e5d0d00bd3fc60890ecf64c9d01e1f64a7848d3aa9566af66af4f2",
-              "acc": "ffb03640e55cb9046be63e654c6eda331d980541c0c3612a54a7e9fc9198f8cd"
+              "block_height": 787,
+              "seed": "bb6e6bc0030bd8eaf2d2c2bca484f3d2f1bb3ad219e48eb6fdf6f7518cbec7eb",
+              "acc": "a7d2bd1c217f3ce50b34b0475da43c370ba03ffe1651444b4c7424c1990c97e8"
             }
           ],
-          "acc": "ffb03640e55cb9046be63e654c6eda331d980541c0c3612a54a7e9fc9198f8cd",
+          "acc": "a7d2bd1c217f3ce50b34b0475da43c370ba03ffe1651444b4c7424c1990c97e8",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "566",
+              "rarity_roll": "947",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "324",
+              "card_roll": "124",
               "kind": "visible",
-              "index": 8,
-              "token_id": "130"
+              "index": 7,
+              "token_id": "140"
             },
             {
               "slot": 1,
-              "rarity_roll": "462",
+              "rarity_roll": "626",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "25",
+              "card_roll": "314",
               "kind": "visible",
-              "index": 6,
-              "token_id": "131"
+              "index": 8,
+              "token_id": "141"
             },
             {
               "slot": 2,
-              "rarity_roll": "408",
-              "rolled_rarity": "rare",
-              "final_rarity": "rare",
-              "card_roll": "0",
+              "rarity_roll": "857",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "334",
               "kind": "visible",
-              "index": 5,
-              "token_id": "132"
+              "index": 8,
+              "token_id": "142"
             },
             {
               "slot": 3,
-              "rarity_roll": "908",
+              "rarity_roll": "789",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "249",
+              "card_roll": "134",
               "kind": "visible",
-              "index": 8,
-              "token_id": "133"
+              "index": 7,
+              "token_id": "143"
             },
             {
               "slot": 4,
-              "rarity_roll": "555",
+              "rarity_roll": "468",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "200",
+              "card_roll": "72",
               "kind": "visible",
               "index": 7,
-              "token_id": "134"
+              "token_id": "144"
             }
           ],
           "mechanics": {
@@ -2252,24 +2557,24 @@
             "rush": true,
             "pity": {
               "before": 1,
-              "gold_roll": 354845,
-              "p_ppm": 150000,
+              "gold_roll": 905298588,
+              "p_ppb": 150000000,
               "gold": false,
-              "after": 0
+              "after": 2
             },
-            "burn_seq": 14,
+            "burn_seq": 23,
             "resurrect_seq": 1,
             "value": {
               "roll": 45,
-              "tier": 4,
-              "bps": 6000,
-              "total": "60000000000000000000000",
+              "tier": 3,
+              "bps": 5000,
+              "total": "50000000000000000000000",
               "amounts": [
+                "16666666666666666666668",
                 null,
-                "30000000000000000000000",
                 null,
-                null,
-                "30000000000000000000000"
+                "16666666666666666666666",
+                "16666666666666666666666"
               ]
             }
           }
@@ -2282,162 +2587,19 @@
       "event": "pack_bought",
       "data": [
         {
-          "pack_id": 14,
+          "pack_id": 15,
           "series_id": 0,
-          "owner_id": "carol.test.near",
+          "owner_id": "alice.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 320,
+          "block_height": 790,
           "rush": {
             "active": true,
             "window_count": 1,
-            "baseline_count": 4,
-            "triggered": false,
-            "last_trigger": 308,
-            "rush_until": 328,
-            "rush": true,
-            "capped": false,
-            "account_rush_packs": 1
-          }
-        }
-      ]
-    },
-    {
-      "standard": "memaster",
-      "version": "1.0.0",
-      "event": "pack_revealed",
-      "data": [
-        {
-          "pack_id": 14,
-          "series_id": 0,
-          "owner_id": "carol.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
-          "attempt": 0,
-          "initial_acc": "5872bb24b3595898a3f55036f93ffe7882d067c96ed4292e81ac6422d43f1fd7",
-          "seeds": [
-            {
-              "attempt": 0,
-              "step": 1,
-              "block_height": 321,
-              "seed": "f4c1729beac9c6ddcce3345420b8b27147dcb3b57fae844eb757d5dc9dd20323",
-              "acc": "a8bc40bc4589eb6791b793927f7e2c7643f49f134d905b30f38a9c951e169f37"
-            },
-            {
-              "attempt": 0,
-              "step": 2,
-              "block_height": 322,
-              "seed": "07f9bde19a460798dc41574f47950984ed30f95c920d587e50f3391a3a9bb033",
-              "acc": "486e358c880e6cd8e9d8b7e47e3cad782d7f5c3664fdc9f31bfad8dd8e4cf79f"
-            },
-            {
-              "attempt": 0,
-              "step": 3,
-              "block_height": 323,
-              "seed": "822d11f47eb6014e45e28d42e06b77ed701c712d710ad9e8b98265a4e210577a",
-              "acc": "527dbcdfb2b20662fbb520d2c34fcceefc88cb4e66534c0e65a571c9b1ad695d"
-            }
-          ],
-          "acc": "527dbcdfb2b20662fbb520d2c34fcceefc88cb4e66534c0e65a571c9b1ad695d",
-          "draws": [
-            {
-              "slot": 0,
-              "rarity_roll": "59",
-              "rolled_rarity": "epic",
-              "final_rarity": "epic",
-              "card_roll": "0",
-              "kind": "visible",
-              "index": 2,
-              "token_id": "140"
-            },
-            {
-              "slot": 1,
-              "rarity_roll": "165",
-              "rolled_rarity": "rare",
-              "final_rarity": "epic",
-              "card_roll": "7",
-              "kind": "visible",
-              "index": 4,
-              "token_id": "141"
-            },
-            {
-              "slot": 2,
-              "rarity_roll": "0",
-              "rolled_rarity": "legendary",
-              "final_rarity": "legendary",
-              "card_roll": "1",
-              "kind": "visible",
-              "index": 1,
-              "token_id": "142"
-            },
-            {
-              "slot": 3,
-              "rarity_roll": "61",
-              "rolled_rarity": "epic",
-              "final_rarity": "epic",
-              "card_roll": "4",
-              "kind": "visible",
-              "index": 3,
-              "token_id": "143"
-            },
-            {
-              "slot": 4,
-              "rarity_roll": "73",
-              "rolled_rarity": "legendary",
-              "final_rarity": "legendary",
-              "card_roll": "0",
-              "kind": "visible",
-              "index": 0,
-              "token_id": "144"
-            }
-          ],
-          "mechanics": {
-            "mode": "gold",
-            "rush": true,
-            "pity": {
-              "before": 2,
-              "gold_roll": 997592,
-              "p_ppm": 200000,
-              "gold": true,
-              "after": 0
-            },
-            "burn_seq": 14,
-            "resurrect_seq": 1,
-            "value": {
-              "roll": 91,
-              "tier": 4,
-              "bps": 50000,
-              "total": "500000000000000000000000",
-              "amounts": [
-                "71428571428571428571428",
-                "71428571428571428571428",
-                null,
-                "71428571428571428571428",
-                "285714285714285714285716"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "standard": "memaster",
-      "version": "1.0.0",
-      "event": "pack_bought",
-      "data": [
-        {
-          "pack_id": 15,
-          "series_id": 0,
-          "owner_id": "alice.test.near",
-          "price": "100000000000000000000000",
-          "storage_prepaid": "14850000000000000000000",
-          "block_height": 326,
-          "rush": {
-            "active": true,
-            "window_count": 2,
             "baseline_count": 5,
             "triggered": false,
-            "last_trigger": 308,
-            "rush_until": 328,
+            "last_trigger": 772,
+            "rush_until": 792,
             "rush": true,
             "capped": false,
             "account_rush_packs": 1
@@ -2454,37 +2616,37 @@
           "pack_id": 15,
           "series_id": 0,
           "owner_id": "alice.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "650ef6922b5ea18347464d80facbc4cf07639a56a6d54b0e533c813f6b0f869c",
+          "initial_acc": "ad4b075afaf581e263b054e8b4fbe6237476db8968136449d608c1e680e67b21",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 327,
-              "seed": "41ee15653e07c5ebdf5981634d0a1e53c1adb268ad72d2fb51dd84a89dd3334d",
-              "acc": "e1ac64d7ffd559f120ae174289efd4b830a2be3304f50883bc23d4aaf5cba933"
+              "block_height": 791,
+              "seed": "0d48106fa7c99c1149920d214df1453952ec5fa3d8f51ac716f8e03e7c516aea",
+              "acc": "a88839c6062972598c20fb7d595096cb4c35aafdeb9c52201228ce0384cf03b9"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 328,
-              "seed": "2c3f49706fb4084268adfa627b75539ff29fb77efc007f957003507f381f4ceb",
-              "acc": "1a8470d5989dd10e26b2170fd2ece6e4d14f65adce971e96f0558a29050fc945"
+              "block_height": 792,
+              "seed": "29be704f1b5c2ec167c7b4ef44441d5b7b712717b497645f5b0fd6afe0ec81fc",
+              "acc": "a8aab97810e80a1acdfdb5d6032abb2a3e2f298a05916e9b444668545c97d761"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 329,
-              "seed": "690bfcca2b5e5b2c435d48ec0ed76f1d27dab4f9b9d39587a81b22663204edc5",
-              "acc": "927cc3f2efef6797e71c0e5e0e0fa50e8cad8000fc19d1847e3de4c4dcc474a7"
+              "block_height": 793,
+              "seed": "7813008e91347becd38ca7295b9ceca4331845593fa4e445e16c9a54fa1204f8",
+              "acc": "bcfc38173a2a5039cfb1fd8cb74dc96d13f5916e69027118945fbd4c2beb73cc"
             }
           ],
-          "acc": "927cc3f2efef6797e71c0e5e0e0fa50e8cad8000fc19d1847e3de4c4dcc474a7",
+          "acc": "bcfc38173a2a5039cfb1fd8cb74dc96d13f5916e69027118945fbd4c2beb73cc",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "225",
+              "rarity_roll": "211",
               "rolled_rarity": "rare",
               "final_rarity": "rare",
               "card_roll": "0",
@@ -2494,68 +2656,68 @@
             },
             {
               "slot": 1,
-              "rarity_roll": "49",
-              "rolled_rarity": "epic",
-              "final_rarity": "epic",
-              "card_roll": "0",
+              "rarity_roll": "440",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "186",
               "kind": "visible",
-              "index": 2,
+              "index": 7,
               "token_id": "151"
             },
             {
               "slot": 2,
-              "rarity_roll": "27",
-              "rolled_rarity": "epic",
-              "final_rarity": "epic",
-              "card_roll": "7",
+              "rarity_roll": "740",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "130",
               "kind": "visible",
-              "index": 4,
+              "index": 7,
               "token_id": "152"
             },
             {
               "slot": 3,
-              "rarity_roll": "28",
-              "rolled_rarity": "epic",
-              "final_rarity": "epic",
-              "card_roll": "4",
+              "rarity_roll": "896",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "12",
               "kind": "visible",
-              "index": 3,
+              "index": 6,
               "token_id": "153"
             },
             {
               "slot": 4,
-              "rarity_roll": "18",
-              "rolled_rarity": "legendary",
-              "final_rarity": "legendary",
-              "card_roll": "1",
+              "rarity_roll": "859",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "139",
               "kind": "visible",
-              "index": 1,
+              "index": 7,
               "token_id": "154"
             }
           ],
           "mechanics": {
-            "mode": "gold",
+            "mode": "rush",
             "rush": true,
             "pity": {
-              "before": 2,
-              "gold_roll": 612901,
-              "p_ppm": 200000,
-              "gold": true,
-              "after": 0
+              "before": 0,
+              "gold_roll": 508885691,
+              "p_ppb": 100000000,
+              "gold": false,
+              "after": 1
             },
-            "burn_seq": 14,
+            "burn_seq": 23,
             "resurrect_seq": 1,
             "value": {
-              "roll": 88,
-              "tier": 4,
-              "bps": 50000,
-              "total": "500000000000000000000000",
+              "roll": 3,
+              "tier": 0,
+              "bps": 2000,
+              "total": "20000000000000000000000",
               "amounts": [
                 null,
-                "166666666666666666666668",
-                "166666666666666666666666",
-                "166666666666666666666666",
-                null
+                "5000000000000000000000",
+                "5000000000000000000000",
+                "5000000000000000000000",
+                "5000000000000000000000"
               ]
             }
           }
@@ -2573,14 +2735,14 @@
           "owner_id": "bob.test.near",
           "price": "100000000000000000000000",
           "storage_prepaid": "14850000000000000000000",
-          "block_height": 332,
+          "block_height": 796,
           "rush": {
             "active": false,
             "window_count": 2,
             "baseline_count": 6,
             "triggered": false,
-            "last_trigger": 308,
-            "rush_until": 328,
+            "last_trigger": 772,
+            "rush_until": 792,
             "rush": false,
             "capped": false,
             "account_rush_packs": null
@@ -2597,82 +2759,82 @@
           "pack_id": 16,
           "series_id": 0,
           "owner_id": "bob.test.near",
-          "table_hash": "532a47af55b21da6b380b6a8426350a5da334417f41dfba945c07c3b154b49f5",
+          "table_hash": "0b76037150098fbf31537254887ef90b4c7283c087f9ab122d86b488fa00a727",
           "attempt": 0,
-          "initial_acc": "afec68ea74432499714ca5be8cf9d4c8dd90db81bbbf30c938eaecc25eab1bd5",
+          "initial_acc": "2065b8b60867c63bef31dea9725f58bdd277bacea2bec692f68196a1cc35d413",
           "seeds": [
             {
               "attempt": 0,
               "step": 1,
-              "block_height": 333,
-              "seed": "3fde74c74d70f29dce8a739c7b22caa64629812e696f846ada2304b5b4c7c218",
-              "acc": "a5483e54a2fa0494ced312270d7b33a8c27f23d965827ab456936b1a89c39502"
+              "block_height": 797,
+              "seed": "5a449fe9f30e3e5fd3e5aed022c96c91e577f600c4c7dff26ed0ee68f4bd58c0",
+              "acc": "d2c3321248d1f58bfd0123bbc3ef2bf20e5c438d0bb93eb01ce2547890cfe22f"
             },
             {
               "attempt": 0,
               "step": 2,
-              "block_height": 334,
-              "seed": "0e471b94960a57c1044ad8b7b4597705e9f208a2701624896eb687a95579084e",
-              "acc": "41fbb5669ecdc1709db04f9a4a7ffc8dbc1c48555831e0068155d32d0e0bcb55"
+              "block_height": 798,
+              "seed": "9c9f3e48bcc865526551879cfafe9749add5b5b9b046d4528ff7058d054b0234",
+              "acc": "3c89cbd980a1a937a534ea78edddcf86ce367ec05a6f352b687edc1e36b8f457"
             },
             {
               "attempt": 0,
               "step": 3,
-              "block_height": 335,
-              "seed": "aeebec0ed51c0e7e30a23dc9da7141f25a421fb2ef521d40ba12a4f288f2cab9",
-              "acc": "fe66299184e39f6ce0bda15bc8ad4ebe3b43e142eb8d6dab4a88f902ac3a0476"
+              "block_height": 799,
+              "seed": "6501c5acb9c26de1b96d840eaa4dbfb8342fd66121f9ed29a6a7856a09000664",
+              "acc": "9c65894fcbecc405d1ea69c342bb4460fa754e8d389587750488eca7cc6c52a9"
             }
           ],
-          "acc": "fe66299184e39f6ce0bda15bc8ad4ebe3b43e142eb8d6dab4a88f902ac3a0476",
+          "acc": "9c65894fcbecc405d1ea69c342bb4460fa754e8d389587750488eca7cc6c52a9",
           "draws": [
             {
               "slot": 0,
-              "rarity_roll": "487",
+              "rarity_roll": "656",
               "rolled_rarity": "common",
               "final_rarity": "common",
-              "card_roll": "8",
+              "card_roll": "126",
               "kind": "visible",
-              "index": 6,
+              "index": 7,
               "token_id": "160"
             },
             {
               "slot": 1,
-              "rarity_roll": "742",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "61",
-              "kind": "visible",
-              "index": 7,
-              "token_id": "161"
-            },
-            {
-              "slot": 2,
-              "rarity_roll": "638",
-              "rolled_rarity": "common",
-              "final_rarity": "common",
-              "card_roll": "14",
-              "kind": "visible",
-              "index": 6,
-              "token_id": "162"
-            },
-            {
-              "slot": 3,
-              "rarity_roll": "190",
+              "rarity_roll": "133",
               "rolled_rarity": "rare",
               "final_rarity": "rare",
               "card_roll": "0",
               "kind": "visible",
               "index": 5,
+              "token_id": "161"
+            },
+            {
+              "slot": 2,
+              "rarity_roll": "497",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "61",
+              "kind": "visible",
+              "index": 7,
+              "token_id": "162"
+            },
+            {
+              "slot": 3,
+              "rarity_roll": "580",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "197",
+              "kind": "visible",
+              "index": 7,
               "token_id": "163"
             },
             {
               "slot": 4,
-              "rarity_roll": "110",
-              "rolled_rarity": "epic",
-              "final_rarity": "epic",
-              "card_roll": "4",
+              "rarity_roll": "811",
+              "rolled_rarity": "common",
+              "final_rarity": "common",
+              "card_roll": "126",
               "kind": "visible",
-              "index": 3,
+              "index": 7,
               "token_id": "164"
             }
           ],
@@ -2680,25 +2842,25 @@
             "mode": "base",
             "rush": false,
             "pity": {
-              "before": 0,
-              "gold_roll": 440195,
-              "p_ppm": 100000,
+              "before": 1,
+              "gold_roll": 264723078,
+              "p_ppb": 150000000,
               "gold": false,
-              "after": 1
+              "after": 2
             },
-            "burn_seq": 14,
+            "burn_seq": 23,
             "resurrect_seq": 1,
             "value": {
-              "roll": 54,
-              "tier": 4,
-              "bps": 6000,
-              "total": "60000000000000000000000",
+              "roll": 93,
+              "tier": 9,
+              "bps": 20000,
+              "total": "200000000000000000000000",
               "amounts": [
-                "7500000000000000000000",
-                "7500000000000000000000",
-                "7500000000000000000000",
+                "50000000000000000000000",
                 null,
-                "37500000000000000000000"
+                "50000000000000000000000",
+                "50000000000000000000000",
+                "50000000000000000000000"
               ]
             }
           }
