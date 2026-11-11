@@ -43,7 +43,8 @@ impl Contract {
     }
 
     /// Révèle une mythique déjà sortie au moins une fois. Le dépôt couvre le stockage ajouté
-    /// (excédent rendu). Met à jour les cartes scellées : métadonnées et adossement.
+    /// (excédent rendu). Les cartes scellées prennent le contenu révélé à la lecture
+    /// (`nft_metadata_update` les liste).
     #[payable]
     pub fn reveal_mythic(
         &mut self,
@@ -78,30 +79,11 @@ impl Contract {
             content: content.clone(),
             revealed_at_height: env::block_height(),
         };
-        let sealed = std::mem::take(&mut series.sealed_tokens[j]);
-        for token_id in &sealed {
-            let Some(meta_store) = self.tokens.token_metadata_by_id.as_mut() else { break };
-            let pack_id = meta_store
-                .get(token_id)
-                .and_then(|old| old.extra)
-                .and_then(|e| near_sdk::serde_json::from_str::<near_sdk::serde_json::Value>(&e).ok())
-                .and_then(|v| v.get("pack_id").and_then(|p| p.as_u64()))
-                .unwrap_or(0);
-            let issued = meta_store.get(token_id).and_then(|o| o.issued_at);
-            let mut meta = Self::revealed_mythic_metadata(series_id, &m, &revealed, pack_id, issued);
-            meta.updated_at = Some(env::block_timestamp_ms().to_string());
-            meta_store.insert(token_id, &meta);
-            if let Some(info) = self.cards.get_mut(token_id) {
-                info.sealed = false;
-            }
-            if let Some(b) = &content.backing {
-                // La carte a pu être brûlée entre-temps ? Impossible : une scellée n'a pas d'adossement.
-                if self.tokens.owner_by_id.get(token_id).is_some() {
-                    self.backing.insert(token_id.clone(), b.clone());
-                }
-            }
-        }
+        // Les cartes déjà tirées ne stockent que leur référence : leurs métadonnées et leur
+        // adossement se lisent désormais dans `revealed_mythics`, rien à réécrire carte par carte.
+        let sealed = series.sealed_tokens[j].clone();
         series.revealed_mythics[j] = Some(revealed);
+        series.mythic_revealed_ms[j] = env::block_timestamp_ms();
         *self.series.get_mut(series_id).unwrap() = series;
 
         events::emit(
@@ -118,8 +100,6 @@ impl Contract {
 
         // Stockage : flush explicite pour mesurer, puis facturation au révélateur.
         self.series.flush();
-        self.cards.flush();
-        self.backing.flush();
         let end = env::storage_usage();
         let cost = env::storage_byte_cost().as_yoctonear() * end.saturating_sub(start) as u128;
         let deposit = env::attached_deposit().as_yoctonear();

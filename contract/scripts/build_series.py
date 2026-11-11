@@ -33,6 +33,12 @@ Exemple (near-cli-rs) :
         file-args scripts/out/<slug>/append_series_cards.01.json prepaid-gas '300 Tgas' \
         attached-deposit '<deposits[nom] en yoctoNEAR> yoctonear' sign-as <owner> network-config testnet sign-with-keychain send
 
+Mécaniques (`"mechanics"` dans les paramètres, voir docs/mecaniques-spec.md) : table or et table rush
+données en poids ou en multiplicateurs des poids de base (la commune compense), pitié, plancher des
+burns, paramètres du rush. Le contrat ne connaît pas la valeur des cartes : c'est ce script qui
+contrôle la couverture (`coverage_check`, valeurs moyennes par rareté en multiples du prix) et refuse
+une table rush au-delà de `max_rush` (80 %). Les couvertures calculées vont dans manifest.json.
+
 Les cartes visibles sont triées par card_id (ordre exigé par le chargement par lots).
 Un card_id du catalogue de plus de 64 octets (limite du contrat) est raccourci de façon déterministe :
 55 premiers octets + "-" + 8 caractères hex de sha256(id). La correspondance est dans manifest.json.
@@ -226,7 +232,65 @@ def build(params, catalogue, secrets_path, new_secrets):
         "mythics": mythics,
         "royalties": params.get("royalties", []),
     }
-    return table, renamed
+    coverage = None
+    if params.get("mechanics"):
+        table["mechanics"], coverage = build_mechanics(params, table)
+    return table, renamed, coverage
+
+
+def scaled_weights(base, mult):
+    """Poids de rareté multipliés (`mult` : rareté → facteur, arrondi au plus proche) ; la commune
+    compense, pour garder le même total."""
+    total = sum(base[r] for r in canon.RARITY_NAMES)
+    out = {r: int(round(base[r] * float(mult.get(r, 1)))) for r in canon.RARITY_NAMES if r != "common"}
+    out["common"] = total - sum(out.values())
+    if out["common"] <= 0:
+        raise SystemExit(f"multiplicateurs trop forts : plus de poids pour la commune ({mult})")
+    return {r: out[r] for r in canon.RARITY_NAMES}
+
+
+def table_coverage(weights, cards_per_pack, value):
+    """Couverture d'une table de taux : espérance de valeur brûlable d'un pack, en multiples du prix.
+    `value[r]` = valeur moyenne d'un emplacement de rareté r (brûlables et cartes de collection
+    confondues), en multiples du prix du pack."""
+    total = sum(weights[r] for r in canon.RARITY_NAMES)
+    return cards_per_pack * sum(weights[r] / total * float(value.get(r, 0)) for r in canon.RARITY_NAMES)
+
+
+def build_mechanics(params, table):
+    """Mécaniques de la table (hachées avec elle). Contrôle hors chaîne de la couverture : le contrat
+    n'a pas la valeur des cartes, c'est ce script qui refuse une table rush trop généreuse."""
+    m = params["mechanics"]
+    base = table["rarity_weights"]
+    out = {"gold_weights": None, "pity": None, "burn": None, "rush": None}
+    if m.get("gold_weights") or m.get("gold_multipliers"):
+        out["gold_weights"] = m.get("gold_weights") or scaled_weights(base, m["gold_multipliers"])
+    if m.get("pity"):
+        out["pity"] = {k: int(m["pity"][k]) for k in ("p0_ppm", "k_ppm", "n_max")}
+    if m.get("burn"):
+        out["burn"] = {"floor_bps": int(m["burn"]["floor_bps"])}
+    if m.get("rush"):
+        r = m["rush"]
+        weights = r.get("weights") or scaled_weights(base, r["multipliers"])
+        out["rush"] = {k: int(r[k]) for k in ("ratio_bps", "min_packs", "window_blocks", "baseline_blocks",
+                                               "bucket_blocks", "duration_blocks", "cooldown_blocks")}
+        out["rush"]["weights"] = weights
+    coverage = None
+    chk = m.get("coverage_check")
+    if chk:
+        n = table["cards_per_pack"]
+        coverage = {"base": table_coverage(base, n, chk["rarity_value"])}
+        if out["gold_weights"]:
+            coverage["gold"] = table_coverage(out["gold_weights"], n, chk["rarity_value"])
+        if out["rush"]:
+            coverage["rush"] = table_coverage(out["rush"]["weights"], n, chk["rarity_value"])
+            if coverage["rush"] > float(chk["max_rush"]) + 1e-9:
+                raise SystemExit(
+                    f"table rush refusée : couverture {coverage['rush']:.3f} > plafond {chk['max_rush']} "
+                    "(acheter pendant un rush serait à espérance positive)")
+    elif out["rush"]:
+        raise SystemExit("mechanics.rush exige mechanics.coverage_check (contrôle de la couverture hors chaîne)")
+    return out, coverage
 
 
 def main(argv=None):
@@ -252,7 +316,7 @@ def main(argv=None):
     if os.path.commonpath([os.path.abspath(out), os.path.join(HERE, "secrets")]) == os.path.join(HERE, "secrets"):
         raise SystemExit("--out ne doit pas être sous scripts/secrets/")
 
-    table, renamed = build(params, catalogue, secrets_path, a.new_secrets)
+    table, renamed, coverage = build(params, catalogue, secrets_path, a.new_secrets)
 
     # Hash : vérificateur Python (canon.py reproduit serde_json::to_vec).
     table_bytes = canon.table_json_bytes(table)
@@ -309,6 +373,8 @@ def main(argv=None):
         "deposits": deposits,
         "deposit_total_near": f"{sum(int(d) for d in deposits.values()) / 10 ** 24:.3f}",
         "renamed_ids": renamed,
+        "mechanics": table.get("mechanics"),
+        "coverage": coverage,
         "secrets_file": os.path.relpath(secrets_path, CONTRACT),
     }
     write_json(os.path.join(out, "manifest.json"), manifest)

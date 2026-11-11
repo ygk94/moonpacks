@@ -8,7 +8,7 @@
 use crate::draw;
 use crate::types::*;
 use crate::*;
-use near_sdk::serde_json::json;
+use near_sdk::serde_json::{json, Value};
 use near_sdk::Promise;
 
 #[near]
@@ -36,12 +36,29 @@ impl Contract {
         let pack_id = self.next_pack_id;
         self.next_pack_id += 1;
         let height = env::block_height();
+
+        // Gold rush : l'état est figé ici, à l'achat (pas au tirage), pour qu'on ne puisse pas
+        // viser le rush en retardant la révélation.
+        let mut flags = 0u8;
+        let mut rush_ev = None;
+        let series = self.series.get_mut(series_id).unwrap();
+        series.packs_sold += 1;
+        if let Some(rp) = series.table.mechanics.as_ref().and_then(|m| m.rush.clone()) {
+            let st = series.rush.get_or_insert_with(RushState::default);
+            let o = draw::rush_on_buy(&rp, st, height);
+            if o.active {
+                flags |= FLAG_RUSH;
+            }
+            rush_ev = Some(json!({
+                "active": o.active, "window_count": o.window_count, "baseline_count": o.baseline_count,
+                "triggered": o.triggered, "last_trigger": st.last_trigger,
+                "rush_until": st.last_trigger.map(|t| t.saturating_add(rp.duration_blocks)),
+            }));
+        }
+
         let pack = Pack {
-            pack_id,
             series_id,
             owner_id: buyer.clone(),
-            price_paid: price,
-            storage_prepaid: storage,
             bought_at_height: height,
             status: PackStatus::Pending,
             attempt: 0,
@@ -49,24 +66,31 @@ impl Contract {
             acc: draw::initial_acc(pack_id, buyer.as_str(), &table_hash),
             seeds: Vec::new(),
             last_progress_height: height,
-            token_ids: Vec::new(),
+            revealed_at_ms: 0,
+            flags,
             draws: Vec::new(),
+            cards: Vec::new(),
         };
         self.packs.insert(pack_id, pack);
-        // Liste paginée par compte : (compte, rang) → pack_id, et un compteur par compte.
+        // Liste paginée par compte, par blocs : (compte, bloc) → pack_ids, et un compteur par compte.
         let rank = self.pack_count_by_owner.get(&buyer).copied().unwrap_or(0);
-        self.packs_by_owner.insert((buyer.clone(), rank), pack_id);
+        let key = (buyer.clone(), rank / OWNER_CHUNK);
+        if rank % OWNER_CHUNK == 0 {
+            self.owner_packs.insert(key, vec![pack_id]);
+        } else {
+            self.owner_packs.get_mut(&key).unwrap_or_else(|| env::panic_str("Bloc de liste manquant")).push(pack_id);
+        }
         self.pack_count_by_owner.insert(buyer.clone(), rank + 1);
-        self.series.get_mut(series_id).unwrap().packs_sold += 1;
         self.revenue += price;
 
-        events::emit(
-            "pack_bought",
-            json!({
-                "pack_id": pack_id, "series_id": series_id, "owner_id": buyer,
-                "price": U128(price), "storage_prepaid": U128(storage), "block_height": height,
-            }),
-        );
+        let mut ev = json!({
+            "pack_id": pack_id, "series_id": series_id, "owner_id": buyer,
+            "price": U128(price), "storage_prepaid": U128(storage), "block_height": height,
+        });
+        if let Some(r) = rush_ev {
+            ev["rush"] = r;
+        }
+        events::emit("pack_bought", ev);
         Self::refund(&buyer, deposit - required);
         self.schedule_step(pack_id, 0, 1);
         U128(pack_id as u128)
@@ -89,7 +113,7 @@ impl Contract {
         pack.acc = draw::mix(&pack.acc, &seed, pack_id, pack.owner_id.as_str());
         pack.step = step;
         pack.last_progress_height = height;
-        pack.seeds.push(SeedRecord { attempt, step, block_height: height, seed, acc_after: pack.acc });
+        pack.seeds.push(SeedRecord { attempt, step, block_height: height, seed });
 
         if step < self.config.reveal_steps {
             events::emit(
@@ -109,7 +133,7 @@ impl Contract {
             env::panic_str("test-hooks: échec simulé du dernier reçu");
         }
 
-        self.finalize_pack(pack);
+        self.finalize_pack(pack_id, pack);
     }
 
     /// Relance le tirage d'un booster resté `Pending` (aucune carte écrite) après
@@ -131,7 +155,7 @@ impl Contract {
         let delay = self.config.retry_delay_blocks;
         let pack = self.packs.get_mut(&pack_id).unwrap_or_else(|| env::panic_str("Pack inconnu"));
         require!(pack.status == PackStatus::Pending, "Tirage déjà écrit : relance interdite");
-        require!(pack.token_ids.is_empty(), "Tirage déjà écrit : relance interdite");
+        require!(pack.cards.is_empty(), "Tirage déjà écrit : relance interdite");
         require!(
             env::block_height() >= pack.last_progress_height + delay,
             "Délai de relance non écoulé"
@@ -176,76 +200,104 @@ impl Contract {
             .detach();
     }
 
-    /// Tirage final + création des cartes + journal. Aucun chemin d'échec.
-    fn finalize_pack(&mut self, mut pack: Pack) {
-        let pack_id = pack.pack_id;
+    /// Tirage final + création des cartes + journal. Aucun chemin d'échec qui dépende du résultat :
+    /// gaz fixe, stockage prépayé (borne du pire cas), aucun `require` sur les cartes, la table de
+    /// taux ou les compteurs (pitié, burns).
+    fn finalize_pack(&mut self, pack_id: u64, mut pack: Pack) {
         let series_id = pack.series_id;
+        let owner = pack.owner_id.clone();
         let mut series = self.series.get(series_id).cloned().unwrap_or_else(|| env::panic_str("Série inconnue"));
         let n = series.table.cards_per_pack;
-        let mut draws = Vec::with_capacity(n as usize);
-        let mut minted_tokens = Vec::with_capacity(n as usize);
+        let mech = series.table.mechanics.clone();
 
+        // Table de taux du pack : pitié (même aléa `acc`, tag 2), rush figé à l'achat.
+        let rush = pack.flags & FLAG_RUSH != 0;
+        let mut mode = PackMode::Base;
+        let mut pity_ev = Value::Null;
+        let mut burned: Option<(Vec<u32>, u32)> = None;
+        let mut burn_seq = None;
+        let mut resurrect_seq = None;
+        if let Some(m) = &mech {
+            let mut pity_gold = false;
+            let mut pity_n = None;
+            if let Some(p) = &m.pity {
+                let nb = self.pity.get(&(owner.clone(), series_id)).copied().unwrap_or(0);
+                let (g, roll, p_ppm) = draw::pity_is_gold(p, nb, &pack.acc);
+                pity_gold = g;
+                pity_n = Some(nb);
+                pity_ev = json!({ "before": nb, "gold_roll": roll, "p_ppm": p_ppm, "gold": g });
+            }
+            mode = draw::pack_mode(pity_gold, rush);
+            if let Some(nb) = pity_n {
+                // Gold pack (pitié) ou pack rush : le compteur repart à 0.
+                let after = if mode == PackMode::Base { nb.saturating_add(1) } else { 0 };
+                self.pity.insert((owner.clone(), series_id), after);
+                pity_ev["after"] = json!(after);
+            }
+            if let Some(bp) = &m.burn {
+                if let Some(b) = self.series_burns.get(&series_id) {
+                    burned = Some((b.burned.clone(), bp.floor_bps));
+                    burn_seq = Some(b.seq);
+                    resurrect_seq = Some(series.resurrect_seq);
+                }
+            }
+        }
+        match mode {
+            PackMode::Gold => pack.flags |= FLAG_GOLD,
+            PackMode::Rush => pack.flags |= FLAG_MODE_RUSH,
+            PackMode::Base => {}
+        }
+        let weights = draw::mode_weights(&series.table, mode).clone();
+
+        pack.revealed_at_ms = env::block_timestamp_ms();
+        pack.status = PackStatus::Revealed;
+        let acc = pack.acc;
+        let seeds_ev = Self::seeds_json(pack_id, &pack, &series.table_hash.unwrap_or([0; 32]));
+        self.packs.insert(pack_id, pack);
+
+        let bv = burned.as_ref().map(|(b, f)| draw::BurnView { burned: b, floor_bps: *f });
+        let mut draws = Vec::with_capacity(n as usize);
+        let mut records = Vec::with_capacity(n as usize);
+        let mut minted_tokens = Vec::with_capacity(n as usize);
         for slot in 0..n {
-            let d = draw::draw_slot_compact(
-                &series.table.rarity_weights,
+            let d = draw::draw_slot_mech(
+                &weights,
                 &series.draw_cards,
                 &series.table.mythics,
                 &series.minted,
                 &series.mythic_minted,
-                &pack.acc,
+                bv.as_ref(),
+                &acc,
                 slot,
             );
-            let token_id = self.next_token_id.to_string();
-            self.next_token_id += 1;
-            let mut sealed = false;
-            let mut backing = None;
-            let meta;
+            let token_id = self.internal_mint_slot(pack_id, &owner);
             match d.kind {
-                CardKind::Visible => {
-                    let card = self.card_def(series_id, d.index);
-                    meta = Self::card_metadata(series_id, &card, pack_id);
-                    series.minted[d.index as usize] += 1;
-                    backing = card.backing;
-                }
+                CardKind::Visible => series.minted[d.index as usize] += 1,
                 CardKind::Mythic => {
-                    meta = Self::build_metadata(series_id, &series, d.kind, d.index, pack_id);
                     let j = d.index as usize;
                     series.mythic_minted[j] += 1;
-                    match &series.revealed_mythics[j] {
-                        Some(r) => backing = r.content.backing.clone(),
-                        None => {
-                            sealed = true;
-                            series.sealed_tokens[j].push(token_id.clone());
-                        }
+                    if series.revealed_mythics[j].is_none() {
+                        series.sealed_tokens[j].push(token_id.clone());
+                        events::emit(
+                            "mythic_drawn",
+                            json!({
+                                "series_id": series_id, "mythic_index": d.index,
+                                "commitment": series.table.mythics[j].commitment,
+                                "token_id": token_id, "pack_id": pack_id,
+                            }),
+                        );
                     }
                 }
             }
-            self.tokens.internal_mint_with_refund(token_id.clone(), pack.owner_id.clone(), Some(meta), None);
-            self.cards.insert(
-                token_id.clone(),
-                CardInfo {
-                    series_id,
-                    kind: d.kind,
-                    index: d.index,
-                    rarity: d.final_rarity,
-                    state: CardState::Normal,
-                    sealed,
-                },
-            );
-            if let Some(b) = backing {
-                self.backing.insert(token_id.clone(), b);
-            }
-            if sealed {
-                events::emit(
-                    "mythic_drawn",
-                    json!({
-                        "series_id": series_id, "mythic_index": d.index,
-                        "commitment": series.table.mythics[d.index as usize].commitment,
-                        "token_id": token_id, "pack_id": pack_id,
-                    }),
-                );
-            }
-            draws.push(DrawRecord {
+            draws.push(PackDraw {
+                rarity_roll: d.rarity_roll as u64,
+                rolled_rarity: d.rolled_rarity,
+                final_rarity: d.final_rarity,
+                card_roll: d.card_roll,
+                kind: d.kind,
+                index: d.index,
+            });
+            records.push(DrawRecord {
                 slot,
                 rarity_roll: U128(d.rarity_roll),
                 rolled_rarity: d.rolled_rarity,
@@ -257,45 +309,47 @@ impl Contract {
             });
             minted_tokens.push(token_id);
         }
-
-        near_contract_standards::non_fungible_token::events::NftMint {
-            owner_id: &pack.owner_id,
-            token_ids: &minted_tokens.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-            memo: Some(&format!("pack {}", pack_id)),
+        if let Some(p) = self.packs.get_mut(&pack_id) {
+            p.draws = draws;
         }
-        .emit();
 
-        let seeds: Vec<_> = pack
-            .seeds
-            .iter()
-            .map(|s| {
-                json!({
-                    "attempt": s.attempt, "step": s.step, "block_height": s.block_height,
-                    "seed": hex32(&s.seed), "acc": hex32(&s.acc_after),
-                })
-            })
-            .collect();
-        events::emit(
-            "pack_revealed",
-            json!({
-                "pack_id": pack_id,
-                "series_id": series_id,
-                "owner_id": pack.owner_id,
-                "table_hash": series.table_hash.map(|h| hex32(&h)),
-                "attempt": pack.attempt,
-                "initial_acc": hex32(&draw::initial_acc(pack_id, pack.owner_id.as_str(), &series.table_hash.unwrap_or([0; 32]))),
-                "seeds": seeds,
-                "acc": hex32(&pack.acc),
-                "draws": draws,
-            }),
-        );
-
-        pack.status = PackStatus::Revealed;
-        pack.token_ids = minted_tokens;
-        pack.draws = draws;
-        self.packs.insert(pack_id, pack);
+        Self::emit_mint(&owner, &minted_tokens, pack_id);
+        let mut ev = json!({
+            "pack_id": pack_id,
+            "series_id": series_id,
+            "owner_id": owner,
+            "table_hash": series.table_hash.map(|h| hex32(&h)),
+            "attempt": self.packs.get(&pack_id).map(|p| p.attempt).unwrap_or(0),
+            "initial_acc": hex32(&draw::initial_acc(pack_id, owner.as_str(), &series.table_hash.unwrap_or([0; 32]))),
+            "seeds": seeds_ev,
+            "acc": hex32(&acc),
+            "draws": records,
+        });
+        if mech.is_some() {
+            // État figé qui a servi au tirage : table de taux, rush (figé à l'achat), pitié, burns.
+            ev["mechanics"] = json!({
+                "mode": mode, "rush": rush, "pity": pity_ev, "burn_seq": burn_seq,
+                "resurrect_seq": resurrect_seq,
+            });
+        }
+        events::emit("pack_revealed", ev);
         if let Some(slot) = self.series.get_mut(series_id) {
             *slot = series;
         }
+    }
+
+    /// Graines journalisées, avec `acc` recalculé après chaque étape depuis `initial_acc`.
+    pub(crate) fn seeds_json(pack_id: u64, pack: &Pack, table_hash: &[u8; 32]) -> Vec<Value> {
+        let mut acc = draw::initial_acc(pack_id, pack.owner_id.as_str(), table_hash);
+        pack.seeds
+            .iter()
+            .map(|s| {
+                acc = draw::mix(&acc, &s.seed, pack_id, pack.owner_id.as_str());
+                json!({
+                    "attempt": s.attempt, "step": s.step, "block_height": s.block_height,
+                    "seed": hex32(&s.seed), "acc": hex32(&acc),
+                })
+            })
+            .collect()
     }
 }

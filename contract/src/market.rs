@@ -12,9 +12,9 @@ impl Contract {
     #[payable]
     pub fn list(&mut self, token_id: TokenId, price: U128) {
         let seller = env::predecessor_account_id();
-        let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
+        let owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
         require!(owner == seller, "Seul le propriétaire peut vendre");
-        require!(self.card_info(&token_id).state == CardState::Normal, "Carte en cours de burn");
+        require!(self.card_state(&token_id) == CardState::Normal, "Carte en cours de burn");
         require!(price.0 > 0, "Prix nul");
         require!(self.listings.get(&token_id).is_none(), "Déjà en vente");
         let deposit = env::attached_deposit().as_yoctonear();
@@ -29,7 +29,7 @@ impl Contract {
     pub fn delist(&mut self, token_id: TokenId) {
         let l = self.listings.get(&token_id).cloned().unwrap_or_else(|| env::panic_str("Pas en vente"));
         require!(env::predecessor_account_id() == l.seller_id, "Seul le vendeur peut retirer l'annonce");
-        require!(self.card_info(&token_id).state == CardState::Normal, "Carte en cours de burn");
+        require!(self.card_state(&token_id) == CardState::Normal, "Carte en cours de burn");
         self.remove_listing(&token_id, "delisted");
     }
 
@@ -41,19 +41,17 @@ impl Contract {
         let buyer = env::predecessor_account_id();
         let l = self.listings.get(&token_id).cloned().unwrap_or_else(|| env::panic_str("Pas en vente"));
         require!(l.price == expected_price, "Le prix de l'annonce a changé");
-        require!(self.card_info(&token_id).state == CardState::Normal, "Carte en cours de burn");
+        require!(self.card_state(&token_id) == CardState::Normal, "Carte en cours de burn");
         require!(buyer != l.seller_id, "Le vendeur ne peut pas acheter sa carte");
-        let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
+        let owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
         require!(owner == l.seller_id, "Annonce périmée");
         let deposit = env::attached_deposit().as_yoctonear();
         require!(deposit >= l.price.0, "Dépôt inférieur au prix");
 
         self.listings.remove(&token_id);
-        if let Some(a) = self.tokens.approvals_by_id.as_mut() {
-            let removed = a.remove(&token_id);
-            crate::nft::refund_approvals(&owner, removed.as_ref());
-        }
-        self.tokens.internal_transfer_unguarded(&token_id, &owner, &buyer);
+        let removed = self.take_approvals(&token_id);
+        crate::nft::refund_approvals(&owner, Some(&removed));
+        self.internal_transfer_unguarded(&token_id, &owner, &buyer);
         NftTransfer {
             old_owner_id: &owner,
             new_owner_id: &buyer,

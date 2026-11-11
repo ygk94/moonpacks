@@ -9,7 +9,6 @@
 
 use crate::types::*;
 use crate::*;
-use near_contract_standards::non_fungible_token::events::NftBurn;
 use near_sdk::serde_json::json;
 use near_sdk::{ext_contract, Promise, PromiseError};
 
@@ -33,16 +32,14 @@ impl Contract {
         near_sdk::assert_one_yocto();
         require!(env::prepaid_gas() >= MIN_REDEEM_GAS, "Gaz insuffisant pour le burn");
         let owner = env::predecessor_account_id();
-        let token_owner =
-            self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
+        let token_owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
         require!(token_owner == owner, "Seul le propriétaire peut brûler");
         require!(self.listings.get(&token_id).is_none(), "Carte en vente : retirez l'annonce d'abord");
         let redeemer = self.redeemer_id.clone().unwrap_or_else(|| env::panic_str("Aucun redeemer configuré"));
-        let backing =
-            self.backing.get(&token_id).cloned().unwrap_or_else(|| env::panic_str("Carte non brûlable"));
-        let info = self.cards.get_mut(&token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
-        require!(info.state == CardState::Normal, "Burn déjà en cours");
-        info.state = CardState::Redeeming;
+        let backing = self.token_backing(&token_id).unwrap_or_else(|| env::panic_str("Carte non brûlable"));
+        let slot = self.slot_mut_by_id(&token_id);
+        require!(slot.state == CardState::Normal, "Burn déjà en cours");
+        slot.state = CardState::Redeeming;
 
         events::emit(
             "redeem_started",
@@ -73,58 +70,34 @@ impl Contract {
         // Tout reçu réussi vaut succès, quelle que soit la valeur renvoyée.
         let ok = env::promise_results_count() == 1
             && matches!(env::promise_result_checked(0, 1024), Ok(_) | Err(PromiseError::TooLong(_)));
-        let Some(info) = self.cards.get_mut(&token_id) else {
+        let Some((_, slot, pack)) = self.live(&token_id) else {
             env::log_str("on_redeem_complete: carte inconnue");
             return false;
         };
-        if info.state != CardState::Redeeming {
+        if pack.cards[slot].state != CardState::Redeeming {
             env::log_str("on_redeem_complete: carte pas en burn");
             return false;
         }
+        let (series_id, d) = (pack.series_id, pack.draws[slot]);
         if !ok {
-            info.state = CardState::Normal;
+            self.slot_mut_by_id(&token_id).state = CardState::Normal;
             events::emit("redeem_failed", json!({ "token_id": token_id, "owner_id": owner }));
             return false;
         }
-        let backing = self.backing.remove(&token_id);
-        self.cards.remove(&token_id);
+        let backing = self.backing_of(series_id, d.kind, d.index);
         self.internal_burn(&token_id, &owner);
+        // Rareté pilotée par les burns : compteur de la carte et numéro d'ordre du burn.
+        let burn_seq = self.record_burn(series_id, d.kind, d.index);
         events::emit(
             "card_redeemed",
             json!({
                 "token_id": token_id, "owner_id": owner,
                 "asset_id": backing.as_ref().map(|b| b.asset_id.clone()),
                 "amount": backing.map(|b| b.amount),
+                "series_id": series_id, "kind": d.kind, "index": d.index,
+                "burn_seq": burn_seq,
             }),
         );
         true
-    }
-}
-
-impl Contract {
-    /// Supprime la carte des structures NEP-171/177/178/181 et émet `nft_burn`.
-    pub(crate) fn internal_burn(&mut self, token_id: &TokenId, owner: &AccountId) {
-        self.tokens.owner_by_id.remove(token_id);
-        if let Some(m) = self.tokens.token_metadata_by_id.as_mut() {
-            m.remove(token_id);
-        }
-        if let Some(per_owner) = self.tokens.tokens_per_owner.as_mut() {
-            if let Some(mut set) = per_owner.get(owner) {
-                set.remove(token_id);
-                if set.is_empty() {
-                    per_owner.remove(owner);
-                } else {
-                    per_owner.insert(owner, &set);
-                }
-            }
-        }
-        if let Some(a) = self.tokens.approvals_by_id.as_mut() {
-            let removed = a.remove(token_id);
-            crate::nft::refund_approvals(owner, removed.as_ref());
-        }
-        if let Some(n) = self.tokens.next_approval_id_by_id.as_mut() {
-            n.remove(token_id);
-        }
-        NftBurn { owner_id: owner, token_ids: &[token_id], authorized_id: None, memo: Some("redeem") }.emit();
     }
 }

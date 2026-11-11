@@ -89,7 +89,22 @@ def series_stats(table: dict, events: list[dict], alpha: float) -> tuple[bool, l
     draws = [d for ev in events for d in ev["draws"]]
     lines.append(f"{len(events)} boosters, {len(draws)} tirages")
 
-    probs = rarity_probs(table)
+    # Série à mécaniques : chaque booster a sa table de taux (base, or, rush). L'attendu est le
+    # mélange des tables effectivement utilisées, booster par booster.
+    probs = {r: 0.0 for r in core.RARITIES}
+    for ev in events:
+        mode = (ev.get("mechanics") or {}).get("mode", "base")
+        w = core.mode_weights(table, mode)
+        tot = max(sum(w[r] for r in core.RARITIES), 1)
+        for r in core.RARITIES:
+            probs[r] += len(ev["draws"]) * w[r] / tot
+    probs = {r: (v / len(draws) if draws else 0.0) for r, v in probs.items()} if draws else rarity_probs(table)
+    modes = {}
+    for ev in events:
+        k = (ev.get("mechanics") or {}).get("mode", "base")
+        modes[k] = modes.get(k, 0) + 1
+    if table.get("mechanics"):
+        lines.append(f"tables de taux utilisées : {', '.join(f'{k} {v}' for k, v in sorted(modes.items()))}")
     obs = {r: 0 for r in core.RARITIES}
     fin = {r: 0 for r in core.RARITIES}
     for d in draws:
@@ -106,6 +121,9 @@ def series_stats(table: dict, events: list[dict], alpha: float) -> tuple[bool, l
     falls = sum(1 for d in draws if d["rolled_rarity"] != d["final_rarity"])
     lines.append(f"  retombées dues aux plafonds : {falls}")
 
+    if (table.get("mechanics") or {}).get("burn"):
+        lines.append("rareté pilotée par les burns : test par carte omis (poids variables, voir pack --event avec rejeu)")
+        return ok, lines
     for r in core.RARITIES[1:]:
         cards = [(i, c) for i, c in enumerate(table["cards"]) if c["rarity"] == r and c["weight"] > 0]
         if len(cards) < 2 or any(c.get("cap") is not None for _, c in cards):

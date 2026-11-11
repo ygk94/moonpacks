@@ -7,6 +7,12 @@ Tout est calculé octet par octet comme le contrat :
 - ``roll(acc, slot, tag) = u128_be(sha256(acc || slot_u8 || tag_u8)[0..16])``
 - ``table_hash = sha256(serde_json::to_vec(table))`` (voir ``canon.py``)
 - ``commitment = sha256(card_id_utf8 || sel)``, ``content_hash = sha256(json(content) || sel)``
+
+Mécaniques (``docs/mecaniques-spec.md``), réimplémentées à part de ``draw.rs`` :
+
+- ``gold_roll = roll(acc, 0, 2) mod 10⁶`` ; gold pack si ``n + 1 ≥ N`` ou ``gold_roll < min(10⁶, p0 + k·n)`` ;
+- rareté pilotée par les burns : poids renormalisés entre brûlables de la rareté (``in_rarity_weight``) ;
+- gold rush : ``rush_on_buy`` (palier relatif, pause, fenêtre glissante par seaux).
 """
 
 from __future__ import annotations
@@ -110,26 +116,161 @@ def _first_unlimited_common(table: dict) -> int:
     return 0
 
 
-def draw_slot(table: dict, minted: list[int], mythic_minted: list[int], acc: bytes, slot: int) -> SlotDraw:
-    total = max(rarity_total(table), 1)
-    rarity_roll = roll(acc, slot, 0) % total
+# ------------------------------------------------------------------ mécaniques
+
+PPM = 1_000_000
+TAG_GOLD = 2
+
+
+@dataclass(frozen=True)
+class Burn:
+    """État des burns pour un tirage : ``burned[i]``, ``backed[i]`` (adossée par la table ou
+    ressuscitée), plancher en points de base."""
+
+    burned: list
+    backed: list
+    floor_bps: int
+
+
+def raw_burn_weight(w: int, minted: int, burned: int, cap, floor_bps: int) -> int:
+    if w == 0 or (cap is not None and minted >= cap):
+        return 0
+    if minted == 0:
+        return w
+    circ = max(minted - burned, 0)
+    return max(w * circ // minted, max(w * floor_bps // 10_000, 1))
+
+
+def burn_factors(table: dict, minted: list[int], burn: Burn, rarity: str) -> tuple[int, int]:
+    e = b = 0
+    for i, (c, n) in enumerate(zip(table["cards"], minted)):
+        if c["rarity"] != rarity or not burn.backed[i]:
+            continue
+        e += raw_burn_weight(c["weight"], n, burn.burned[i], c.get("cap"), burn.floor_bps)
+        b += _available(c["weight"], n, c.get("cap"))
+    return e, b
+
+
+def in_rarity_weight(table: dict, i: int, minted: int, burn: Burn, f: tuple[int, int]) -> int:
+    c = table["cards"][i]
+    e, b = f
+    if burn.backed[i]:
+        return 0 if e == 0 else raw_burn_weight(c["weight"], minted, burn.burned[i], c.get("cap"), burn.floor_bps) * b
+    a = _available(c["weight"], minted, c.get("cap"))
+    return a if e == 0 else a * e
+
+
+def available_weight_mech(table, minted, mythic_minted, burn: Burn | None, rarity: str) -> int:
+    if burn is None or rarity == "mythic":
+        return available_weight(table, minted, mythic_minted, rarity)
+    f = burn_factors(table, minted, burn, rarity)
+    return sum(
+        in_rarity_weight(table, i, n, burn, f)
+        for i, (c, n) in enumerate(zip(table["cards"], minted))
+        if c["rarity"] == rarity
+    )
+
+
+def pity_p_ppm(p: dict, n: int) -> int:
+    return min(PPM, p["p0_ppm"] + p["k_ppm"] * n)
+
+
+def gold_roll(acc: bytes) -> int:
+    return roll(acc, 0, TAG_GOLD) % PPM
+
+
+def pity_is_gold(p: dict, n: int, acc: bytes) -> tuple[bool, int, int]:
+    r, pp = gold_roll(acc), pity_p_ppm(p, n)
+    return (n + 1 >= p["n_max"] or r < pp), r, pp
+
+
+def pack_mode(pity_gold: bool, rush: bool) -> str:
+    return "gold" if pity_gold else ("rush" if rush else "base")
+
+
+def mode_weights(table: dict, mode: str) -> dict:
+    m = table.get("mechanics") or {}
+    if mode == "gold" and m.get("gold_weights"):
+        return m["gold_weights"]
+    if mode == "rush" and m.get("rush"):
+        return m["rush"]["weights"]
+    return table["rarity_weights"]
+
+
+def new_rush_state() -> dict:
+    return {"ring": [], "start_height": None, "last_trigger": None, "rush_count": 0}
+
+
+def rush_on_buy(p: dict, st: dict, h: int) -> dict:
+    """Même algorithme que ``draw::rush_on_buy`` ; ``st`` est modifié en place."""
+    bsz = max(p["bucket_blocks"], 1)
+    ml = max(p["baseline_blocks"] // bsz, 1)
+    mw = min(max(p["window_blocks"] // bsz, 1), ml)
+    if len(st["ring"]) != ml:
+        st["ring"] = [[None, 0] for _ in range(ml)]
+    if st["start_height"] is None:
+        st["start_height"] = h
+    start = st["start_height"]
+    t = st["last_trigger"]
+    in_period = t is not None and h <= t + p["duration_blocks"]
+    active = in_period and h > t
+    paused = t is not None and h <= t + p["duration_blocks"] + p["cooldown_blocks"]
+    b = h // bsz
+    e = st["ring"][b % ml]
+    if e[0] != b:
+        e[0], e[1] = b, 0
+    e[1] += 1
+
+    def count(m):
+        return sum(c for bb, c in st["ring"] if bb is not None and bb <= b and b - bb < m)
+
+    cw, cl = count(mw), count(ml)
+    triggered = (
+        not paused
+        and h >= start + p["baseline_blocks"]
+        and cw >= p["min_packs"]
+        and cw * ml * 10_000 >= p["ratio_bps"] * cl * mw
+    )
+    if triggered:
+        st["last_trigger"] = h
+        st["rush_count"] += 1
+    return {"active": active, "window_count": cw, "baseline_count": cl, "triggered": triggered}
+
+
+def _rarity_from_roll(weights: dict, rarity_roll: int) -> str:
     cum = 0
-    rolled = "common"
     for r in RARITIES:
-        cum += table["rarity_weights"][r]
+        cum += weights[r]
         if rarity_roll < cum:
-            rolled = r
-            break
+            return r
+    return "common"
+
+
+def draw_slot(
+    table: dict,
+    minted: list[int],
+    mythic_minted: list[int],
+    acc: bytes,
+    slot: int,
+    weights: dict | None = None,
+    burn: Burn | None = None,
+) -> SlotDraw:
+    """Un emplacement. ``weights`` : table de rareté du pack (base par défaut) ; ``burn`` : état des
+    burns (rareté pilotée par les burns) ou ``None``. Sans les deux, identique au tirage d'origine."""
+    weights = weights or table["rarity_weights"]
+    total = max(sum(weights[r] for r in RARITIES), 1)
+    rarity_roll = roll(acc, slot, 0) % total
+    rolled = _rarity_from_roll(weights, rarity_roll)
 
     # Retombée sur la rareté inférieure si épuisée.
     final = rolled
-    s = available_weight(table, minted, mythic_minted, final)
+    s = available_weight_mech(table, minted, mythic_minted, burn, final)
     while s == 0:
         low = lower(final)
         if low is None:
             break
         final = low
-        s = available_weight(table, minted, mythic_minted, final)
+        s = available_weight_mech(table, minted, mythic_minted, burn, final)
 
     raw_card = roll(acc, slot, 1)
     card_roll = 0 if s == 0 else raw_card % s
@@ -146,10 +287,14 @@ def draw_slot(table: dict, minted: list[int], mythic_minted: list[int], acc: byt
     else:
         c = 0
         pick = _first_unlimited_common(table)
+        f = burn_factors(table, minted, burn, final) if burn is not None else None
         for i, (card, n) in enumerate(zip(table["cards"], minted)):
             if card["rarity"] != final:
                 continue
-            c += _available(card["weight"], n, card.get("cap"))
+            if burn is None:
+                c += _available(card["weight"], n, card.get("cap"))
+            else:
+                c += in_rarity_weight(table, i, n, burn, f)
             if card_roll < c:
                 pick = i
                 break
@@ -157,12 +302,19 @@ def draw_slot(table: dict, minted: list[int], mythic_minted: list[int], acc: byt
     return SlotDraw(slot, rarity_roll, rolled, final, card_roll, kind, pick)
 
 
-def draw_pack(table: dict, minted: list[int], mythic_minted: list[int], acc: bytes) -> list[SlotDraw]:
+def draw_pack(
+    table: dict,
+    minted: list[int],
+    mythic_minted: list[int],
+    acc: bytes,
+    weights: dict | None = None,
+    burn: Burn | None = None,
+) -> list[SlotDraw]:
     """Tire tous les emplacements comme `finalize_pack` : les compteurs sont incrémentés entre deux
     emplacements. `minted` et `mythic_minted` sont modifiés en place."""
     out = []
     for slot in range(table["cards_per_pack"]):
-        d = draw_slot(table, minted, mythic_minted, acc, slot)
+        d = draw_slot(table, minted, mythic_minted, acc, slot, weights, burn)
         if d.kind == "visible":
             minted[d.index] += 1
         else:

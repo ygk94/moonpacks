@@ -8,6 +8,7 @@ use crate::*;
 use near_sdk::serde_json::{self, Value};
 use near_sdk::test_utils::{accounts, VMContextBuilder};
 use near_sdk::testing_env;
+use near_contract_standards::non_fungible_token::core::NonFungibleTokenCore;
 
 const NEAR: u128 = 1_000_000_000_000_000_000_000_000;
 /// Dépôt joint aux appels de chargement par lots (l'excédent est rendu).
@@ -76,6 +77,7 @@ fn big_table(n: usize) -> SeriesTable {
         cards,
         mythics: vec![],
         royalties: vec![],
+        mechanics: None,
     }
 }
 
@@ -105,7 +107,7 @@ fn buy_and_reveal(c: &mut Contract, series_id: u32, seed_byte: u8, height: u64) 
         set_seed(contract_id(), height + step as u64, [seed_byte.wrapping_add(step); 32]);
         c.reveal_step(pack_id, 0, step);
     }
-    c.packs.get(&pack_id).unwrap().draws.clone()
+    serde_json::from_value(c.get_pack(pack_id).unwrap()["draws"].clone()).unwrap()
 }
 
 #[test]
@@ -153,7 +155,7 @@ fn batched_load_gives_same_table_hash_and_draws() {
                 assert_eq!((r.kind, r.index, r.final_rarity, r.card_roll), (d.kind, d.index, d.final_rarity, d.card_roll.0));
                 minted[d.index as usize] += 1;
                 let card = &t.cards[d.index as usize];
-                let tok = c.tokens.token_metadata_by_id.as_ref().unwrap().get(&d.token_id).unwrap();
+                let tok = c.nft_token(d.token_id.clone()).unwrap().metadata.unwrap();
                 assert_eq!(tok.title.as_deref(), Some(card.title.as_str()));
                 assert_eq!(c.get_backing(d.token_id.clone()), card.backing);
                 assert_eq!(c.get_card(d.token_id.clone()).unwrap().card_id.as_deref(), Some(card.card_id.as_str()));

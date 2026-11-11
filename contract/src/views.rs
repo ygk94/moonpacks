@@ -22,6 +22,11 @@ pub struct SeriesView {
     pub card_count: u32,
     pub minted: Vec<u32>,
     pub mythic_minted: Vec<u32>,
+    /// Paramètres des mécaniques (`None` : série sans mécanique).
+    pub mechanics: Option<Mechanics>,
+    /// Cartes brûlées par index (rareté pilotée par les burns ; vide sinon) et numéro d'ordre.
+    pub burned: Vec<u32>,
+    pub burn_seq: u64,
 }
 
 use near_sdk::json_types::U64;
@@ -79,6 +84,7 @@ impl Contract {
         json!({
             "owner_id": self.owner_id,
             "redeemer_id": self.redeemer_id,
+            "price_oracle_id": self.price_oracle_id,
             "reveal_steps": self.config.reveal_steps,
             "retry_delay_blocks": self.config.retry_delay_blocks,
             "gas": {
@@ -90,7 +96,9 @@ impl Contract {
             "listing_deposit": U128(LISTING_DEPOSIT.as_yoctonear()),
             "revenue": U128(self.revenue),
             "next_pack_id": self.next_pack_id,
-            "next_token_id": self.next_token_id,
+            // token_id = pack_id × 10 + emplacement : borne haute des identifiants à venir.
+            "next_token_id": self.next_pack_id * 10,
+            "total_supply": self.total_supply,
         })
     }
 
@@ -115,6 +123,9 @@ impl Contract {
             card_count: s.draw_cards.len() as u32,
             minted: s.minted.clone(),
             mythic_minted: s.mythic_minted.clone(),
+            mechanics: s.table.mechanics.clone(),
+            burned: self.series_burns.get(&series_id).map(|b| b.burned.clone()).unwrap_or_default(),
+            burn_seq: self.series_burns.get(&series_id).map(|b| b.seq).unwrap_or(0),
         }
     }
 
@@ -189,6 +200,13 @@ impl Contract {
         let page = self.cards_range(series_id, from, to);
         let t = &s.table;
         let total = t.rarity_weights.total();
+        let burned = self.series_burns.get(&series_id).map(|b| b.burned.clone());
+        let floor = crate::mechanics::burn_params(t).map(|b| b.floor_bps).unwrap_or(0);
+        let bv = burned.as_ref().map(|b| draw::BurnView { burned: b, floor_bps: floor });
+        let burn_f: Vec<(u128, u128)> = Rarity::ALL
+            .iter()
+            .map(|r| bv.as_ref().map(|bv| draw::burn_factors(&s.draw_cards, &s.minted, bv, *r)).unwrap_or((0, 0)))
+            .collect();
         let rarities: Vec<Value> = Rarity::ALL
             .iter()
             .map(|r| {
@@ -219,8 +237,11 @@ impl Contract {
                             let i = from as usize + k;
                             json!({
                                 "index": i, "card_id": c.card_id, "weight": c.weight, "cap": c.cap,
-                                "minted": s.minted[i], "burnable": c.backing.is_some(),
+                                "minted": s.minted[i],
+                                "burnable": c.backing.is_some() || self.resurrected.contains_key(&(series_id, i as u32)),
                                 "ppm": ppm(rw, total, c.weight as u64, sum),
+                                // Poids dans la rareté (renormalisé entre brûlables) et part en ppm de la rareté.
+                                "effective_weight": bv.as_ref().map(|bv| U128(draw::in_rarity_weight(&s.draw_cards[i], s.minted[i], bv.burned[i], floor, burn_f[r.index()]))),
                             })
                         })
                         .collect();
@@ -233,6 +254,10 @@ impl Contract {
                     "rarity_ppm": if total == 0 { 0 } else { rw * 1_000_000 / total },
                     "rarity_card_weight": sum,
                     "available_card_weight": draw::available_weight_compact(&s.draw_cards, &t.mythics, &s.minted, &s.mythic_minted, *r),
+                    // Rareté pilotée par les burns : somme des poids renormalisés (modulo de card_roll).
+                    "effective_card_weight": bv.as_ref().map(|bv| U128(draw::available_weight_mech(&s.draw_cards, &t.mythics, &s.minted, &s.mythic_minted, Some(bv), *r))),
+                    "rush_rarity_ppm": t.mechanics.as_ref().and_then(|m| m.rush.as_ref()).map(|x| rarity_ppm(&x.weights, *r)),
+                    "gold_rarity_ppm": t.mechanics.as_ref().and_then(|m| m.gold_weights.as_ref()).map(|g| rarity_ppm(g, *r)),
                     "cards": cards,
                 })
             })
@@ -250,24 +275,41 @@ impl Contract {
 
     pub fn get_pack(&self, pack_id: u64) -> Option<Value> {
         let p = self.packs.get(&pack_id)?;
+        let s = self.series_ref(p.series_id);
+        let draws: Vec<DrawRecord> = p
+            .draws
+            .iter()
+            .enumerate()
+            .map(|(slot, d)| DrawRecord {
+                slot: slot as u8,
+                rarity_roll: U128(d.rarity_roll as u128),
+                rolled_rarity: d.rolled_rarity,
+                final_rarity: d.final_rarity,
+                card_roll: U128(d.card_roll),
+                kind: d.kind,
+                index: d.index,
+                token_id: token_id_of(pack_id, slot as u8),
+            })
+            .collect();
+        let token_ids: Vec<TokenId> = (0..p.cards.len()).map(|i| token_id_of(pack_id, i as u8)).collect();
         Some(json!({
-            "pack_id": p.pack_id,
+            "pack_id": pack_id,
             "series_id": p.series_id,
             "owner_id": p.owner_id,
-            "price_paid": U128(p.price_paid),
-            "storage_prepaid": U128(p.storage_prepaid),
+            // Prix et stockage de la série (figés à l'ouverture) : plus stockés par pack.
+            "price_paid": s.table.price,
+            "storage_prepaid": U128(env::storage_byte_cost().as_yoctonear() * s.storage_per_pack as u128),
             "bought_at_height": p.bought_at_height,
             "status": p.status,
             "attempt": p.attempt,
             "step": p.step,
             "acc": hex32(&p.acc),
             "last_progress_height": p.last_progress_height,
-            "seeds": p.seeds.iter().map(|s| json!({
-                "attempt": s.attempt, "step": s.step, "block_height": s.block_height,
-                "seed": hex32(&s.seed), "acc": hex32(&s.acc_after),
-            })).collect::<Vec<_>>(),
-            "token_ids": p.token_ids,
-            "draws": p.draws,
+            "seeds": Self::seeds_json(pack_id, p, &s.table_hash.unwrap_or([0; 32])),
+            "token_ids": token_ids,
+            "draws": draws,
+            "rush": p.flags & FLAG_RUSH != 0,
+            "mode": p.mode(),
         }))
     }
 
@@ -281,35 +323,51 @@ impl Contract {
         let count = self.pack_count_by_owner.get(&account_id).copied().unwrap_or(0);
         let from = from_index.unwrap_or(0).min(count);
         let to = from.saturating_add(limit.unwrap_or(50).min(100)).min(count);
-        (from..to).filter_map(|i| self.packs_by_owner.get(&(account_id.clone(), i)).copied()).collect()
+        let mut out = Vec::new();
+        let mut i = from;
+        while i < to {
+            let Some(chunk) = self.owner_packs.get(&(account_id.clone(), i / OWNER_CHUNK)) else { break };
+            let lo = (i % OWNER_CHUNK) as usize;
+            let hi = (lo + (to - i) as usize).min(chunk.len());
+            if hi <= lo {
+                break;
+            }
+            out.extend_from_slice(&chunk[lo..hi]);
+            i += (hi - lo) as u32;
+        }
+        out
     }
 
     pub fn get_card(&self, token_id: TokenId) -> Option<CardView> {
-        let info = self.cards.get(&token_id)?;
-        let owner_id = self.tokens.owner_by_id.get(&token_id)?;
-        let s = self.series_ref(info.series_id);
-        let card_id = match info.kind {
-            CardKind::Visible => Some(self.card_def(info.series_id, info.index).card_id),
-            CardKind::Mythic => s.revealed_mythics[info.index as usize].as_ref().map(|r| r.card_id.clone()),
+        let (_, slot, pack) = self.live(&token_id)?;
+        let d = pack.draws[slot];
+        let owner_id = pack.cards[slot].owner.clone().unwrap_or_else(|| pack.owner_id.clone());
+        let s = self.series_ref(pack.series_id);
+        let (card_id, sealed) = match d.kind {
+            CardKind::Visible => (Some(self.card_def(pack.series_id, d.index).card_id), false),
+            CardKind::Mythic => match &s.revealed_mythics[d.index as usize] {
+                Some(r) => (Some(r.card_id.clone()), false),
+                None => (None, true),
+            },
         };
         Some(CardView {
             token_id: token_id.clone(),
             owner_id,
-            series_id: info.series_id,
-            kind: info.kind,
-            index: info.index,
+            series_id: pack.series_id,
+            kind: d.kind,
+            index: d.index,
             card_id,
-            rarity: info.rarity,
-            state: info.state,
-            sealed: info.sealed,
-            backing: self.backing.get(&token_id).cloned(),
+            rarity: d.final_rarity,
+            state: pack.cards[slot].state,
+            sealed,
+            backing: self.backing_of(pack.series_id, d.kind, d.index),
             listing: self.listings.get(&token_id).cloned(),
         })
     }
 
-    /// Registre carte → (asset_id, amount).
+    /// Adossement courant d'une carte (table, résurrection, ou mythique révélée).
     pub fn get_backing(&self, token_id: TokenId) -> Option<Backing> {
-        self.backing.get(&token_id).cloned()
+        self.token_backing(&token_id)
     }
 
     pub fn get_listing(&self, token_id: TokenId) -> Option<Listing> {
@@ -358,4 +416,13 @@ fn ppm(rw: u64, total: u64, w: u64, sum: u64) -> u64 {
         return 0;
     }
     ((rw as u128 * w as u128 * 1_000_000) / (total as u128 * sum as u128)) as u64
+}
+
+fn rarity_ppm(w: &RarityWeights, r: Rarity) -> u64 {
+    let total = w.total();
+    if total == 0 {
+        0
+    } else {
+        w.get(r) as u64 * 1_000_000 / total
+    }
 }

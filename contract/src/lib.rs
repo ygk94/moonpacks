@@ -5,12 +5,13 @@
 //! - mythiques secrètes sous engagement, révélées à leur première sortie (`mythic.rs`) ;
 //! - marché intégré (`market.rs`) ;
 //! - burn en deux temps via un `redeemer` abstrait (`redeem.rs`) ;
-//! - interfaces NFT standard (`nft.rs`).
+//! - mécaniques : pitié, rareté pilotée par les burns, gold rush, résurrection (`mechanics.rs`) ;
+//! - interfaces NFT standard, stockage minimal par carte (`nft.rs`).
 
 use near_contract_standards::non_fungible_token::metadata::{
     NFTContractMetadata, TokenMetadata, NFT_METADATA_SPEC,
 };
-use near_contract_standards::non_fungible_token::{NonFungibleToken, TokenId};
+use near_contract_standards::non_fungible_token::TokenId;
 use near_sdk::json_types::U128;
 use near_sdk::store::{IterableMap, LookupMap, Vector};
 use near_sdk::{env, near, require, AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault};
@@ -18,6 +19,7 @@ use near_sdk::{env, near, require, AccountId, BorshStorageKey, Gas, NearToken, P
 pub mod draw;
 pub mod events;
 mod hash_stream;
+mod mechanics;
 mod market;
 mod mythic;
 mod nft;
@@ -31,6 +33,8 @@ mod views;
 mod tests;
 #[cfg(test)]
 mod tests_batch;
+#[cfg(test)]
+mod tests_mech;
 
 use types::*;
 
@@ -69,35 +73,61 @@ pub const MIN_REVEAL_STEPS: u8 = 2;
 pub const MAX_REVEAL_STEPS: u8 = 6;
 
 // ---------------------------------------------------------------- stockage (octets)
-/// Partie fixe d'un enregistrement de pack (hors graines, tirages, jetons).
-pub const PACK_BASE_BYTES: u64 = 400;
-/// Une graine journalisée (attempt, step, hauteur, graine, acc).
-pub const SEED_RECORD_BYTES: u64 = 100;
-/// Entrée de la liste paginée des packs par propriétaire, compteur compris.
-pub const OWNER_PACK_LIST_BYTES: u64 = 250;
-/// Par carte, en plus des métadonnées et de l'estimation du standard :
-/// CardInfo, DrawRecord dans le pack, identifiant dans le pack.
-pub const PER_CARD_EXTRA_BYTES: u64 = 300;
-/// Entrée du registre d'adossement, hors longueur de `asset_id`.
-pub const BACKING_BASE_BYTES: u64 = 120;
+//
+// Une carte ne stocke que sa référence : un emplacement de pack (`CardSlot`, 10 o) et son tirage
+// (`PackDraw`, 23 o), plus une entrée de 8 o dans la liste de son propriétaire et une dans la liste
+// globale (listes par blocs). Les métadonnées NEP-177 et l'adossement sont reconstruits à la lecture
+// depuis la table de série. Les constantes ci-dessous bornent le pire cas (comptes de 64 octets,
+// premier achat du compte, nouveaux blocs de liste) ; la mesure est dans le README.
+
+/// Enregistrement de pack hors graines et cartes : clé, surcoût de 40 o par entrée, champs fixes,
+/// propriétaire de 64 octets au plus.
+pub const PACK_RECORD_BYTES: u64 = 200;
+/// Une graine journalisée (tentative, étape, hauteur, graine).
+pub const SEED_RECORD_BYTES: u64 = 45;
+/// Par carte : `PackDraw` (31) + `CardSlot` (10) + liste du propriétaire (8) + liste globale (8).
+pub const PER_CARD_BYTES: u64 = 60;
+/// Par mythique scellée : identifiant ajouté à `Series::sealed_tokens`.
+pub const SEALED_TOKEN_BYTES: u64 = 24;
+/// Entrée de la liste des packs du compte.
+pub const OWNER_PACK_LIST_BYTES: u64 = 8;
+/// Nouveaux blocs de liste au pire (cartes du compte, liste globale, packs du compte).
+pub const NEW_CHUNKS_BYTES: u64 = 120 + 50 + 120;
+/// Premier achat d'un compte : compteurs de packs et de cartes du compte.
+pub const NEW_ACCOUNT_BYTES: u64 = 230;
+/// Entrée du compteur de pitié (compte, série), à son premier tirage.
+pub const PITY_ENTRY_BYTES: u64 = 120;
+/// Marge.
+pub const PACK_MARGIN_BYTES: u64 = 64;
 /// Dépôt d'une annonce de marché.
 pub const LISTING_DEPOSIT: NearToken = NearToken::from_millinear(5);
+
+/// Cartes par bloc de la liste d'un propriétaire.
+pub const OWNER_CHUNK: u32 = 32;
+/// Cartes par bloc de la liste globale.
+pub const GLOBAL_CHUNK: u32 = 64;
+/// Seaux au plus dans la fenêtre du gold rush.
+pub const MAX_RUSH_BUCKETS: u64 = 96;
+/// Bornes du compteur de pitié.
+pub const MAX_PITY_N: u32 = 10_000;
+pub const PPM: u64 = 1_000_000;
 
 #[derive(BorshStorageKey)]
 #[near]
 enum StorageKey {
-    NftOwners,
-    NftMetadata,
-    NftEnumeration,
-    NftApprovals,
     Series,
-    Packs,
-    PacksByOwner,
-    PackCountByOwner,
-    Cards,
-    Backing,
-    Listings,
     SeriesCards,
+    SeriesBurns,
+    Resurrected,
+    Packs,
+    OwnerPacks,
+    PackCountByOwner,
+    OwnerTokens,
+    OwnerTokenCount,
+    AllTokens,
+    Approvals,
+    Pity,
+    Listings,
 }
 
 #[near(contract_state)]
@@ -105,20 +135,32 @@ enum StorageKey {
 pub struct Contract {
     owner_id: AccountId,
     redeemer_id: Option<AccountId>,
+    /// Oracle de prix abstrait (résurrection des coins morts), comme le redeemer.
+    price_oracle_id: Option<AccountId>,
     config: Config,
     metadata: NFTContractMetadata,
-    tokens: NonFungibleToken,
     series: Vector<Series>,
     /// Cartes visibles des séries, par blocs de `CARDS_PER_CHUNK` : `(series_id, bloc) → cartes`.
     series_cards: LookupMap<(u32, u32), Vec<CardDef>>,
+    /// Compteurs de burn (séries à rareté pilotée par les burns).
+    series_burns: LookupMap<u32, BurnState>,
+    /// Adossement donné par l'oracle à une carte de collection : `(series_id, index) → adossement`.
+    resurrected: LookupMap<(u32, u32), Backing>,
     packs: LookupMap<u64, Pack>,
-    packs_by_owner: LookupMap<(AccountId, u32), u64>,
+    /// Packs d'un compte, par blocs de `OWNER_CHUNK` : `(compte, bloc) → pack_id`.
+    owner_packs: LookupMap<(AccountId, u32), Vec<u64>>,
     pack_count_by_owner: LookupMap<AccountId, u32>,
-    cards: LookupMap<TokenId, CardInfo>,
-    backing: LookupMap<TokenId, Backing>,
+    /// Cartes d'un compte (NEP-181), par blocs de `OWNER_CHUNK`, retrait par échange avec la dernière.
+    owner_tokens: LookupMap<(AccountId, u32), Vec<u64>>,
+    owner_token_count: LookupMap<AccountId, u32>,
+    /// Toutes les cartes vivantes (NEP-181), par blocs de `GLOBAL_CHUNK`.
+    all_tokens: LookupMap<u32, Vec<u64>>,
+    total_supply: u32,
+    approvals: LookupMap<u64, TokenApprovals>,
+    /// Compteur de pitié : `(compte, série) → packs consécutifs sans gold pack`.
+    pity: LookupMap<(AccountId, u32), u32>,
     listings: IterableMap<TokenId, Listing>,
     next_pack_id: u64,
-    next_token_id: u64,
     /// Total encaissé en prix de boosters (yoctoNEAR). Aucun retrait pour l'instant.
     revenue: u128,
 }
@@ -150,30 +192,29 @@ impl Contract {
             "reveal_steps hors bornes"
         );
         Self {
-            owner_id: owner_id.clone(),
+            owner_id,
             redeemer_id,
+            price_oracle_id: None,
             config: Config {
                 reveal_steps,
                 retry_delay_blocks: retry_delay_blocks.unwrap_or(100),
             },
             metadata,
-            tokens: NonFungibleToken::new(
-                StorageKey::NftOwners,
-                owner_id,
-                Some(StorageKey::NftMetadata),
-                Some(StorageKey::NftEnumeration),
-                Some(StorageKey::NftApprovals),
-            ),
             series: Vector::new(StorageKey::Series),
             series_cards: LookupMap::new(StorageKey::SeriesCards),
+            series_burns: LookupMap::new(StorageKey::SeriesBurns),
+            resurrected: LookupMap::new(StorageKey::Resurrected),
             packs: LookupMap::new(StorageKey::Packs),
-            packs_by_owner: LookupMap::new(StorageKey::PacksByOwner),
+            owner_packs: LookupMap::new(StorageKey::OwnerPacks),
             pack_count_by_owner: LookupMap::new(StorageKey::PackCountByOwner),
-            cards: LookupMap::new(StorageKey::Cards),
-            backing: LookupMap::new(StorageKey::Backing),
+            owner_tokens: LookupMap::new(StorageKey::OwnerTokens),
+            owner_token_count: LookupMap::new(StorageKey::OwnerTokenCount),
+            all_tokens: LookupMap::new(StorageKey::AllTokens),
+            total_supply: 0,
+            approvals: LookupMap::new(StorageKey::Approvals),
+            pity: LookupMap::new(StorageKey::Pity),
             listings: IterableMap::new(StorageKey::Listings),
             next_pack_id: 0,
-            next_token_id: 0,
             revenue: 0,
         }
     }
@@ -185,6 +226,13 @@ impl Contract {
         self.assert_owner();
         self.redeemer_id = redeemer_id.clone();
         events::emit("redeemer_set", near_sdk::serde_json::json!({ "redeemer_id": redeemer_id }));
+    }
+
+    /// Change l'oracle de prix (résurrection des coins morts). `None` désactive la résurrection.
+    pub fn set_price_oracle(&mut self, price_oracle_id: Option<AccountId>) {
+        self.assert_owner();
+        self.price_oracle_id = price_oracle_id.clone();
+        events::emit("price_oracle_set", near_sdk::serde_json::json!({ "price_oracle_id": price_oracle_id }));
     }
 
     /// Fait échouer le dernier reçu du tirage (build `test-hooks` seulement).
@@ -218,10 +266,6 @@ impl Contract {
         self.series.get(series_id).unwrap_or_else(|| env::panic_str("Série inconnue"))
     }
 
-    pub(crate) fn card_info(&self, token_id: &TokenId) -> &CardInfo {
-        self.cards.get(token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"))
-    }
-
     /// Carte visible d'index `index` (lit un seul bloc).
     pub(crate) fn card_def(&self, series_id: u32, index: u32) -> CardDef {
         self.series_cards
@@ -252,13 +296,20 @@ impl Contract {
         t
     }
 
-    /// Métadonnées NEP-177 d'une carte visible. Sert au mint et à l'estimation du stockage.
-    pub(crate) fn card_metadata(series_id: u32, c: &CardDef, pack_id: u64) -> TokenMetadata {
+    /// Métadonnées NEP-177 d'une carte visible, reconstruites depuis la table (rien n'est stocké
+    /// par carte). `burnable` suit l'adossement courant (table, ou résurrection par l'oracle).
+    pub(crate) fn card_metadata(
+        series_id: u32,
+        c: &CardDef,
+        pack_id: u64,
+        burnable: bool,
+        issued_at_ms: u64,
+    ) -> TokenMetadata {
         let extra = near_sdk::serde_json::json!({
             "series_id": series_id,
             "card_id": c.card_id,
             "rarity": c.rarity.as_str(),
-            "burnable": c.backing.is_some(),
+            "burnable": burnable,
             "pack_id": pack_id,
         });
         TokenMetadata {
@@ -266,26 +317,33 @@ impl Contract {
             media: c.media.clone(),
             reference: c.reference.clone(),
             copies: c.cap.map(|x| x as u64),
-            issued_at: Some((env::block_timestamp_ms()).to_string()),
+            issued_at: Some(issued_at_ms.to_string()),
             extra: Some(extra.to_string()),
             ..Default::default()
         }
     }
 
-    /// Métadonnées NEP-177 d'une mythique (scellée ou révélée). Les cartes visibles passent par
-    /// `card_metadata`, car leurs définitions ne sont pas dans `Series`.
-    pub(crate) fn build_metadata(
+    /// Métadonnées NEP-177 d'une mythique : scellée tant que l'engagement n'est pas révélé, puis
+    /// révélée (avec `updated_at` = date de révélation pour une carte créée scellée).
+    pub(crate) fn mythic_metadata(
         series_id: u32,
         series: &Series,
-        kind: CardKind,
         index: u32,
         pack_id: u64,
+        issued_at_ms: u64,
+        token_id: &str,
     ) -> TokenMetadata {
-        require!(kind == CardKind::Mythic, "build_metadata : mythiques seulement");
-        let issued_at = Some((env::block_timestamp_ms()).to_string());
-        let m = &series.table.mythics[index as usize];
-        match &series.revealed_mythics[index as usize] {
-            Some(r) => Self::revealed_mythic_metadata(series_id, m, r, pack_id, issued_at),
+        let issued_at = Some(issued_at_ms.to_string());
+        let j = index as usize;
+        let m = &series.table.mythics[j];
+        match &series.revealed_mythics[j] {
+            Some(r) => {
+                let mut meta = Self::revealed_mythic_metadata(series_id, m, r, pack_id, issued_at);
+                if series.sealed_tokens[j].iter().any(|t| t == token_id) {
+                    meta.updated_at = Some(series.mythic_revealed_ms[j].to_string());
+                }
+                meta
+            }
             None => {
                 let extra = near_sdk::serde_json::json!({
                     "series_id": series_id,
@@ -337,6 +395,17 @@ impl Contract {
             near_sdk::Promise::new(to.clone()).transfer(NearToken::from_yoctonear(amount)).detach();
         }
     }
+}
+
+/// `token_id = pack_id × 10 + emplacement` (10 cartes par booster au plus).
+pub fn token_id_of(pack_id: u64, slot: u8) -> TokenId {
+    (pack_id * 10 + slot as u64).to_string()
+}
+
+/// Inverse de `token_id_of` ; refuse les formes non canoniques (zéros de tête, signe…).
+pub fn parse_token_id(token_id: &str) -> Option<u64> {
+    let n: u64 = token_id.parse().ok()?;
+    (n.to_string() == token_id).then_some(n)
 }
 
 pub(crate) fn hex32(b: &[u8; 32]) -> String {

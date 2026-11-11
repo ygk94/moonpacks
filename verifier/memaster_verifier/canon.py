@@ -111,18 +111,64 @@ def rarity_weights_json(w: dict) -> str:
     return _obj([(r, _int(w[r], 0, 1 << 32)) for r in RARITY_NAMES])
 
 
-def table_json(t: dict) -> str:
+def _u32(x) -> str:
+    return _int(x, 0, 1 << 32)
+
+
+def _u64(x) -> str:
+    return _int(x, 0, 1 << 64)
+
+
+def pity_json(p: dict) -> str:
+    return _obj([("p0_ppm", _u32(p["p0_ppm"])), ("k_ppm", _u32(p["k_ppm"])), ("n_max", _u32(p["n_max"]))])
+
+
+def burn_json(b: dict) -> str:
+    return _obj([("floor_bps", _u32(b["floor_bps"]))])
+
+
+def rush_json(r: dict) -> str:
     return _obj(
         [
-            ("name", _str(t["name"])),
-            ("price", _u128(t["price"])),
-            ("cards_per_pack", _int(t["cards_per_pack"], 0, 1 << 8)),
-            ("rarity_weights", rarity_weights_json(t["rarity_weights"])),
-            ("cards", _arr(t["cards"], card_json)),
-            ("mythics", _arr(t["mythics"], mythic_commitment_json)),
-            ("royalties", _arr(t["royalties"], royalty_json)),
+            ("ratio_bps", _u32(r["ratio_bps"])),
+            ("min_packs", _u32(r["min_packs"])),
+            ("window_blocks", _u64(r["window_blocks"])),
+            ("baseline_blocks", _u64(r["baseline_blocks"])),
+            ("bucket_blocks", _u64(r["bucket_blocks"])),
+            ("duration_blocks", _u64(r["duration_blocks"])),
+            ("cooldown_blocks", _u64(r["cooldown_blocks"])),
+            ("weights", rarity_weights_json(r["weights"])),
         ]
     )
+
+
+def mechanics_json(m: dict) -> str:
+    """`Mechanics` : tous les champs, `null` pour une option absente, dans l'ordre de `types.rs`."""
+    return _obj(
+        [
+            ("gold_weights", _opt(m.get("gold_weights"), rarity_weights_json)),
+            ("pity", _opt(m.get("pity"), pity_json)),
+            ("burn", _opt(m.get("burn"), burn_json)),
+            ("rush", _opt(m.get("rush"), rush_json)),
+        ]
+    )
+
+
+def table_json(t: dict) -> str:
+    """`SeriesTable`. `mechanics` vient en dernier et **n'apparaît pas** quand il vaut `None`
+    (`skip_serializing_if`) : une table sans mécanique garde ses octets et son hash."""
+    pairs = [
+        ("name", _str(t["name"])),
+        ("price", _u128(t["price"])),
+        ("cards_per_pack", _int(t["cards_per_pack"], 0, 1 << 8)),
+        ("rarity_weights", rarity_weights_json(t["rarity_weights"])),
+        ("cards", _arr(t["cards"], card_json)),
+        ("mythics", _arr(t["mythics"], mythic_commitment_json)),
+        ("royalties", _arr(t["royalties"], royalty_json)),
+    ]
+    if t.get("mechanics") is not None:
+        pairs.append(("mechanics", mechanics_json(t["mechanics"])))
+    return _obj(pairs)
 
 
 def content_json(c: dict) -> str:

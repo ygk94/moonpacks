@@ -4,6 +4,7 @@ use crate::draw;
 use crate::types::*;
 use crate::*;
 use near_contract_standards::non_fungible_token::core::NonFungibleTokenCore;
+use near_contract_standards::non_fungible_token::enumeration::NonFungibleTokenEnumeration;
 use near_sdk::test_utils::{accounts, VMContextBuilder};
 use near_sdk::{testing_env, PromiseResult, RuntimeFeesConfig};
 
@@ -103,6 +104,7 @@ fn table() -> SeriesTable {
             cap: 3,
         }],
         royalties: vec![Royalty { account_id: owner(), bps: 500 }],
+        mechanics: None,
     }
 }
 
@@ -372,16 +374,36 @@ fn commitment_helper_matches_table() {
 fn mint_sealed(c: &mut Contract) -> String {
     let mut s = c.series_ref(0).clone();
     s.mythic_minted[0] += 1;
-    let tid = "sealed-1".to_string();
-    s.sealed_tokens[0].push(tid.clone());
-    let meta = Contract::build_metadata(0, &s, CardKind::Mythic, 0, 0);
+    let pid = c.next_pack_id;
+    c.next_pack_id += 1;
+    s.sealed_tokens[0].push(token_id_of(pid, 0));
     *c.series.get_mut(0).unwrap() = s;
-    c.tokens.internal_mint_with_refund(tid.clone(), alice(), Some(meta), None);
-    c.cards.insert(
-        tid.clone(),
-        CardInfo { series_id: 0, kind: CardKind::Mythic, index: 0, rarity: Rarity::Mythic, state: CardState::Normal, sealed: true },
+    c.packs.insert(
+        pid,
+        Pack {
+            series_id: 0,
+            owner_id: alice(),
+            bought_at_height: 0,
+            status: PackStatus::Revealed,
+            attempt: 0,
+            step: 3,
+            acc: [0; 32],
+            seeds: vec![],
+            last_progress_height: 0,
+            revealed_at_ms: 0,
+            flags: 0,
+            draws: vec![PackDraw {
+                rarity_roll: 0,
+                rolled_rarity: Rarity::Mythic,
+                final_rarity: Rarity::Mythic,
+                card_roll: 0,
+                kind: CardKind::Mythic,
+                index: 0,
+            }],
+            cards: vec![],
+        },
     );
-    tid
+    c.internal_mint_slot(pid, &alice())
 }
 
 #[test]
@@ -430,23 +452,18 @@ fn undrawn_mythic_cannot_be_revealed() {
 
 // ----------------------------------------------------------------- marché et burn
 
-fn first_backed_token(c: &Contract, owner: &AccountId) -> String {
-    c.tokens
-        .tokens_per_owner
-        .as_ref()
-        .unwrap()
-        .get(owner)
-        .unwrap()
-        .iter()
-        .find(|t| c.backing.get(t).is_some())
-        .expect("aucune carte adossée")
+fn first_backed_token(c: &Contract, owner: &AccountId) -> Option<String> {
+    c.nft_tokens_for_owner(owner.clone(), None, None)
+        .into_iter()
+        .map(|t| t.token_id)
+        .find(|t| c.get_backing(t.clone()).is_some())
 }
 
 fn pack_with_backed_card(c: &mut Contract) -> String {
     for seed in 0..50u8 {
         buy_and_reveal(c, alice(), seed);
-        if c.tokens.tokens_per_owner.as_ref().unwrap().get(&alice()).unwrap().iter().any(|t| c.backing.get(&t).is_some()) {
-            return first_backed_token(c, &alice());
+        if let Some(t) = first_backed_token(c, &alice()) {
+            return t;
         }
     }
     panic!("pas de carte adossée");
@@ -739,6 +756,6 @@ fn gen_mythics_script_matches_contract_hashes() {
 
 impl Contract {
     fn nft_supply_for_owner_internal(&self, a: &AccountId) -> u64 {
-        self.tokens.tokens_per_owner.as_ref().unwrap().get(a).map(|s| s.len()).unwrap_or(0)
+        self.owner_token_count.get(a).copied().unwrap_or(0) as u64
     }
 }

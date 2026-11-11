@@ -144,6 +144,7 @@ mod tests {
             cards: vec![],
             mythics: vec![MythicCommitment { commitment: "a".repeat(64), content_hash: "b".repeat(64), weight: 1, cap: 2 }],
             royalties: vec![Royalty { account_id: "r.near".parse().unwrap(), bps: 10 }],
+            mechanics: None,
         }
     }
 
@@ -178,6 +179,50 @@ mod tests {
         let (before, after) = header_json_parts(&header());
         let card = near_sdk::serde_json::to_vec(&t.cards[0]).unwrap();
         assert_eq!([before, card, after].concat(), json.into_bytes());
+    }
+
+    /// Avec des mécaniques : le champ `mechanics` vient en dernier, ses sous-champs dans cet ordre,
+    /// et la coupe de l'en-tête retombe toujours sur la table complète. Sans mécanique, le champ
+    /// est absent (test précédent) : les tables d'avant gardent leurs octets et leur hash.
+    #[test]
+    fn mechanics_field_order_is_locked() {
+        let mut t = header();
+        let g = RarityWeights { mythic: 2, legendary: 4, epic: 6, rare: 8, common: 10 };
+        t.mechanics = Some(Mechanics {
+            gold_weights: Some(g.clone()),
+            pity: Some(PityParams { p0_ppm: 20_000, k_ppm: 10_000, n_max: 30 }),
+            burn: Some(BurnParams { floor_bps: 2_500 }),
+            rush: Some(RushParams {
+                ratio_bps: 25_000,
+                min_packs: 50,
+                window_blocks: 6_000,
+                baseline_blocks: 144_000,
+                bucket_blocks: 1_500,
+                duration_blocks: 3_000,
+                cooldown_blocks: 36_000,
+                weights: RarityWeights { mythic: 3, legendary: 30, epic: 241, rare: 936, common: 8_790 },
+            }),
+        });
+        let json = String::from_utf8(near_sdk::serde_json::to_vec(&t).unwrap()).unwrap();
+        assert!(json.ends_with(concat!(
+            r#""royalties":[{"account_id":"r.near","bps":10}],"#,
+            r#""mechanics":{"gold_weights":{"mythic":2,"legendary":4,"epic":6,"rare":8,"common":10},"#,
+            r#""pity":{"p0_ppm":20000,"k_ppm":10000,"n_max":30},"burn":{"floor_bps":2500},"#,
+            r#""rush":{"ratio_bps":25000,"min_packs":50,"window_blocks":6000,"baseline_blocks":144000,"#,
+            r#""bucket_blocks":1500,"duration_blocks":3000,"cooldown_blocks":36000,"#,
+            r#""weights":{"mythic":3,"legendary":30,"epic":241,"rare":936,"common":8790}}}}"#,
+        )), "{json}");
+        let (before, after) = header_json_parts(&t);
+        assert_eq!([before, after].concat(), json.into_bytes());
+        // `"mechanics": null` explicite = absent.
+        let back: SeriesTable = near_sdk::serde_json::from_str(&json_without_mechanics_null()).unwrap();
+        assert!(back.mechanics.is_none());
+    }
+
+    fn json_without_mechanics_null() -> String {
+        let mut v = near_sdk::serde_json::to_value(header()).unwrap();
+        v["mechanics"] = near_sdk::serde_json::Value::Null;
+        v.to_string()
     }
 
     #[test]

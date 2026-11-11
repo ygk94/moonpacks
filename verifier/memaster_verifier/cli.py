@@ -158,6 +158,18 @@ def cmd_pack(args) -> int:
     table, tsrc = _load_table(args, sid)
     print(f"table : {tsrc}")
 
+    if args.event and table.get("mechanics") is not None and args.pack_id is None:
+        # Série à mécaniques : rejeu de tous les événements utiles (achats, tirages, burns,
+        # résurrections) dans l'ordre du fichier, sans archive d'état.
+        items = [(n, e) for n, e in verify.load_series_events(args.event) if e.get("series_id", sid) == sid]
+        m = mm = None
+        if args.snapshot:
+            m, mm = _load_snapshot(args.snapshot)
+        print(f"série à mécaniques : rejeu de {len(items)} événements ({', '.join(sorted({n for n, _ in items}))})")
+        reports, st = verify.replay_series(table, items, m, mm)
+        print(f"minted après rejeu : {st.m} / mythiques {st.mm} ; burns {st.burn_seq}, résurrections {st.resurrect_seq}")
+        return _emit(reports, args.verbose)
+
     if len(events) > 1:
         # Plusieurs événements : rejeu dans l'ordre fourni.
         m = mm = None
@@ -282,7 +294,17 @@ def cmd_stats(args) -> int:
     table, tsrc = _load_table(args, sid)
     print(f"table : {tsrc}")
     code = 0
-    if args.replay:
+    if args.replay and table.get("mechanics") is not None:
+        items = []
+        for p in args.events:
+            items.extend((n, e) for n, e in verify.load_series_events(p) if e.get("series_id", sid) == sid)
+        reports, st = verify.replay_series(table, items)
+        bad = [r for r in reports if not r.ok]
+        print(f"rejeu depuis l'ouverture (mécaniques) : {len(reports) - len(bad)}/{len(reports)} rapports vérifiés")
+        for r in bad:
+            print(r.render(False))
+        code = 1 if bad else 0
+    elif args.replay:
         reports, m, mm = verify.replay(table, events)
         bad = [r for r in reports if not r.ok]
         print(f"rejeu depuis l'ouverture : {len(reports) - len(bad)}/{len(reports)} boosters vérifiés ; minted final {m} / {mm}")

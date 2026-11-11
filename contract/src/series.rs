@@ -62,10 +62,11 @@ fn validate_header(table: &SeriesTable) {
     require!(table.royalties.len() <= MAX_ROYALTIES, "Trop de redevances");
     let bps: u32 = table.royalties.iter().map(|r| r.bps as u32).sum();
     require!(bps <= MAX_ROYALTY_BPS, "Redevances > 50 %");
+    crate::mechanics::validate_mechanics(table);
 }
 
 /// Contrôles carte par carte, et unicité des `card_id` dans `cards`.
-fn validate_cards(weights: &RarityWeights, cards: &[CardDef]) {
+fn validate_cards(header: &SeriesTable, cards: &[CardDef]) {
     let mut ids = std::collections::BTreeSet::new();
     for c in cards {
         check_len(&c.card_id, MAX_ID_LEN, "card_id");
@@ -74,7 +75,7 @@ fn validate_cards(weights: &RarityWeights, cards: &[CardDef]) {
         check_opt_url(&c.reference, "reference");
         check_backing(&c.backing);
         require!(c.rarity != Rarity::Mythic, "Les mythiques passent par des engagements");
-        require!(weights.get(c.rarity) > 0, "Carte dans une rareté de poids nul");
+        require!(crate::mechanics::rarity_used(header, c.rarity), "Carte dans une rareté de poids nul");
         require!(ids.insert(c.card_id.as_str()), "card_id en double");
     }
 }
@@ -82,17 +83,19 @@ fn validate_cards(weights: &RarityWeights, cards: &[CardDef]) {
 /// Règles qui portent sur la table entière : chaque rareté pondérée a une carte, et une commune
 /// illimitée existe (le tirage n'échoue jamais). Sur les données compactes : pas besoin de relire
 /// les cartes à l'ouverture.
-fn validate_coverage(weights: &RarityWeights, cards: &[DrawCard]) {
-    for r in [Rarity::Legendary, Rarity::Epic, Rarity::Rare, Rarity::Common] {
-        if weights.get(r) > 0 {
-            require!(
-                cards.iter().any(|c| c.rarity == r && c.weight > 0),
-                format!("Rareté {} sans carte", r.as_str())
-            );
+fn validate_coverage(header: &SeriesTable, cards: &[DrawCard]) {
+    for weights in crate::mechanics::weight_tables(header) {
+        for r in [Rarity::Legendary, Rarity::Epic, Rarity::Rare, Rarity::Common] {
+            if weights.get(r) > 0 {
+                require!(
+                    cards.iter().any(|c| c.rarity == r && c.weight > 0),
+                    format!("Rareté {} sans carte", r.as_str())
+                );
+            }
         }
     }
     require!(
-        weights.common > 0
+        header.rarity_weights.common > 0
             && cards.iter().any(|c| c.rarity == Rarity::Common && c.cap.is_none() && c.weight > 0),
         "Il faut au moins une commune sans plafond et de poids non nul"
     );
@@ -102,9 +105,9 @@ fn validate_coverage(weights: &RarityWeights, cards: &[DrawCard]) {
 pub(crate) fn validate_table(table: &SeriesTable) {
     validate_header(table);
     require!(table.cards.len() <= MAX_CARDS_PER_SERIES, "Trop de cartes");
-    validate_cards(&table.rarity_weights, &table.cards);
+    validate_cards(table, &table.cards);
     let compact: Vec<DrawCard> = table.cards.iter().map(DrawCard::from).collect();
-    validate_coverage(&table.rarity_weights, &compact);
+    validate_coverage(table, &compact);
 }
 
 /// Validation d'un appel : complète, ou sans les règles de couverture si la table sera
@@ -116,7 +119,7 @@ fn validate_call(table: &SeriesTable, partial: bool) {
     );
     if partial {
         validate_header(table);
-        validate_cards(&table.rarity_weights, &table.cards);
+        validate_cards(table, &table.cards);
     } else {
         validate_table(table);
     }
@@ -171,7 +174,7 @@ impl Contract {
             !cards.is_empty() && cards.len() <= MAX_CARDS_PER_CALL,
             format!("Lot de 1 à {} cartes", MAX_CARDS_PER_CALL)
         );
-        validate_cards(&s.table.rarity_weights, &cards);
+        validate_cards(&s.table, &cards);
         let from = s.draw_cards.len();
         let count = cards.len();
         self.push_cards(series_id, cards);
@@ -195,7 +198,7 @@ impl Contract {
         require!(s.status != SeriesStatus::Deleted, "Brouillon supprimé");
         require!(s.status == SeriesStatus::Draft, "Série déjà ouverte");
         // Règles de couverture (déjà vérifiées à la création d'une table complète, pas d'une table par lots).
-        validate_coverage(&s.table.rarity_weights, &s.draw_cards);
+        validate_coverage(&s.table, &s.draw_cards);
         let storage = self.worst_case_pack_storage(series_id);
         let s = self.series.get_mut(series_id).unwrap();
         let mut stream = s.hash_stream.take().unwrap_or_else(|| env::panic_str("Hash de chargement absent"));
@@ -240,8 +243,13 @@ impl Contract {
         s.minted = Vec::new();
         s.mythic_minted = Vec::new();
         s.revealed_mythics = Vec::new();
+        s.mythic_revealed_ms = Vec::new();
         s.sealed_tokens = Vec::new();
+        s.rush = None;
+        s.table.mechanics = None;
+        self.series_burns.remove(&series_id);
         self.series.flush();
+        self.series_burns.flush();
         self.series_cards.flush();
         let freed = before.saturating_sub(env::storage_usage());
         let s = self.series.get_mut(series_id).unwrap();
@@ -307,7 +315,14 @@ impl Contract {
         s.table = header;
         s.mythic_minted = vec![0; m];
         s.revealed_mythics = vec![None; m];
+        s.mythic_revealed_ms = vec![0; m];
         s.sealed_tokens = vec![Vec::new(); m];
+        s.rush = initial_rush(&s.table);
+        let burns = crate::mechanics::burn_params(&s.table).is_some();
+        self.series_burns.remove(&series_id);
+        if burns {
+            self.series_burns.insert(series_id, BurnState::default());
+        }
         self.push_cards(series_id, cards);
     }
 
@@ -320,6 +335,10 @@ impl Contract {
         let cards = std::mem::take(&mut header.cards);
         let mut stream = Sha256Stream::default();
         stream.update(&header_json_parts(&header).0);
+        let rush = initial_rush(&header);
+        if crate::mechanics::burn_params(&header).is_some() {
+            self.series_burns.insert(id, BurnState::default());
+        }
         self.series.push(Series {
             id,
             status: SeriesStatus::Draft,
@@ -328,16 +347,17 @@ impl Contract {
             hash_stream: Some(stream),
             table: header,
             draw_cards: Vec::new(),
-            max_card_meta_bytes: 0,
-            max_card_backing_bytes: 0,
             table_hash: None,
             minted: Vec::new(),
             mythic_minted: vec![0; m],
             revealed_mythics: vec![None; m],
+            mythic_revealed_ms: vec![0; m],
             sealed_tokens: vec![Vec::new(); m],
             storage_per_pack: 0,
             packs_sold: 0,
             storage_deposit: 0,
+            rush,
+            resurrect_seq: 0,
         });
         self.push_cards(id, cards);
         events::emit("series_created", json!({ "series_id": id, "batched": partial }));
@@ -351,6 +371,7 @@ impl Contract {
     fn charge_storage(&mut self, series_id: u32, before: u64) -> u128 {
         self.series.flush();
         self.series_cards.flush();
+        self.series_burns.flush();
         let added = env::storage_usage().saturating_sub(before);
         let cost = env::storage_byte_cost().as_yoctonear() * added as u128;
         let deposit = env::attached_deposit().as_yoctonear();
@@ -368,8 +389,8 @@ impl Contract {
         let s = self.series.get_mut(series_id).unwrap_or_else(|| env::panic_str("Série inconnue"));
         require!(s.status == SeriesStatus::Draft, "Table figée : série déjà ouverte");
         require!(s.draw_cards.len() + cards.len() <= MAX_CARDS_PER_SERIES, "Trop de cartes");
-        let len = |m: &TokenMetadata| near_sdk::borsh::to_vec(m).map(|v| v.len()).unwrap_or(0) as u64;
         let stream = s.hash_stream.as_mut().unwrap_or_else(|| env::panic_str("Hash de chargement absent"));
+        let mut burns = self.series_burns.get_mut(&series_id);
         for c in cards {
             let idx = s.draw_cards.len() as u32;
             if s.batched {
@@ -385,14 +406,11 @@ impl Contract {
                 stream.update(b",");
             }
             stream.update(&near_sdk::serde_json::to_vec(&c).unwrap_or_else(|_| env::panic_str("JSON impossible")));
-            let meta = Self::card_metadata(series_id, &c, u64::MAX);
-            s.max_card_meta_bytes = s.max_card_meta_bytes.max(len(&meta));
-            if let Some(b) = &c.backing {
-                s.max_card_backing_bytes =
-                    s.max_card_backing_bytes.max(BACKING_BASE_BYTES + b.asset_id.len() as u64);
-            }
             s.draw_cards.push(DrawCard::from(&c));
             s.minted.push(0);
+            if let Some(b) = burns.as_mut() {
+                b.burned.push(0);
+            }
             let key = (series_id, idx / CARDS_PER_CHUNK);
             if idx % CARDS_PER_CHUNK == 0 {
                 self.series_cards.insert(key, vec![c]);
@@ -411,52 +429,39 @@ impl Contract {
         let chunks = (s.draw_cards.len() as u32).div_ceil(CARDS_PER_CHUNK);
         s.draw_cards.clear();
         s.minted.clear();
-        s.max_card_meta_bytes = 0;
-        s.max_card_backing_bytes = 0;
+        if let Some(b) = self.series_burns.get_mut(&series_id) {
+            *b = BurnState::default();
+        }
         for k in 0..chunks {
             self.series_cards.remove(&(series_id, k));
         }
     }
 
-    /// Stockage du pire cas d'un booster, en octets (voir README pour la mesure réelle).
-    /// Les maxima des cartes visibles sont tenus à jour au chargement (`push_cards`).
+    /// Stockage du pire cas d'un booster, en octets (voir README pour la mesure réelle). Il ne
+    /// dépend plus de la taille des métadonnées : une carte ne stocke que sa référence.
     pub(crate) fn worst_case_pack_storage(&self, series_id: u32) -> u64 {
         let s = self.series_ref(series_id);
-        let len = |m: &TokenMetadata| near_sdk::borsh::to_vec(m).map(|v| v.len()).unwrap_or(0) as u64;
-        let mut max_meta = s.max_card_meta_bytes;
-        let mut max_backing = s.max_card_backing_bytes;
-        if !s.table.mythics.is_empty() {
-            // Une mythique déjà révélée peut sortir avec un contenu de taille maximale.
-            let dummy = RevealedMythic {
-                card_id: "x".repeat(MAX_ID_LEN),
-                sel: "0".repeat(64),
-                content: MythicContent {
-                    title: "x".repeat(MAX_TITLE_LEN),
-                    media: Some("x".repeat(MAX_URL_LEN)),
-                    reference: Some("x".repeat(MAX_URL_LEN)),
-                    backing: None,
-                },
-                revealed_at_height: 0,
-            };
-            for m in &s.table.mythics {
-                let meta = Self::revealed_mythic_metadata(
-                    series_id,
-                    m,
-                    &dummy,
-                    u64::MAX,
-                    Some(u64::MAX.to_string()),
-                );
-                max_meta = max_meta.max(len(&meta));
-            }
-            max_backing = max_backing.max(BACKING_BASE_BYTES + MAX_ASSET_ID_LEN as u64);
-        }
-        let per_card = self.tokens.extra_storage_in_bytes_per_token
-            + max_meta as u64
-            + max_backing
-            + PER_CARD_EXTRA_BYTES;
-        PACK_BASE_BYTES
+        let n = s.table.cards_per_pack as u64;
+        let mut bytes = PACK_RECORD_BYTES
             + self.config.reveal_steps as u64 * SEED_RECORD_BYTES
+            + n * PER_CARD_BYTES
             + OWNER_PACK_LIST_BYTES
-            + s.table.cards_per_pack as u64 * per_card
+            + NEW_CHUNKS_BYTES
+            + NEW_ACCOUNT_BYTES
+            + PACK_MARGIN_BYTES;
+        if !s.table.mythics.is_empty() {
+            bytes += n * SEALED_TOKEN_BYTES;
+        }
+        if s.table.mechanics.as_ref().is_some_and(|m| m.pity.is_some()) {
+            bytes += PITY_ENTRY_BYTES;
+        }
+        bytes
     }
+}
+
+/// État initial du gold rush : anneau de `window / bucket` seaux vides.
+fn initial_rush(t: &SeriesTable) -> Option<RushState> {
+    let r = t.mechanics.as_ref()?.rush.as_ref()?;
+    let m = (r.baseline_blocks / r.bucket_blocks.max(1)).max(1);
+    Some(RushState { ring: vec![(u64::MAX, 0); m as usize], ..Default::default() })
 }

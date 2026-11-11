@@ -48,5 +48,48 @@
     }
   ],
   "royalties": [],
+  "mechanics": {
+    "_doc": "Paramètres par défaut de docs/mecaniques-spec.md (simulation série 3, sim/RAPPORT.md). Hauteurs en blocs, 0,6 s par bloc supposé (non vérifié). Valeurs de rareté illustratives : à recaler sur la simulation.",
+    "gold_multipliers": {
+      "mythic": 4,
+      "legendary": 4,
+      "epic": 3,
+      "rare": 2
+    },
+    "pity": {
+      "p0_ppm": 20000,
+      "k_ppm": 2000,
+      "n_max": 20
+    },
+    "burn": {
+      "floor_bps": 2500
+    },
+    "rush": {
+      "ratio_bps": 25000,
+      "min_packs": 50,
+      "window_blocks": 6000,
+      "baseline_blocks": 144000,
+      "bucket_blocks": 1500,
+      "duration_blocks": 3000,
+      "cooldown_blocks": 36000,
+      "multipliers": {
+        "mythic": 1.51,
+        "legendary": 1.51,
+        "epic": 1.34,
+        "rare": 1.17
+      }
+    },
+    "coverage_check": {
+      "_doc": "Valeur moyenne d'un emplacement par rareté, en multiples du prix du pack, déduite de la série 3 (base 58,6 %, or 184 %, rush 80 %).",
+      "rarity_value": {
+        "common": 0,
+        "rare": 0.18,
+        "epic": 4.0,
+        "legendary": 10,
+        "mythic": 55
+      },
+      "max_rush": 0.8
+    }
+  },
   "batch_size": 200
 }

@@ -150,6 +150,7 @@ fn table(name: &str, price: u128, w: RarityWeights, cards: Vec<CardDef>, mythics
         cards,
         mythics,
         royalties: vec![Royalty { account_id: royalty_to.id().as_str().parse().unwrap(), bps: 500 }],
+        mechanics: None,
     }
 }
 
