@@ -1163,10 +1163,24 @@ fn build_v2_args(tag: &str) -> std::path::PathBuf {
     params["mechanics"]["pity"]["n_max"] = json!(20);
     let params_path = dir.join("params.json");
     std::fs::write(&params_path, serde_json::to_vec_pretty(&params).unwrap()).unwrap();
+    // Faux noms de mythiques : le test ne dépend pas du fichier secret (ignoré par git).
+    let catalogue: Value = serde_json::from_slice(&std::fs::read(format!("{root}/../docs/data/catalogue-v2.json")).unwrap()).unwrap();
+    let fake: serde_json::Map<String, Value> = catalogue
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|c| c["rarete"] == "mythique" && c["section"] == "catalogue")
+        .enumerate()
+        .map(|(i, c)| (c["id"].as_str().unwrap().to_string(), json!({ "id": format!("fictif-{}", i + 1), "nom": format!("Fictif {}", i + 1) })))
+        .collect();
+    let fake_path = dir.join("mythiques-fictives.json");
+    std::fs::write(&fake_path, serde_json::to_vec(&fake).unwrap()).unwrap();
     let out = std::process::Command::new("python3")
         .arg("-I")
         .arg(format!("{root}/scripts/build_series.py"))
         .arg(&params_path)
+        .arg("--mythiques")
+        .arg(&fake_path)
         .arg("--out")
         .arg(dir.join("out"))
         .arg("--secrets")

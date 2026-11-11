@@ -39,6 +39,12 @@ RPC_URL=${RPC_URL:-https://rpc.testnet.fastnear.com}
 CONTRACT_ID=${CONTRACT_ID:-app.$ROOT_ID}
 REDEEMER_ID=${REDEEMER_ID:-redeemer.$ROOT_ID}
 ORACLE_ID=${ORACLE_ID:-oracle.$ROOT_ID}
+# Comptes : nom NEAR valide en .testnet (ils servent aussi de chemins dans ~/.near-credentials).
+for id in "$ROOT_ID" "$CONTRACT_ID" "$REDEEMER_ID" "$ORACLE_ID"; do
+  if ! [[ ${#id} -ge 2 && ${#id} -le 64 && $id =~ ^(([a-z0-9]+[-_])*[a-z0-9]+\.)*([a-z0-9]+[-_])*[a-z0-9]+$ && $id == *.testnet ]]; then
+    echo "Refus : compte invalide ou hors testnet : $id" >&2; exit 1
+  fi
+done
 BUYERS=${BUYERS:-3}
 CONTRACT_NEAR=${CONTRACT_NEAR:-7}
 MOCK_NEAR=${MOCK_NEAR:-1.5}
@@ -53,9 +59,10 @@ log() { printf '\n== %s\n' "$*"; }
 
 # Vue JSON par RPC (sortie : le résultat décodé, ou « null » si la vue panique ou le compte n'existe pas).
 view() {
-  python3 - "$RPC_URL" "$1" "$2" "${3:-{\}}" <<'PY'
+  python3 - "$RPC_URL" "$1" "$2" "${3:-}" <<'PY'
 import base64, json, sys, time, urllib.request
 rpc, acc, meth, args = sys.argv[1:5]
+args = args or "{}"  # (bash 3.2 de macOS : "${3:-{\}}" donnait « {\} », qui n'est pas du JSON)
 body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "query", "params": {
     "request_type": "call_function", "finality": "final", "account_id": acc, "method_name": meth,
     "args_base64": base64.b64encode(args.encode()).decode()}}).encode()
@@ -74,14 +81,26 @@ if "result" not in res:
 print(bytes(res["result"]).decode())
 PY
 }
+# 0 : le compte existe ; 1 : le RPC répond qu'il n'existe pas ; 2 : RPC injoignable ou réponse
+# inattendue (après 5 essais). Seul 1 permet de conclure à l'absence.
 account_exists() {
   python3 - "$RPC_URL" "$1" <<'PY'
-import json, sys, urllib.request
+import json, sys, time, urllib.request
 rpc, acc = sys.argv[1:3]
 body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "query", "params": {
     "request_type": "view_account", "finality": "final", "account_id": acc}}).encode()
-r = json.load(urllib.request.urlopen(urllib.request.Request(rpc, body, {"content-type": "application/json"}), timeout=20))
-sys.exit(0 if "result" in r else 1)
+for attempt in range(5):
+    try:
+        r = json.load(urllib.request.urlopen(urllib.request.Request(rpc, body, {"content-type": "application/json"}), timeout=20))
+    except Exception:
+        time.sleep(2 * (attempt + 1))
+        continue
+    if "result" in r:
+        sys.exit(0)
+    if "UNKNOWN_ACCOUNT" in json.dumps(r.get("error", {})):
+        sys.exit(1)
+    time.sleep(2 * (attempt + 1))
+sys.exit(2)
 PY
 }
 code_hash() {
@@ -95,12 +114,16 @@ print(r.get("result", {}).get("code_hash", ""))
 PY
 }
 jget() { python3 -c "import json,sys; d=json.load(sys.stdin); print(eval(sys.argv[1], {'d': d}))" "$1"; }
-call() { # call <signer> <method> <json-args|@fichier> <gaz Tgas> <dépôt yocto>
-  local signer=$1 method=$2 args=$3 gas=$4 dep=$5 a
+call() { # call <signer> <method> <json-args|@fichier> <gaz Tgas> <dépôt yocto> ; s'arrête en cas d'échec
+  local signer=$1 method=$2 args=$3 gas=$4 dep=$5 a out rc=0
   if [[ $args == @* ]]; then a=(file-args "${args#@}"); else a=(json-args "$args"); fi
-  near contract call-function as-transaction "$CONTRACT_ID" "$method" "${a[@]}" \
-    prepaid-gas "$gas Tgas" attached-deposit "$dep yoctonear" sign-as "$signer" "${SIGN[@]}" 2>&1 \
-    | grep -E "Transaction ID|rror|panicked|Smart contract" || true
+  out=$(near contract call-function as-transaction "$CONTRACT_ID" "$method" "${a[@]}" \
+    prepaid-gas "$gas Tgas" attached-deposit "$dep yoctonear" sign-as "$signer" "${SIGN[@]}" 2>&1) || rc=$?
+  printf '%s\n' "$out" | grep -E "Transaction ID|rror|panicked|Smart contract" || true
+  # Avant, le « || true » du filtre avalait tout échec (panique, dépôt insuffisant) malgré set -e.
+  if [ "$rc" -ne 0 ] || printf '%s' "$out" | grep -qE "panicked|Failure|rror"; then
+    echo "Échec de $method (code $rc) : arrêt" >&2; exit 1
+  fi
 }
 
 # 1. Build
@@ -118,13 +141,21 @@ shasum -a 256 "$WASM" "$WASM_REDEEMER" "$WASM_ORACLE"
 # 2. Comptes
 account_exists "$ROOT_ID" || { echo "Compte racine $ROOT_ID introuvable (créer-le avec le faucet)" >&2; exit 1; }
 mk_sub() { # mk_sub <compte> <NEAR>
-  if account_exists "$1"; then echo "$1 existe"; return; fi
+  local st=0
+  account_exists "$1" || st=$?
+  if [ "$st" = 0 ]; then echo "$1 existe"; return; fi
+  [ "$st" = 1 ] || { echo "RPC injoignable : existence de $1 inconnue, arrêt" >&2; exit 1; }
   for attempt in 1 2 3; do
     log "Création de $1 ($2 NEAR), essai $attempt"
     near account create-account fund-myself "$1" "$2 NEAR" autogenerate-new-keypair save-to-legacy-keychain \
       sign-as "$ROOT_ID" "${SIGN[@]}" 2>&1 | grep -E "Transaction ID|created successfully|rror" || true
     sleep 3
-    account_exists "$1" && return
+    st=0
+    account_exists "$1" || st=$?
+    [ "$st" = 0 ] && return
+    # Ne jamais effacer une clé sans réponse « compte inconnu » du RPC : une erreur réseau juste
+    # après une création réussie effacerait la clé d'un compte créé et approvisionné.
+    [ "$st" = 1 ] || { echo "RPC injoignable après la création de $1 : clé locale gardée, arrêt" >&2; exit 1; }
     # Échec (vu sur testnet : « Transaction has expired ») : la clé locale générée ne sert à rien.
     rm -rf "$HOME/.near-credentials/testnet/$1" "$HOME/.near-credentials/testnet/$1.json"
     sleep $((attempt * 5))
@@ -176,6 +207,7 @@ NSER=$(view "$CONTRACT_ID" get_series_count)
 if [ "$NSER" = 0 ]; then
   log "Série $SLUG : build_series.py"
   python3 "$HERE/build_series.py" "$SERIES_PARAMS" "${BUILD_ARGS[@]}"
+  python3 "$HERE/validate_series.py" "$OUT" --secrets "$HERE/secrets/$SLUG.json"
   for f in $(python3 -c "import json,sys; print(' '.join(json.load(open(sys.argv[1]))['calls']))" "$OUT/manifest.json"); do
     dep=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['deposits'][sys.argv[2]])" "$OUT/manifest.json" "$f")
     m=${f%%.*}
@@ -184,12 +216,28 @@ if [ "$NSER" = 0 ]; then
     call "$ROOT_ID" "$m" "@$OUT/$f" 300 "$dep"
   done
 fi
+EXPECTED_HASH=$(cat "$OUT/table_hash.txt")
 if [ "$(view "$CONTRACT_ID" get_series '{"series_id":0}' | jget 'd["status"]')" = draft ]; then
+  # L'ouverture fige la table pour toujours : le brouillon chargé doit être exactement la table
+  # locale (nombre de cartes, puis hash recalculé depuis l'en-tête et les pages lus sur la chaîne).
+  # Une reprise après un chargement interrompu s'arrête ici au lieu d'ouvrir une table tronquée.
+  WANT=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['cards'])" "$OUT/manifest.json")
+  HAVE=$(view "$CONTRACT_ID" get_series '{"series_id":0}' | jget 'd["card_count"]')
+  if [ "$HAVE" != "$WANT" ]; then
+    echo "Brouillon incomplet : $HAVE cartes sur la chaîne, $WANT attendues. Pas d'ouverture." >&2
+    echo "Compléter avec append_series_cards (lots manquants de $OUT) ou delete_draft, puis relancer." >&2
+    exit 1
+  fi
+  (cd "$CONTRACT_DIR/../verifier" && python3 -m memaster_verifier table --rpc "$RPC_URL" --contract "$CONTRACT_ID" \
+    --series 0 --draft --expected-hash "$EXPECTED_HASH") \
+    || { echo "Brouillon on-chain ≠ table locale (hash) : pas d'ouverture" >&2; exit 1; }
   log "open_series(0)"
   call "$ROOT_ID" open_series "@$OUT/open_series.json" 300 0
 fi
-echo "Hash attendu : $(cat "$OUT/table_hash.txt")"
-view "$CONTRACT_ID" get_series_table_hash '{"series_id":0}'
+ONCHAIN_HASH=$(view "$CONTRACT_ID" get_series_table_hash '{"series_id":0}' | jget 'd["stored"]')
+echo "Hash attendu : $EXPECTED_HASH"
+echo "Hash on-chain : $ONCHAIN_HASH"
+[ "$ONCHAIN_HASH" = "$EXPECTED_HASH" ] || { echo "Hash on-chain ≠ hash attendu" >&2; exit 1; }
 
 # 6. Série de contrôle sans mécanique (create_series, une transaction ; une commune adossée pour le burn)
 if [ "${SKIP_CONTROL:-0}" != 1 ]; then

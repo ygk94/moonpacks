@@ -202,15 +202,18 @@ def table_from_pages(header_view: dict, pages: list[bytes]) -> tuple[dict, list[
 
 
 def verify_table_pages(
-    header_view: dict, pages: list[bytes], expected_hex: dict[str, str | None]
+    header_view: dict, pages: list[bytes], expected_hex: dict[str, str | None], draft: bool = False
 ) -> tuple[Report, dict]:
     """Vérification d'une table lue par pages : en-tête léger (`get_series_header`) et pages brutes
     de `get_series_cards`. Le hash est recalculé ici, sur la table reconstruite, puis comparé au
     hash enregistré à l'ouverture (`header_view["table_hash"]`) et aux autres sources."""
     table, problems = table_from_pages(header_view, pages)
-    rep, table = verify_table(
-        table_json_bytes(table), {"get_series_header.table_hash (enregistré à l'ouverture)": header_view.get("table_hash"), **expected_hex}
-    )
+    # Brouillon (`draft`) : aucun hash n'est encore enregistré, on compare au seul hash attendu
+    # (contrôle avant `open_series` : le brouillon chargé est-il exactement la table locale ?).
+    stored = {} if draft else {"get_series_header.table_hash (enregistré à l'ouverture)": header_view.get("table_hash")}
+    rep, table = verify_table(table_json_bytes(table), {**stored, **expected_hex})
+    if draft and header_view.get("status") != "draft":
+        rep.errors.append(f"--draft : la série est « {header_view.get('status')} », pas un brouillon")
     rep.title = "Table de série (lue par pages)"
     rep.ok_lines = [x for x in rep.ok_lines if not x.startswith("les octets reçus")]
     for p in problems:

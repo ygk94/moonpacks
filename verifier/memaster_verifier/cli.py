@@ -100,7 +100,10 @@ def cmd_table(args) -> int:
         _need_rpc(args, "table")
         if args.series is None:
             raise UsageError("table : --series requis avec --rpc")
-    if on_chain:
+    draft = getattr(args, "draft", False)
+    if draft and not (args.expected_hash and on_chain and not args.file):
+        raise UsageError("table --draft : --rpc, --contract, --series et --expected-hash requis (sans --file)")
+    if on_chain and not draft:
         # Hash enregistré à l'ouverture : vue légère, le contrat ne recalcule rien.
         h = Rpc(args.rpc).view(args.contract, "get_series_table_hash", {"series_id": args.series})
         expected["get_series_table_hash.stored (enregistré à l'ouverture)"] = h["stored"]
@@ -114,7 +117,7 @@ def cmd_table(args) -> int:
         rep, table = verify.verify_table(_table_bytes_from_file(args.file), expected)
     else:
         header, pages = fetch_table_pages(Rpc(args.rpc), args.contract, args.series, args.page_size)
-        rep, table = verify.verify_table_pages(header, pages, expected)
+        rep, table = verify.verify_table_pages(header, pages, expected, draft=draft)
         rep.note(f"pages de {min(args.page_size, int(header.get('max_page', MAX_PAGE)))} cartes ; hash recalculé localement, jamais par le contrat")
     for line in verify.table_summary(table):
         rep.note(line)
@@ -347,6 +350,8 @@ def build_parser() -> argparse.ArgumentParser:
     t.add_argument("--file", help="table JSON (octets bruts de get_series_table de préférence)")
     t.add_argument("--expected-hash", help="hash hex attendu (sinon lu sur la chaîne avec --rpc)")
     t.add_argument("--page-size", type=int, default=MAX_PAGE, help="cartes par page de get_series_cards (200 au plus)")
+    t.add_argument("--draft", action="store_true",
+                   help="brouillon pas encore ouvert : compare la table chargée à --expected-hash (avant open_series)")
     t.set_defaults(func=cmd_table)
 
     k = sub.add_parser("pack", parents=[common], help="recalcule acc et les tirages d'un pack_revealed")
