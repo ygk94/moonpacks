@@ -8,6 +8,12 @@ ultra rare sans garantie, mythique 1 sur 10⁶, valeur aléatoire par pack, myth
 `app2.memaster-demo-j7xg7z.testnet` ; première version, sans valeur aléatoire, laissée sur
 `app.memaster-demo-j7xg7z.testnet`. Mesures dans `docs/testnet.md`.
 
+**Version 3 (12/11, branche `feat/contrat-v3`, non déployée)** : stockage prépayé non utilisé rendu au tirage,
+stockage libéré rendu au burn, remboursement d'un pack `stuck`, retrait des recettes avec garde-fous
+(`withdraw_revenue`, `get_treasury`), codes d'erreur stables (`ERRORS.md`). Détail dans `docs/mecaniques-spec.md`,
+section 12. **La disposition borsh change** (`Pack::storage_used`, compteurs de l'état racine, statut `refunded`) :
+déployer sur un nouveau compte, comme `app2`.
+
 - near-sdk **5.30.1** et near-contract-standards **5.30.1** (dernières versions sur crates.io le 11/11/2026)
 - tests sandbox : near-workspaces **0.24.0** (avec near-sandbox 0.4.0), build par cargo-near-build 0.11.5
 - build : cargo-near **0.23.0**
@@ -21,19 +27,22 @@ ultra rare sans garantie, mythique 1 sur 10⁶, valeur aléatoire par pack, myth
 | `src/mechanics.rs` | Validation des mécaniques (gold pack, tables de valeur, brûlable garantie), compteurs de burn, `set_resurrected` (oracle), vues `get_pity`, `get_rush_state`, `get_burns`, `get_resurrected` |
 | `src/series.rs` | `create_series` (brouillon), `create_series_batched` + `append_series_cards` (grosse table par lots, payables), `replace_series_table(_batched)` (brouillon seulement), `delete_draft`, `open_series` (gel, hash, stockage du pire cas), `pause_series`, `resume_series`, `close_series` |
 | `src/hash_stream.rs` | SHA-256 incrémental du JSON de la table, tenu à jour pendant le chargement ; coupe de l'en-tête autour de `"cards":[` (motif unique exigé) |
-| `src/pack.rs` | `buy_pack`, `reveal_step` (privé), `retry_reveal`, tirage final et mint |
+| `src/pack.rs` | `buy_pack`, `reveal_step` (privé), `retry_reveal`, `refund_stuck_pack`, tirage final et mint, stockage mesuré reçu par reçu et prépayé non utilisé rendu |
+| `src/treasury.rs` | `get_treasury`, `withdraw_revenue` (retrait borné par les engagements) |
 | `src/draw.rs` | Tirage pur et déterministe (sert aussi de référence au vérificateur), pitié, poids renormalisés des burns, fenêtre du rush, gold pack à planchers et retombée (`draw_slot_rule`, `fallback_order`), pack complet (`draw_pack_mech`), valeur (`value_tier`, `split_value`, `pack_value`) |
 | `src/mythic.rs` | `reveal_mythic`, `compute_mythic_commitment` |
 | `src/market.rs` | `list`, `delist`, `buy` |
-| `src/redeem.rs` | `redeem`, `on_redeem_complete` (privé), interface `Redeemer` (montant = part de la valeur du pack dans une série à table de valeur) |
+| `src/redeem.rs` | `redeem`, `on_redeem_complete` (privé, rend le stockage libéré), interface `Redeemer` (montant = part de la valeur du pack dans une série à table de valeur) |
 | `src/nft.rs` | NEP-171 (cœur), 177, 178, 181 (énumération), 199 (`nft_payout`, `nft_transfer_payout`), réécrits sur le stockage minimal par carte |
-| `src/views.rs` | Lectures : `get_series`, `get_series_header` (en-tête léger), `get_series_cards` (paginée), `get_series_table_hash` (hash stocké), `get_rates` (paginée), `get_series_table` (petites séries), `get_mythic_commitments`, `get_pack`, `get_packs_for_owner`, `get_card`, `get_backing`, `get_listing(s)`, `get_config` |
+| `src/views.rs` | Lectures : `get_series`, `get_series_header` (en-tête léger), `get_series_cards` (paginée), `get_series_table_hash` (hash stocké), `get_rates` (paginée), `get_series_table` (petites séries), `get_mythic_commitments`, `get_pack` (avec `storage_used`), `get_packs_for_owner`, `get_card`, `get_backing`, `get_listing(s)`, `get_config` |
 | `src/events.rs` | Événements NEP-297 (`standard: "memaster"`, `version: "1.0.0"`) |
 | `mock-redeemer/` | Redeemer factice des tests : enregistre `redeem(owner, asset_id, amount)` ou panique sur demande |
 | `mock-oracle/` | Oracle de prix factice : `push_resurrection` appelle `set_resurrected` (aucun prix lu) |
 | `tests/sandbox.rs` | Tests d'intégration et mesures |
 | `src/tests_batch.rs` | Tests unitaires du chargement par lots |
 | `src/tests_mech.rs` | Tests unitaires des mécaniques et du stockage par carte |
+| `src/tests_v3.rs` | Tests unitaires de la v3 (stockage rendu, pack `stuck` remboursé, retrait, codes d'erreur) |
+| `ERRORS.md` | Codes d'erreur stables : code, texte français, proposition anglaise, qui peut la provoquer |
 | `scripts/build_series.py` | Arguments des appels de série à partir du catalogue v2, vrais noms des mythiques lus dans `docs/data/secrets/mythiques.json`, tables de valeur (`--tables-valeur`) (voir « Série v2 ») |
 | `scripts/validate_series.py` | Validateur à lancer avant `open_series` : règles du contrat réécrites hors ligne (en accord avec `validate_table` sur des tables mutées au hasard, `tests_fuzz.rs`), lots du dossier de sortie, valeur moyenne (rush ≤ 80 %, normale ≤ 100 %), préimages des mythiques révélables, aucun secret dans les fichiers publics (`--git` : fichiers suivis). Appelé aussi par `build_series.py` |
 
@@ -94,7 +103,11 @@ ultra rare sans garantie, mythique 1 sur 10⁶, valeur aléatoire par pack, myth
 
 1. `buy_pack(series_id)`, une seule signature. Le dépôt doit être au moins `prix + stockage du pire cas`
    (`get_series(id).required_deposit`), et le gaz au moins `get_series(id).min_gas` (160 Tgas avec k = 3).
-   L'excédent de dépôt est rendu tout de suite, avant le tirage. Le paiement est ensuite définitif.
+   L'excédent de dépôt est rendu tout de suite, avant le tirage. Le prix est ensuite acquis (sauf pack `stuck`,
+   point 7). **Le stockage prépayé non utilisé est rendu au dernier reçu** : chaque reçu du pack mesure ce qu'il
+   écrit (`Pack::storage_used`), et le tirage final rend `storage_per_pack − storage_used` (× 10¹⁹) à l'acheteur
+   (`pack_revealed.storage`). Sur testnet, cela fait environ 0,0057 NEAR rendus au premier achat d'un compte
+   (1 034 o utilisés sur 1 605) et 0,010 NEAR ensuite (602 o).
 2. `acc0 = sha256("memaster:pack" || pack_id_le || owner || table_hash)`, puis k reçus `reveal_step` privés et
    chaînés (k = 3 par défaut, de 2 à 6, fixé à l'init). Chacun calcule
    `acc = sha256(acc || env::random_seed() || pack_id_le || owner)`. Le gaz de chaque reçu est **fixé par le contrat** :
@@ -118,12 +131,14 @@ ultra rare sans garantie, mythique 1 sur 10⁶, valeur aléatoire par pack, myth
    prix) dans la table normale, gold ou rush ; `⌊prix × V / 10⁴⌋` est réparti entre les brûlables du pack au prorata
    des multiplicateurs par rareté, le reste à la carte au plus fort multiplicateur (`docs/mecaniques-spec.md`, section 9).
    Le reçu crée les cartes par mint direct (jamais de `*_transfer_call`) et journalise `pack_revealed` : graines,
-   hauteurs, acc intermédiaires et final, tirages complets et, pour une série à mécaniques, le bloc `mechanics`
-   (`mode`, `rush`, `pity`, `burn_seq`, `resurrect_seq`, `value`). Ce reçu ne contient aucun `require` qui dépende du résultat.
+   hauteurs, acc intermédiaires et final, tirages complets, le bloc `storage` (`prepaid_bytes`, `used_bytes`,
+   `refund`) et, pour une série à mécaniques, le bloc `mechanics`
+   (`mode`, `rush`, `pity`, `burn_seq`, `resurrect_seq`, `value`). Ce reçu ne contient aucun `require` qui dépende du
+   résultat ; le remboursement du stockage est un simple virement, que le solde couvre toujours (point 7).
 4. Une étape périmée (mauvaise tentative, mauvais ordre, pack déjà révélé) est ignorée sans panique.
-5. `retry_reveal(pack_id)` est ouvert à tous, seulement si le pack est `Pending` sans aucune carte écrite et après
-   `retry_delay_blocks` blocs sans progrès (100 par défaut, 20 au moins : en dessous, un tiers pourrait relancer un tirage
-   encore en cours et faire passer le pack d'un autre en `Stuck`). La tentative est incrémentée, ce qui rend les anciennes
+5. `retry_reveal(pack_id)` est **réservé à l'acheteur du pack** (v3 : un tiers ne peut ni épuiser ses tentatives ni le
+   pousser vers `Stuck`), seulement si le pack est `Pending` sans aucune carte écrite et après
+   `retry_delay_blocks` blocs sans progrès (100 par défaut, 20 au moins). La tentative est incrémentée, ce qui rend les anciennes
    étapes caduques. `acc` continue d'accumuler. Sont journalisées les graines de tous les reçus **réussis** : celle
    d'un dernier reçu échoué ne l'est pas, puisque son état est annulé.
 6. **Un tirage échoué peut être connu.** La graine d'un dernier reçu échoué vaut `hash(action_hash || random_value)`,
@@ -132,11 +147,16 @@ ultra rare sans garantie, mythique 1 sur 10⁶, valeur aléatoire par pack, myth
    d'échec conditionné au tirage (gaz fixe, stockage prépayé, aucun `require` sur les cartes). Personne ne peut donc
    faire échouer les seuls mauvais tirages pour relancer. Un échec relève du protocole ou d'un bug, et la relance
    repart de nouvelles graines.
-7. **État `Stuck`.** Après 10 tentatives (`MAX_ATTEMPTS`), un nouvel appel à `retry_reveal` fait passer le pack en
-   `Stuck` et émet `pack_stuck`. Il n'y a plus d'issue, et **volontairement pas de remboursement** : les tirages
-   échoués ont pu être connus, et rembourser offrirait une option d'annulation.
+7. **État `Stuck`, puis remboursement.** Après 10 tentatives (`MAX_ATTEMPTS`), un nouvel appel à `retry_reveal` fait
+   passer le pack en `Stuck` et émet `pack_stuck` : plus aucun tirage possible. `refund_stuck_pack(pack_id)`, ouvert à
+   tous, rend alors à l'acheteur le prix et le stockage prépayé non utilisé, passe le pack en `refunded` (final) et
+   émet `pack_refunded`. **Pas de tirage gratuit, par construction** : un pack tiré ne devient jamais `Stuck`, et le
+   dernier reçu n'a aucun chemin d'échec qui dépende du tirage (point 6), donc personne ne peut faire échouer les seuls
+   mauvais tirages pour se faire rembourser. Le remboursement du stockage ne peut pas manquer de solde : `withdraw_revenue`
+   garde toujours les engagements des packs non tirés et une réserve (voir « Trésorerie »).
 
-Il n'existe aucune méthode d'annulation ni de remboursement (vérifié dans l'ABI par un test).
+Il n'existe aucune méthode d'annulation. Le seul remboursement est celui d'un pack `Stuck` (vérifié dans l'ABI par un
+test : `refund_stuck_pack` est la seule méthode dont le nom contient « refund », et elle refuse un pack tiré).
 
 ### Mythiques secrètes
 
@@ -192,7 +212,8 @@ rush).
 
 ### Marché intégré
 
-`list(token_id, price)` demande un dépôt de 0,005 NEAR, rendu au retrait ou à la vente. `delist(token_id)`.
+`list(token_id, price)` demande un dépôt de 0,005 NEAR, rendu au retrait ou à la vente, et un prix d'au plus 10⁹ NEAR
+(`MAX_LISTING_PRICE`, sinon le calcul des redevances déborde). `delist(token_id)`.
 `buy(token_id, expected_price)` exige le prix attendu (contre un vendeur qui retirerait puis remettrait sa carte plus
 cher juste avant l'achat) et un dépôt au moins égal au prix. Le vendeur reçoit le prix moins les redevances de la série,
 l'excédent est rendu. Tout est refusé sur une carte en `Redeeming`. Tout transfert (NEP-171, `nft_transfer_payout`)
@@ -204,7 +225,11 @@ retire l'annonce. Une carte en vente ne peut pas être brûlée : il faut d'abor
 `Redeeming` : transfert, vente et nouveau burn sont alors refusés. Le contrat appelle ensuite
 `redeemer.redeem(owner, asset_id, amount)` (30 Tgas fixes) puis `on_redeem_complete` (20 Tgas fixes, privé). Si le reçu
 du redeemer réussit, quelle que soit sa valeur de retour, la carte est brûlée (`nft_burn`) ; si la série a la rareté
-pilotée par les burns, le compteur de la carte et `burn_seq` sont incrémentés (journalisés dans `card_redeemed`). S'il
+pilotée par les burns, le compteur de la carte et `burn_seq` sont incrémentés (journalisés dans `card_redeemed`).
+**Le stockage libéré est rendu au propriétaire** : `on_redeem_complete` mesure les octets libérés (listes NEP-181,
+blocs et compteurs vidés, approbations, propriétaire de l'emplacement) et les rend, jamais plus
+(`card_redeemed.freed_bytes`, `storage_refund`). L'emplacement du pack (`CardSlot`, `PackDraw`) reste : il porte le
+`token_id` des autres cartes, la part de valeur des autres brûlables et `get_pack`. S'il
 échoue, la carte revient à `Normal`. L'adossement est celui de la table, ou celui donné par l'oracle (résurrection).
 **Série à table de valeur** : `asset_id` reste celui de la carte, mais `amount` est la part de la valeur tirée pour le
 pack (yoctoNEAR de valeur, recalculée depuis `Pack::value`), pas le montant de la table. Cas spéciaux à adossement fixe :
@@ -237,13 +262,13 @@ cd contract
 rustup target add wasm32-unknown-unknown        # requis par cargo-near (wasm32v1-none ne suffit pas)
 cargo install cargo-near --locked               # 0.23.0
 
-cargo near build non-reproducible-wasm          # → target/near/memaster.wasm (535 845 octets)
+cargo near build non-reproducible-wasm          # → target/near/memaster.wasm (595 094 octets ; v2 : 580 961)
 (cd mock-redeemer && cargo near build non-reproducible-wasm)
 (cd mock-oracle && cargo near build non-reproducible-wasm)
 
-cargo test --lib                                # 126 tests unitaires (python3 requis pour les tests des scripts et le fuzz)
+cargo test --lib                                # 145 tests unitaires environ (python3 requis pour les tests des scripts et le fuzz)
 MEMASTER_FUZZ_CASES=5000 cargo test --lib tests_fuzz -- --nocapture   # fuzz différentiel plus long (MEMASTER_FUZZ_SEED pour rejouer)
-cargo test --test sandbox -- --nocapture        # 20 tests sandbox, mesures imprimées (~70 s, en parallèle)
+cargo test --test sandbox -- --nocapture        # 22 tests sandbox, mesures imprimées (~60 à 90 s, en parallèle)
 MECH_VECTORS_OUT=../verifier/tests/vectors/sandbox_mech_vectors.json \
   cargo test --test sandbox -- mechanics_end_to_end   # régénère les événements réels du vérificateur
 
@@ -256,7 +281,7 @@ cargo test                                      # tout
 Les tests sandbox compilent eux-mêmes les wasm (production, variante `--features test-hooks`, redeemer factice) dans
 `target/near-test/`. Le premier lancement télécharge le binaire near-sandbox, donc il faut le réseau.
 La feature `test-hooks` ajoute `test_set_reveal_failure` (owner), qui fait échouer le dernier reçu du tirage. Elle
-sert uniquement au test de `retry_reveal` et **ne doit jamais être déployée**.
+sert uniquement aux tests de `retry_reveal`, du pack `Stuck` et du retrait, et **ne doit jamais être déployée**.
 
 ## Tests
 
@@ -320,19 +345,30 @@ validateur hors ligne (`scripts/validate_series.py`) d'accord avec `validate_tab
 pitié au plafond du compteur, burns au plancher, raretés et mythique épuisées, 40 refus de validation, table aux
 bornes, `retry_delay_blocks` minimal.
 
-**Sandbox (20)** :
+
+**Version 3 (19, `src/tests_v3.rs`).** Stockage rendu au tirage (mesure reçu par reçu, rendu = prépayé − utilisé,
+un seul virement, à l'acheteur ; second achat d'un compte moins cher), stockage rendu au burn (entrées de liste,
+liste vidée, approbations comprises, jamais plus que les octets libérés), pack `stuck` (remboursé une fois à
+l'acheteur même demandé par un tiers, prix sorti des recettes, ni étape ni relance ensuite, refus pour un pack en
+attente ou tiré, un pack tiré ne devient jamais `stuck`, un tiers ne peut pas relancer le pack d'un autre), prix
+d'annonce borné et redevances sans débordement, retrait (solde fixé à engagements + 2 yocto : un yocto de plus refusé,
+solde après retrait ≥ engagements ; engagements suivis au tirage, au burn et au retrait d'annonce ; owner et 1 yocto
+exigés), codes d'erreur (chaque message en a un, `ERRORS.md` complet dans les deux sens, détection d'un message sans
+code).
+
+**Sandbox (22)** :
 
 | Test | Ce qu'il montre |
 |---|---|
-| `buy_pack_and_measurements` | Achat, recalcul public d'`acc` et des tirages, hauteurs et graines des reçus, gaz et stockage (cas normal et pire cas) |
+| `buy_pack_and_measurements` | Achat, recalcul public d'`acc` et des tirages, hauteurs et graines des reçus, gaz et stockage (cas normal et pire cas) ; v3 : `used_bytes` = variation exacte du `storage_usage` du compte, rendu = prépayé − utilisé |
 | `distribution_over_300_packs` | 300 boosters (10 acheteurs en parallèle) : raretés tirées dans ±5σ, plafonds respectés, retombées, ratio des communes, recalcul de chaque tirage |
 | `caps_fall_back_to_lower_rarity` | Légendaire plafonnée à 3 : exactement 3 créées, le reste retombe |
 | `mythic_reveal_and_commitment_check` | Table sans le nom du mème, sortie scellée, métadonnées « ? » identiques avant et après la révélation (ni nom, ni `card_id`, ni adossement dans `nft_token` et `get_card`, aucun `nft_metadata_update`), mauvais sel refusé, révélation, engagements revérifiés depuis l'événement, sortie suivante directe et anonyme |
 | `integrated_market` | Mise en vente, achat (95 % plus le dépôt au vendeur, 5 % de redevance), retrait, remise en vente plus chère refusée à l'ancien prix, transfert qui retire l'annonce, `nft_payout` |
-| `burn_success_and_failure` | Burn réussi (carte brûlée, redeemer appelé avec les bons arguments), échec (carte restaurée puis brûlable), garde-fous, callback privé |
-| `no_cancellation_possible` | Prix acquis, livraison par mint uniquement, aucune méthode d'annulation (ni dans l'ABI), `reveal_step` privé, pas de relance après écriture |
+| `burn_success_and_failure` | Burn réussi (carte brûlée, redeemer appelé avec les bons arguments), échec (carte restaurée puis brûlable), garde-fous, callback privé ; v3 : `freed_bytes` = baisse exacte du `storage_usage`, rendus |
+| `no_cancellation_possible` | Prix acquis, livraison par mint uniquement, aucune méthode d'annulation (ni dans l'ABI), `refund_stuck_pack` seule méthode « refund » et refusée sur un pack tiré, `reveal_step` privé, pas de relance après écriture |
 | `insufficient_deposit_or_gas` | Refus à `required - 1` yocto et à 100 Tgas, rien n'est enregistré, excédent rendu |
-| `retry_reveal_after_failed_draw` | Dernier reçu en échec : pack `Pending` à l'étape 2, pas de remboursement, relance trop tôt refusée, relance par un tiers après le délai, seconde relance refusée |
+| `retry_reveal_after_failed_draw` | Dernier reçu en échec : pack `Pending` à l'étape 2, pas de remboursement, relance trop tôt refusée, relance d'un tiers refusée (`E_NOT_PACK_OWNER`), relance par l'acheteur après le délai, seconde relance refusée |
 | `worst_case_fits_in_270_tgas` | **Plafond MetaMask** : boosters à 270 Tgas attachés au total, jusqu'à `pack_revealed`, avec table de 200 cartes aux chaînes maximales, 20 engagements, 10 redevances, légendaires épuisées (retombée) et mythique révélée au contenu maximal |
 | `buyer_cost_vs_attached_gas` | Coût réel pour l'acheteur selon le gaz attaché |
 | `init_is_private` | Un tiers ne peut pas appeler `new` |
@@ -343,6 +379,8 @@ bornes, `retry_delay_blocks` minimal.
 | `mechanics_end_to_end` | Toutes les mécaniques : pitié N = 3, rush déclenché par un pic après remplissage de la fenêtre longue, burns de toutes les com_a (jusqu'à la dernière), oracle installé en deux temps (acceptation refusée avant le délai), résurrection d'une épique par `mock-oracle` (rare et commune, hors liste, refusées), 45 à 48 événements rejoués par le vérificateur Python sans archive d'état |
 | `worst_case_cascade_with_burns_fits` | Pire cas du dernier reçu : 2 000 cartes, 10 par booster, toutes les mécaniques (gold pack de 10 emplacements à plancher légendaire, table de valeur), légendaires, épiques et rares épuisées (chaque emplacement retombe trois fois, brûlable garantie comprise), burns entre les achats, 200 cartes ressuscitables : 48,4 Tgas au plus sur 120 |
 | `value_and_gold_pack_end_to_end` | Gold pack de 5 cartes à planchers un pack sur deux (pitié N = 2), brûlable garantie, valeur tirée et répartie (prix non multiple de 10⁴), burn d'une brûlable d'un pack normal et d'un gold pack : le redeemer factice reçoit exactement la part journalisée ; rejeu par le vérificateur Python (valeur, répartition, planchers) |
+| `stuck_pack_is_refunded_once` | v3 : 10 vrais derniers reçus en échec (build `test-hooks`), relance d'un tiers refusée, `Stuck`, remboursement demandé par un tiers et versé exactement à l'acheteur (prix + stockage non utilisé), ni second remboursement, ni relance, ni carte |
+| `withdraw_revenue_respects_commitments` | v3 : annonce et pack en attente, refus (tiers, sans 1 yocto, au-delà du retirable), retrait maximal, solde ≥ engagements ; ensuite le pack en attente se tire avec son remboursement, un achat passe, l'annonce se retire avec son dépôt |
 | `draft_storage_is_paid_by_owner_and_refunded_on_delete` | Création par lots refusée sans dépôt, stockage payé = augmentation mesurée, excédent rendu, `delete_draft` réservé à l'owner, stockage libéré rendu, emplacement de 184 o, série supprimée inutilisable, série ouverte non supprimable |
 
 ## Série v2 (`scripts/build_series.py`)
@@ -453,9 +491,38 @@ Avant, le dépôt requis était de 0,216 à 0,396 NEAR. Le stockage prépayé es
 l'ouverture (`worst_case_pack_storage` : comptes de 64 caractères, premier achat du compte, nouveaux blocs de liste,
 entrée de pitié, entrée du plafond de packs rush). Il ne dépend plus de la longueur des métadonnées.
 
-**Décision : le stockage non utilisé n'est pas remboursé.** Le stockage réel dépend des cartes tirées : un
-remboursement calculé après le tirage serait un chemin de remboursement conditionné au résultat. Seul l'excédent
-au-delà de `required_deposit` est rendu, dans `buy_pack`, avant tout tirage. Le surplus de stockage reste au contrat.
+**v3 : le stockage non utilisé est rendu** au dernier reçu (`pack_revealed.storage.refund`). L'ancienne objection
+(« un remboursement calculé après le tirage serait un chemin conditionné au résultat ») ne tient pas : le montant dépend
+du tirage, mais c'est un virement sortant sans `require`, couvert par le solde (le retrait garde les engagements des
+packs non tirés et une réserve) ; il ne peut pas faire échouer le reçu. Mesures (sandbox, 12/11) : table de 4 cartes,
+893 o utilisés sur 1 227 au premier achat (0,00334 NEAR rendus), 580 o ensuite (0,00647 NEAR) ; coût réel de
+l'acheteur 0,1103 puis 0,1072 NEAR pour 0,11227 NEAR joints. Sur testnet, avec les mesures de la v2 (+4 o en v3), ce serait
+environ 567 o rendus au premier achat d'un compte et 999 o ensuite.
+
+### Trésorerie (v3)
+
+`get_treasury()` donne le solde, le stockage occupé, les engagements et le retirable ; `withdraw_revenue(amount?)`
+(owner, 1 yocto) retire au plus `solde − (stockage occupé + dépôts d'annonces + packs non tirés + valeur des
+brûlables vivantes + 1 NEAR de réserve)`, événement `revenue_withdrawn` (`docs/mecaniques-spec.md`, section 12.4).
+L'adossement fixe d'une table sans valeur et celui des mythiques, qui ne sont pas en NEAR, ne sont pas réservés.
+
+### Comparaison v2 → v3 (même sandbox, même jour)
+
+| Cas | v2 (`307321a`) | v3 |
+|---|---|---|
+| Série v2, 22 boosters à 160 Tgas : gaz total au plus | 29,71 Tgas | 30,99 Tgas (+1,3 : mesure du stockage, virement de remboursement) |
+| idem, `buy_pack` / dernier reçu au plus | 8,10 / 15,56 Tgas | 8,21 / 16,04 Tgas |
+| idem, stockage au plus / prépayé | 971 o / 1 605 o | 975 o / 1 605 o (+4 o : `Pack::storage_used`) |
+| 2 000 cartes, 10 par booster : total | 38,8 – 39,7 Tgas | 39,7 – 42,1 Tgas |
+| idem, dernier reçu | 22,4 – 23,3 Tgas | 22,5 – 24,8 Tgas |
+| Cascade au pire (dernier reçu, budget 120) | 48,4 Tgas (doc) | 49,4 – 50,4 Tgas |
+| `redeem` réussi, total / `on_redeem_complete` au plus | 8,19 / 3,96 Tgas | 8,96 / 4,27 Tgas (budget 20) |
+| Pack `Stuck` remboursé | impossible | 3,4 Tgas |
+| `withdraw_revenue` | (n'existait pas) | 3,0 Tgas |
+| wasm | 580 961 o | 595 094 o (+14 133) |
+
+Sur testnet, la v2 mesure 29,3 – 30,6 Tgas par booster (moyenne 29,9) et 602 à 1 091 o : la v3 devrait donner
+environ 30,6 – 31,9 Tgas, avec environ 567 à 999 o de stockage rendus par pack (à mesurer au redéploiement).
 
 ## Revue de sécurité du 11/11/2026 : corrections
 
@@ -485,7 +552,8 @@ au-delà de `required_deposit` est rendu, dans `buy_pack`, avant tout tirage. Le
 
 - **Graine.** Un producteur de bloc connaît la graine de son bloc et peut retenir un bloc. L'avantage est limité au
   dernier reçu, et k > 1 n'y change rien. Pas de VRF externe.
-- **Packs `Stuck`.** Après 10 tentatives échouées, le pack n'a plus d'issue et n'est pas remboursé (choix assumé).
+- **Packs `Stuck`.** Après 10 tentatives échouées (relancées par l'acheteur seul), le pack est remboursable une fois
+  (`refund_stuck_pack`) : prix et stockage non utilisé.
 - **Révélation des mythiques hors chaîne.** Tant que l'owner n'a pas révélé, la carte reste scellée. Il peut aussi ne
   jamais révéler ; la carte reste alors une mythique sans adossement. Une vue RPC `compute_mythic_commitment`
   transmet le secret au nœud interrogé : il vaut mieux calculer les engagements hors ligne.
@@ -500,7 +568,8 @@ au-delà de `required_deposit` est rendu, dans `buy_pack`, avant tout tirage. Le
   l'ouverture ajoute (quelques dizaines d'octets). Un brouillon abandonné se supprime par `delete_draft` ; il laisse
   un emplacement de 184 o. `get_series_table` d'une table de taille maximale renvoie 1,7 Mo pour 183 Tgas : préférer
   `get_series_header` et `get_series_cards`.
-- **Stockage.** Il n'est pas couvert pour les graines des relances (environ 100 o par étape, à la charge du contrat),
+- **Stockage.** Le prépayé ne couvre pas les graines des relances au-delà du premier essai (81 o par relance mesurés,
+  à la charge du contrat ; le remboursement au tirage vaut alors 0),
   ni pour les entrées de liste d'un acheteur du marché ou d'un destinataire de transfert (environ 120 o au premier,
   8 o ensuite, à la charge du contrat).
 - **Mécaniques.** L'oracle de prix est de confiance, comme le redeemer : le contrat ne vérifie ni le cours ni le stock
@@ -511,8 +580,8 @@ au-delà de `required_deposit` est rendu, dans `buy_pack`, avant tout tirage. Le
 - **Valeur.** Le contrat tire et répartit une valeur en yoctoNEAR et la transmet au redeemer ; il ne finance rien et
   ne vérifie pas que le redeemer puisse livrer. Les tables de `serie-exemple.json` sont provisoires (calibrage dans
   `sim/`).
-- **Revenus.** Les prix encaissés restent sur le contrat (`get_config().revenue`). Il n'existe volontairement aucune
-  méthode de retrait tant que la mécanique d'approvisionnement n'est pas conçue.
+- **Revenus.** Retirables par `withdraw_revenue`, au-delà des engagements (section « Trésorerie »). Avant la v3, il n'existait volontairement aucune
+  méthode de retrait, faute de mécanique d'approvisionnement (toujours à concevoir).
 - **Redeemer.** Il est de confiance et peut être changé par l'owner. Un redeemer qui réussit sans livrer, ou qui panique
   après avoir livré, casse la garantie. Si le callback manque de gaz (20 Tgas fixes ; le `redeem` complet brûle 10,4 Tgas), la carte
   reste bloquée en `Redeeming`.
@@ -526,7 +595,8 @@ au-delà de `required_deposit` est rendu, dans `buy_pack`, avant tout tirage. Le
 
 - Approvisionnement des jetons, contrôle de couverture, retrait réel : un vrai redeemer à la place du mock.
 - Sortie de secours sur NEAR, et récupération d'une carte bloquée en `Redeeming` (délai puis restauration).
-- Retrait des revenus avec garde-fous (réserve ≥ engagements, plafond par coin).
+- Retrait des revenus : fait en v3 (réserve ≥ engagements) ; reste un plafond par coin et la réserve des adossements
+  qui ne sont pas en NEAR.
 - Build reproductible (`[package.metadata.near.reproducible_build]`), suppression des clés d'accès complet après
   déploiement, publication du hash du code.
 - Recalcul externe de `random_seed` à partir de `random_value` et `action_hash` (rythme des reçus et gaz mesurés sur

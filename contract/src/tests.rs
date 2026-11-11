@@ -263,8 +263,8 @@ fn retry_reveal_rules() {
     set_seed(contract_id(), 21, [1; 32]);
     c.reveal_step(pack_id, 0, 1);
 
-    // après le délai, par n'importe qui
-    set(bob(), 0, 200);
+    // après le délai, par l'acheteur
+    set(alice(), 0, 200);
     c.retry_reveal(pack_id);
     let p = c.get_pack(pack_id).unwrap();
     assert_eq!(p["attempt"], 1);
@@ -402,6 +402,7 @@ fn mint_sealed(c: &mut Contract) -> String {
             }],
             cards: vec![],
             value: None,
+            storage_used: 0,
         },
     );
     c.internal_mint_slot(pid, &alice())
@@ -648,12 +649,12 @@ fn pack_becomes_stuck_after_max_attempts() {
     let mut h = 20;
     for _ in 1..MAX_ATTEMPTS {
         h += 200;
-        set(bob(), 0, h);
+        set(alice(), 0, h);
         c.retry_reveal(pack_id); // les chaînes programmées ne s'exécutent pas en test unitaire
     }
     assert_eq!(c.get_pack(pack_id).unwrap()["attempt"], MAX_ATTEMPTS - 1);
     h += 200;
-    set(bob(), 0, h);
+    set(alice(), 0, h);
     c.retry_reveal(pack_id);
     let p = c.get_pack(pack_id).unwrap();
     assert_eq!(p["status"], "stuck");

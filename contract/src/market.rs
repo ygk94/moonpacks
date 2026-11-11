@@ -12,24 +12,29 @@ impl Contract {
     #[payable]
     pub fn list(&mut self, token_id: TokenId, price: U128) {
         let seller = env::predecessor_account_id();
-        let owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
-        require!(owner == seller, "Seul le propriétaire peut vendre");
-        require!(self.card_state(&token_id) == CardState::Normal, "Carte en cours de burn");
-        require!(price.0 > 0, "Prix nul");
-        require!(self.listings.get(&token_id).is_none(), "Déjà en vente");
+        let owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_CARD: Carte inconnue"));
+        require!(owner == seller, "E_LIST_NOT_OWNER: Seul le propriétaire peut vendre");
+        require!(self.card_state(&token_id) == CardState::Normal, "E_CARD_REDEEMING: Carte en cours de burn");
+        require!(price.0 > 0, "E_ZERO_PRICE: Prix nul");
+        require!(
+            price.0 <= MAX_LISTING_PRICE,
+            format!("E_PRICE_TOO_HIGH: Prix trop élevé : {} yoctoNEAR au plus", MAX_LISTING_PRICE)
+        );
+        require!(self.listings.get(&token_id).is_none(), "E_ALREADY_LISTED: Déjà en vente");
         let deposit = env::attached_deposit().as_yoctonear();
         let need = LISTING_DEPOSIT.as_yoctonear();
-        require!(deposit >= need, format!("Dépôt d'annonce : {} yoctoNEAR requis", need));
+        require!(deposit >= need, format!("E_LISTING_DEPOSIT: Dépôt d'annonce : {} yoctoNEAR requis", need));
         self.listings.insert(token_id.clone(), Listing { seller_id: seller.clone(), price, deposit: U128(need) });
+        self.listing_deposits += need;
         events::emit("card_listed", json!({ "token_id": token_id, "seller_id": seller, "price": price }));
         Self::refund(&seller, deposit - need);
     }
 
     /// Retire une annonce (propriétaire seulement).
     pub fn delist(&mut self, token_id: TokenId) {
-        let l = self.listings.get(&token_id).cloned().unwrap_or_else(|| env::panic_str("Pas en vente"));
-        require!(env::predecessor_account_id() == l.seller_id, "Seul le vendeur peut retirer l'annonce");
-        require!(self.card_state(&token_id) == CardState::Normal, "Carte en cours de burn");
+        let l = self.listings.get(&token_id).cloned().unwrap_or_else(|| env::panic_str("E_NOT_LISTED: Pas en vente"));
+        require!(env::predecessor_account_id() == l.seller_id, "E_NOT_SELLER: Seul le vendeur peut retirer l'annonce");
+        require!(self.card_state(&token_id) == CardState::Normal, "E_CARD_REDEEMING: Carte en cours de burn");
         self.remove_listing(&token_id, "delisted");
     }
 
@@ -39,16 +44,17 @@ impl Contract {
     #[payable]
     pub fn buy(&mut self, token_id: TokenId, expected_price: U128) {
         let buyer = env::predecessor_account_id();
-        let l = self.listings.get(&token_id).cloned().unwrap_or_else(|| env::panic_str("Pas en vente"));
-        require!(l.price == expected_price, "Le prix de l'annonce a changé");
-        require!(self.card_state(&token_id) == CardState::Normal, "Carte en cours de burn");
-        require!(buyer != l.seller_id, "Le vendeur ne peut pas acheter sa carte");
-        let owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
-        require!(owner == l.seller_id, "Annonce périmée");
+        let l = self.listings.get(&token_id).cloned().unwrap_or_else(|| env::panic_str("E_NOT_LISTED: Pas en vente"));
+        require!(l.price == expected_price, "E_PRICE_CHANGED: Le prix de l'annonce a changé");
+        require!(self.card_state(&token_id) == CardState::Normal, "E_CARD_REDEEMING: Carte en cours de burn");
+        require!(buyer != l.seller_id, "E_SELF_BUY: Le vendeur ne peut pas acheter sa carte");
+        let owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_CARD: Carte inconnue"));
+        require!(owner == l.seller_id, "E_STALE_LISTING: Annonce périmée");
         let deposit = env::attached_deposit().as_yoctonear();
-        require!(deposit >= l.price.0, "Dépôt inférieur au prix");
+        require!(deposit >= l.price.0, "E_DEPOSIT_BELOW_PRICE: Dépôt inférieur au prix");
 
         self.listings.remove(&token_id);
+        self.listing_deposits = self.listing_deposits.saturating_sub(l.deposit.0);
         let removed = self.take_approvals(&token_id);
         crate::nft::refund_approvals(&owner, Some(&removed));
         self.internal_transfer_unguarded(&token_id, &owner, &buyer);
@@ -81,6 +87,7 @@ impl Contract {
     /// Retire l'annonce et rend le dépôt au vendeur.
     pub(crate) fn remove_listing(&mut self, token_id: &TokenId, reason: &str) {
         if let Some(l) = self.listings.remove(token_id) {
+            self.listing_deposits = self.listing_deposits.saturating_sub(l.deposit.0);
             Self::refund(&l.seller_id, l.deposit.0);
             events::emit(
                 "card_delisted",

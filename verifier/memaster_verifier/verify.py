@@ -437,7 +437,37 @@ def verify_pack(
             rep.check(ok, f"emplacement {slot} : carte de la bonne rareté", f"emplacement {slot} : carte incohérente avec la rareté finale (ou la règle de l'emplacement)")
         rep.note("sans état des plafonds (--snapshot, --history ou --rpc) : card_roll et le choix de la carte ne sont pas recalculés")
     verify_value(rep, ev, table, acc, mode, backed)
+    verify_storage(rep, ev)
     return rep
+
+
+# Coût du stockage sur NEAR : 10¹⁹ yoctoNEAR par octet.
+STORAGE_BYTE_COST = 10**19
+
+
+def verify_storage(rep: Report, ev: dict) -> None:
+    """Bloc `storage` de `pack_revealed` (contrat v3) : stockage prépayé, stockage mesuré par le contrat
+    et montant rendu à l'acheteur. Vérifie `refund = max(0, prepaid_bytes − used_bytes) × 10¹⁹`. La mesure
+    elle-même (`used_bytes`) vient de `env::storage_usage()` et ne se recalcule pas depuis l'événement :
+    on peut la comparer à la variation de `storage_usage` du compte du contrat sur les reçus du pack.
+    Le montant rendu n'influence pas le tirage (virement émis après les cartes)."""
+    st = ev.get("storage")
+    if st is None:
+        rep.note("pas de bloc storage (contrat d'avant la v3 : stockage prépayé non rendu)")
+        return
+    try:
+        prepaid, used, refund = int(st["prepaid_bytes"]), int(st["used_bytes"]), int(st["refund"])
+    except (KeyError, TypeError, ValueError):
+        rep.errors.append(f"bloc storage illisible : {st}")
+        return
+    expected = max(0, prepaid - used) * STORAGE_BYTE_COST
+    rep.check(
+        refund == expected,
+        f"stockage : {used} o utilisés sur {prepaid} prépayés, {refund} yoctoNEAR rendus",
+        f"stockage : rendu {refund} ≠ (prépayé {prepaid} − utilisé {used}) × 10¹⁹ = {expected}",
+    )
+    if used > prepaid:
+        rep.note(f"stockage utilisé {used} o au-delà du prépayé {prepaid} o (relances) : le contrat paie la différence")
 
 
 def _rolled(table: dict, rarity_roll: int) -> str:

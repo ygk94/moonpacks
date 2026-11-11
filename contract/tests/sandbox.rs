@@ -362,6 +362,14 @@ async fn buy_pack_and_measurements() -> Result<()> {
     println!("  gaz total brûlé : {:.2} Tgas (gaz attaché : {} Tgas)", r.total_gas_burnt.as_gas() as f64 / 1e12, sv["min_gas"].as_str().unwrap().parse::<u64>()? / 1_000_000_000_000);
     println!("  stockage : utilisé {} o, prépayé {} o", used, prepaid);
     assert!(used <= prepaid);
+    // v3 : le contrat mesure exactement ce que le compte a gagné en stockage, et rend le reste.
+    assert_eq!(ev["storage"]["used_bytes"].as_u64().unwrap(), used, "mesure du contrat = storage_usage du compte");
+    assert_eq!(ev["storage"]["prepaid_bytes"].as_u64().unwrap(), prepaid);
+    let refund: u128 = ev["storage"]["refund"].as_str().unwrap().parse()?;
+    assert_eq!(refund, (prepaid - used) as u128 * 10u128.pow(19));
+    println!("  stockage rendu à l'acheteur : {} o ({:.5} NEAR)", prepaid - used, refund as f64 / 1e24);
+    let pack: Value = env.contract.view("get_pack").args_json(json!({ "pack_id": ev["pack_id"] })).await?.json()?;
+    assert_eq!(pack["storage_used"].as_u64().unwrap(), used);
 
     // Pire cas : 200 cartes aux chaînes de longueur maximale, toutes adossées, 5 puis 10 cartes par booster.
     for per_pack in [5u8, 10u8] {
@@ -401,6 +409,7 @@ async fn buy_pack_and_measurements() -> Result<()> {
             sv["required_deposit"].as_str().unwrap().parse::<f64>()? / 1e24
         );
         assert!(used <= prepaid, "stockage prépayé insuffisant");
+        assert_eq!(revealed(&r)["storage"]["used_bytes"].as_u64().unwrap(), used);
     }
     Ok(())
 }
@@ -750,11 +759,20 @@ async fn burn_success_and_failure() -> Result<()> {
     let cid = env.contract.id();
 
     // Succès.
+    let s0 = env.worker.view_account(cid).await?.storage_usage;
     let r = env.alice.call(cid, "redeem").args_json(json!({ "token_id": ids[0] }))
         .deposit(NearToken::from_yoctonear(1)).gas(Gas::from_tgas(100)).transact().await?;
     assert!(r.is_success(), "{:?}", r.failures());
-    println!("=== MESURE : redeem réussi, gaz total {:.2} Tgas ===", r.total_gas_burnt.as_gas() as f64 / 1e12);
+    let s1 = env.worker.view_account(cid).await?.storage_usage;
+    let cb = r.receipt_outcomes().iter().find(|o| o.logs.iter().any(|l| l.contains("card_redeemed"))).unwrap().gas_burnt;
+    println!("=== MESURE : redeem réussi, gaz total {:.2} Tgas, on_redeem_complete {:.2} Tgas ===", r.total_gas_burnt.as_gas() as f64 / 1e12, cb.as_gas() as f64 / 1e12);
     assert_eq!(events(&r.logs(), "card_redeemed").len(), 1);
+    // v3 : les octets libérés par le burn sont mesurés et rendus au propriétaire.
+    let red = &events(&r.logs(), "card_redeemed")[0];
+    let freed = red["freed_bytes"].as_u64().unwrap();
+    assert_eq!(freed, s0 - s1, "octets libérés = baisse du storage_usage du compte");
+    assert_eq!(red["storage_refund"].as_str().unwrap().parse::<u128>()?, freed as u128 * 10u128.pow(19));
+    println!("  stockage libéré et rendu au burn : {} o", freed);
     assert!(r.logs().iter().any(|l| l.contains("\"nft_burn\"")));
     assert_eq!(r.json::<bool>()?, true);
     let tok: Value = env.contract.view("nft_token").args_json(json!({ "token_id": ids[0] })).await?.json()?;
@@ -823,7 +841,10 @@ async fn no_cancellation_possible() -> Result<()> {
     env.worker.fast_forward(40).await?;
     let x = env.bob.call(env.contract.id(), "retry_reveal").args_json(json!({ "pack_id": pack_id })).max_gas().transact().await?;
     assert!(x.is_failure());
-    // ABI : aucune méthode d'annulation ou de remboursement.
+    // Le seul remboursement (pack `Stuck`) est refusé pour un pack tiré.
+    let x = env.alice.call(env.contract.id(), "refund_stuck_pack").args_json(json!({ "pack_id": pack_id })).transact().await?;
+    assert!(x.is_failure() && format!("{:?}", x.failures()).contains("E_NOT_STUCK"));
+    // ABI : aucune méthode d'annulation ; un seul remboursement, celui d'un pack bloqué.
     let abi = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/target/near-test/prod/near/memaster_abi.json"))
         .or_else(|_| std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/target/near/memaster_abi.json")))
         .unwrap_or_default();
@@ -831,7 +852,7 @@ async fn no_cancellation_possible() -> Result<()> {
         let v: Value = serde_json::from_str(&abi)?;
         for f in v["body"]["functions"].as_array().unwrap() {
             let name = f["name"].as_str().unwrap();
-            assert!(!name.contains("cancel") && !name.contains("refund"), "méthode suspecte : {name}");
+            assert!(!name.contains("cancel") && (!name.contains("refund") || name == "refund_stuck_pack"), "méthode suspecte : {name}");
         }
     }
     Ok(())
@@ -874,7 +895,7 @@ async fn insufficient_deposit_or_gas() -> Result<()> {
     Ok(())
 }
 
-/// `retry_reveal` : le dernier reçu échoue (build test-hooks), relance après délai par un tiers.
+/// `retry_reveal` : le dernier reçu échoue (build test-hooks), relance après délai par l'acheteur (un tiers est refusé).
 #[tokio::test]
 async fn retry_reveal_after_failed_draw() -> Result<()> {
     let env = setup_with(true, 20).await?;
@@ -900,8 +921,11 @@ async fn retry_reveal_after_failed_draw() -> Result<()> {
     env.owner.call(cid, "test_set_reveal_failure").args_json(json!({ "fail": false })).transact().await?.into_result()?;
     env.worker.fast_forward(25).await?;
     // Gaz insuffisant pour la chaîne : refusé.
-    assert!(env.carol.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).gas(Gas::from_tgas(50)).transact().await?.is_failure());
+    assert!(env.alice.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).gas(Gas::from_tgas(50)).transact().await?.is_failure());
+    // v3 : un tiers ne peut pas relancer le pack d'un autre (ni épuiser ses tentatives).
     let x = env.carol.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
+    assert!(format!("{:?}", x.failures()).contains("E_NOT_PACK_OWNER"), "{:?}", x.failures());
+    let x = env.alice.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
     assert!(x.is_success(), "{:?}", x.failures());
     let ev = revealed(&x);
     assert_eq!(ev["attempt"], 1);
@@ -913,7 +937,7 @@ async fn retry_reveal_after_failed_draw() -> Result<()> {
     assert_eq!(n, "5");
     // Une seconde relance est refusée.
     env.worker.fast_forward(25).await?;
-    assert!(env.carol.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?.is_failure());
+    assert!(env.alice.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?.is_failure());
     Ok(())
 }
 
@@ -934,14 +958,18 @@ async fn buyer_cost_vs_attached_gas() -> Result<()> {
         env.worker.fast_forward(5).await?;
         let b1 = env.alice.view_account().await?.balance.as_yoctonear();
         let burnt: u128 = r.outcomes().iter().map(|o| o.tokens_burnt.as_yoctonear()).sum();
+        // v3 : le stockage prépayé non utilisé revient à l'acheteur au dernier reçu.
+        let refund: u128 = revealed(&r)["storage"]["refund"].as_str().unwrap().parse()?;
         println!(
-            "=== MESURE : gaz attaché {} Tgas → coût acheteur {:.5} NEAR (dépôt {:.5}, gaz brûlé {:.5}, non rendu {:.5}) ===",
+            "=== MESURE : gaz attaché {} Tgas → coût acheteur {:.5} NEAR (dépôt {:.5}, stockage rendu {:.5}, gaz brûlé {:.5}, non rendu {:.5}) ===",
             gas / 1_000_000_000_000,
             (b0 - b1) as f64 / 1e24,
             dep as f64 / 1e24,
+            refund as f64 / 1e24,
             burnt as f64 / 1e24,
-            (b0 - b1 - dep - burnt) as f64 / 1e24
+            ((b0 - b1) as f64 + refund as f64 - dep as f64 - burnt as f64) / 1e24
         );
+        assert!(b0 - b1 <= dep - refund + burnt + NEAR / 1000, "stockage non utilisé rendu");
     }
     Ok(())
 }
@@ -1958,5 +1986,137 @@ async fn worst_case_cascade_with_burns_fits() -> Result<()> {
     assert!(falls > 70, "la cascade doit être le cas courant : {falls}");
     assert!(burned > 0);
     assert!(max_last < memaster::FINAL_STEP_GAS.as_gas(), "dernier reçu dans son gaz fixe");
+    Ok(())
+}
+
+/// v3 : pack `Stuck` après `MAX_ATTEMPTS` derniers reçus en échec, remboursé une seule fois à l'acheteur
+/// (prix + stockage prépayé non utilisé), sans aucun tirage possible ensuite.
+#[tokio::test]
+async fn stuck_pack_is_refunded_once() -> Result<()> {
+    let env = setup_with(true, 20).await?;
+    let sid = simple_backed_series(&env).await?;
+    let cid = env.contract.id();
+    env.owner.call(cid, "test_set_reveal_failure").args_json(json!({ "fail": true })).transact().await?.into_result()?;
+    let r = buy(&env, &env.alice, sid).await?;
+    assert!(!r.receipt_failures().is_empty(), "le dernier reçu doit échouer");
+    let s0 = env.worker.view_account(cid).await?.storage_usage;
+    // Un tiers ne peut pas épuiser les tentatives du pack d'Alice.
+    env.worker.fast_forward(21).await?;
+    let x = env.carol.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
+    assert!(format!("{:?}", x.failures()).contains("E_NOT_PACK_OWNER"));
+    // MAX_ATTEMPTS = 10 : 9 relances de l'acheteur qui échouent encore, puis la 10e fait passer en Stuck.
+    for _ in 0..9 {
+        env.worker.fast_forward(21).await?;
+        let x = env.alice.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
+        assert!(x.is_success(), "{:?}", x.failures());
+    }
+    env.worker.fast_forward(21).await?;
+    let x = env.alice.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
+    assert_eq!(events(&x.logs(), "pack_stuck").len(), 1);
+    let pack: Value = env.contract.view("get_pack").args_json(json!({ "pack_id": 0 })).await?.json()?;
+    assert_eq!(pack["status"], "stuck");
+    let used = pack["storage_used"].as_u64().unwrap();
+    let s1 = env.worker.view_account(cid).await?.storage_usage;
+    println!("=== MESURE : pack stuck après 10 tentatives : {} o mesurés ({} o de graines des relances), prépayé {} ===",
+        used, s1 - s0, pack["storage_prepaid"]);
+    let t: Value = env.contract.view("get_treasury").await?.json()?;
+    assert_ne!(t["pack_escrow"], "0", "le pack bloqué reste un engagement");
+
+    // Le remboursement va à l'acheteur, même demandé par un tiers.
+    env.owner.call(cid, "test_set_reveal_failure").args_json(json!({ "fail": false })).transact().await?.into_result()?;
+    let b0 = env.alice.view_account().await?.balance.as_yoctonear();
+    let x = env.carol.call(cid, "refund_stuck_pack").args_json(json!({ "pack_id": 0 })).transact().await?;
+    assert!(x.is_success(), "{:?}", x.failures());
+    let ev = &events(&x.logs(), "pack_refunded")[0];
+    let total: u128 = ev["total"].as_str().unwrap().parse()?;
+    let prepaid: u128 = pack["storage_prepaid"].as_str().unwrap().parse()?;
+    let expect = NEAR / 10 + prepaid.saturating_sub(used as u128 * 10u128.pow(19));
+    assert_eq!(total, expect);
+    env.worker.fast_forward(21).await?;
+    let b1 = env.alice.view_account().await?.balance.as_yoctonear();
+    assert_eq!(b1 - b0, total, "l'acheteur reçoit exactement le prix et le stockage non utilisé");
+    println!("  remboursé : {:.5} NEAR (prix 0,1 + stockage {:.5}), gaz {:.2} Tgas", total as f64 / 1e24,
+        (total - NEAR / 10) as f64 / 1e24, x.total_gas_burnt.as_gas() as f64 / 1e12);
+    let pack: Value = env.contract.view("get_pack").args_json(json!({ "pack_id": 0 })).await?.json()?;
+    assert_eq!(pack["status"], "refunded");
+    let t: Value = env.contract.view("get_treasury").await?.json()?;
+    assert_eq!(t["pack_escrow"], "0");
+    assert_eq!(t["revenue"], "0", "le prix remboursé sort des recettes");
+
+    // Pas de second remboursement, pas de relance, pas de tirage.
+    let x = env.alice.call(cid, "refund_stuck_pack").args_json(json!({ "pack_id": 0 })).transact().await?;
+    assert!(format!("{:?}", x.failures()).contains("E_ALREADY_REFUNDED"));
+    env.worker.fast_forward(21).await?;
+    let x = env.alice.call(cid, "retry_reveal").args_json(json!({ "pack_id": 0 })).max_gas().transact().await?;
+    assert!(format!("{:?}", x.failures()).contains("E_ALREADY_REVEALED"));
+    let n: String = env.contract.view("nft_supply_for_owner").args_json(json!({ "account_id": env.alice.id() })).await?.json()?;
+    assert_eq!(n, "0");
+    Ok(())
+}
+
+/// v3 : retrait des recettes borné par les engagements (stockage occupé, annonces, packs non tirés,
+/// réserve). Après un retrait maximal, les achats et les remboursements du tirage passent encore.
+#[tokio::test]
+async fn withdraw_revenue_respects_commitments() -> Result<()> {
+    let env = setup_with(true, 20).await?;
+    let sid = simple_backed_series(&env).await?;
+    let cid = env.contract.id();
+    // Un pack tiré (une carte mise en vente) et un pack resté en attente (dernier reçu en échec).
+    let ids = token_ids(&revealed(&buy(&env, &env.alice, sid).await?));
+    env.alice.call(cid, "list").args_json(json!({ "token_id": ids[0], "price": "1000" }))
+        .deposit(NearToken::from_millinear(5)).transact().await?.into_result()?;
+    env.owner.call(cid, "test_set_reveal_failure").args_json(json!({ "fail": true })).transact().await?.into_result()?;
+    assert!(!buy(&env, &env.bob, sid).await?.receipt_failures().is_empty());
+    env.owner.call(cid, "test_set_reveal_failure").args_json(json!({ "fail": false })).transact().await?.into_result()?;
+
+    let t: Value = env.contract.view("get_treasury").await?.json()?;
+    let g = |k: &str| t[k].as_str().unwrap().parse::<u128>().unwrap();
+    println!("=== TRÉSORERIE : {t} ===");
+    assert_eq!(g("listing_deposits"), NEAR / 200);
+    assert!(g("pack_escrow") >= NEAR / 10, "le pack en attente : prix et stockage");
+    assert_eq!(g("committed"), g("storage_locked") + g("listing_deposits") + g("pack_escrow") + g("value_reserved") + g("min_reserve"));
+    let w = g("withdrawable");
+    assert!(w > 0);
+
+    // Non-owner, sans 1 yocto, au-delà du retirable : refusé.
+    let x = env.alice.call(cid, "withdraw_revenue").args_json(json!({ "amount": "1" })).deposit(NearToken::from_yoctonear(1)).transact().await?;
+    assert!(format!("{:?}", x.failures()).contains("E_NOT_OWNER"));
+    let x = env.owner.call(cid, "withdraw_revenue").args_json(json!({ "amount": "1" })).transact().await?;
+    assert!(format!("{:?}", x.failures()).contains("E_ONE_YOCTO"));
+    let x = env.owner.call(cid, "withdraw_revenue").args_json(json!({ "amount": (w + NEAR).to_string() }))
+        .deposit(NearToken::from_yoctonear(1)).transact().await?;
+    assert!(format!("{:?}", x.failures()).contains("E_WITHDRAW_LIMIT"), "{:?}", x.failures());
+
+    // Retrait de tout le retirable (le solde a un peu bougé : récompenses de gaz).
+    let o0 = env.owner.view_account().await?.balance.as_yoctonear();
+    let x = env.owner.call(cid, "withdraw_revenue").args_json(json!({})).deposit(NearToken::from_yoctonear(1)).transact().await?;
+    assert!(x.is_success(), "{:?}", x.failures());
+    let ev = events(&x.logs(), "revenue_withdrawn")[0].clone();
+    let gas = x.total_gas_burnt.as_gas() as f64 / 1e12;
+    let got: u128 = x.json::<U128>()?.0;
+    println!("  retiré {:.4} NEAR, gaz {:.2} Tgas, événement {ev}", got as f64 / 1e24, gas);
+    env.worker.fast_forward(3).await?;
+    let o1 = env.owner.view_account().await?.balance.as_yoctonear();
+    assert!(o1 + NEAR / 100 > o0 + got, "l'owner reçoit le montant (moins le gaz)");
+
+    // Le solde ne descend pas sous les engagements.
+    let acct = env.worker.view_account(cid).await?;
+    let t: Value = env.contract.view("get_treasury").await?.json()?;
+    let g = |k: &str| t[k].as_str().unwrap().parse::<u128>().unwrap();
+    let locked = acct.storage_usage as u128 * 10u128.pow(19);
+    assert!(acct.balance.as_yoctonear() >= locked + g("listing_deposits") + g("pack_escrow") + g("value_reserved") + g("min_reserve"));
+    assert!(g("withdrawable") < NEAR / 100, "plus rien de notable à retirer : {}", g("withdrawable"));
+
+    // Les engagements restent honorés : le pack en attente se tire (remboursement du stockage compris),
+    // un nouvel achat passe, l'annonce se retire avec son dépôt.
+    env.worker.fast_forward(21).await?;
+    let x = env.bob.call(cid, "retry_reveal").args_json(json!({ "pack_id": 1 })).max_gas().transact().await?;
+    assert!(x.is_success() && x.receipt_failures().is_empty(), "{:?}", x.failures());
+    let r = buy(&env, &env.carol, sid).await?;
+    assert!(r.is_success() && r.receipt_failures().is_empty(), "{:?}", r.failures());
+    env.alice.call(cid, "delist").args_json(json!({ "token_id": ids[0] })).transact().await?.into_result()?;
+    let t: Value = env.contract.view("get_treasury").await?.json()?;
+    assert_eq!(t["pack_escrow"], "0");
+    assert_eq!(t["listing_deposits"], "0");
     Ok(())
 }

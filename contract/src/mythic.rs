@@ -12,7 +12,7 @@ pub(crate) fn compute_commitments(card_id: &str, sel: &[u8], content: &MythicCon
     let mut a = card_id.as_bytes().to_vec();
     a.extend_from_slice(sel);
     let mut b = near_sdk::serde_json::to_vec(content)
-        .unwrap_or_else(|_| env::panic_str("Sérialisation impossible"));
+        .unwrap_or_else(|_| env::panic_str("E_INTERNAL: Sérialisation impossible"));
     b.extend_from_slice(sel);
     (env::sha256_array(&a), env::sha256_array(&b))
 }
@@ -21,8 +21,8 @@ pub(crate) fn compute_commitments(card_id: &str, sel: &[u8], content: &MythicCon
 /// un sel court ou réutilisé permettrait de retrouver les autres mythiques par force brute
 /// sur le catalogue après une première révélation.
 pub(crate) fn decode_sel(sel: &str) -> Vec<u8> {
-    let b = hex_decode(sel).unwrap_or_else(|| env::panic_str("sel : hex invalide"));
-    require!(b.len() == 32, "sel : 32 octets exactement");
+    let b = hex_decode(sel).unwrap_or_else(|| env::panic_str("E_SEL_HEX: sel : hex invalide"));
+    require!(b.len() == 32, "E_SEL_LENGTH: sel : 32 octets exactement");
     b
 }
 
@@ -57,23 +57,23 @@ impl Contract {
         content: MythicContent,
     ) {
         let start = env::storage_usage();
-        require!(!card_id.is_empty() && card_id.len() <= MAX_ID_LEN, "card_id invalide");
-        require!(!content.title.is_empty() && content.title.len() <= MAX_TITLE_LEN, "title invalide");
+        require!(!card_id.is_empty() && card_id.len() <= MAX_ID_LEN, "E_CARD_ID: card_id invalide");
+        require!(!content.title.is_empty() && content.title.len() <= MAX_TITLE_LEN, "E_TITLE: title invalide");
         for u in [&content.media, &content.reference].into_iter().flatten() {
-            require!(u.len() <= MAX_URL_LEN, "URL trop longue");
+            require!(u.len() <= MAX_URL_LEN, "E_URL_LENGTH: URL trop longue");
         }
         check_backing(&content.backing);
         let sel_bytes = decode_sel(&sel);
 
         let mut series = self.series_ref(series_id).clone();
         let j = mythic_index as usize;
-        require!(j < series.table.mythics.len(), "Index de mythique inconnu");
-        require!(series.revealed_mythics[j].is_none(), "Mythique déjà révélée");
-        require!(series.mythic_minted[j] > 0, "Mythique jamais sortie : révélation refusée");
+        require!(j < series.table.mythics.len(), "E_UNKNOWN_MYTHIC: Index de mythique inconnu");
+        require!(series.revealed_mythics[j].is_none(), "E_MYTHIC_REVEALED: Mythique déjà révélée");
+        require!(series.mythic_minted[j] > 0, "E_MYTHIC_NOT_DRAWN: Mythique jamais sortie : révélation refusée");
         let m = series.table.mythics[j].clone();
         let (c, h) = compute_commitments(&card_id, &sel_bytes, &content);
-        require!(hex32(&c) == m.commitment, "sha256(card_id || sel) ne correspond pas à l'engagement");
-        require!(hex32(&h) == m.content_hash, "Le contenu ne correspond pas à content_hash");
+        require!(hex32(&c) == m.commitment, "E_COMMITMENT_MISMATCH: sha256(card_id || sel) ne correspond pas à l'engagement");
+        require!(hex32(&h) == m.content_hash, "E_CONTENT_MISMATCH: Le contenu ne correspond pas à content_hash");
 
         let revealed = RevealedMythic {
             card_id: card_id.clone(),
@@ -106,7 +106,7 @@ impl Contract {
         let end = env::storage_usage();
         let cost = env::storage_byte_cost().as_yoctonear() * end.saturating_sub(start) as u128;
         let deposit = env::attached_deposit().as_yoctonear();
-        require!(deposit >= cost, format!("Dépôt insuffisant pour le stockage : {} yoctoNEAR", cost));
+        require!(deposit >= cost, format!("E_STORAGE_DEPOSIT: Dépôt insuffisant pour le stockage : {} yoctoNEAR", cost));
         Self::refund(&env::predecessor_account_id(), deposit - cost);
     }
 }
