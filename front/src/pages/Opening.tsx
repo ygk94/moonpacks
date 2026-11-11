@@ -12,7 +12,8 @@ import { Card, CardBack } from "../components/Card";
 import { PackArt } from "../components/PackArt";
 import { estimateTokens, type TokenEstimate } from "../lib/backing";
 import { cardImage, loadCatalog, type CatalogEntry } from "../lib/catalog";
-import { formatQty, RARITY_LABEL } from "../lib/format";
+import { formatNearExact, formatQty, RARITY_LABEL } from "../lib/format";
+import { canRefund, canRetryReveal, refundAmount, refundedTotal, revealStorageRefund, unusedStorage } from "../lib/pack";
 import { burnableLast } from "../lib/reveal";
 import { navigate } from "../lib/router";
 import { getCardDefs, getConfig, getPack } from "../near/contract";
@@ -25,7 +26,7 @@ import { VerifyPanel } from "../verify/VerifyPanel";
 
 export type OpeningRequest = { kind: "buy"; series: SeriesView } | { kind: "replay"; packId: number };
 
-type Phase = "signing" | "sealing" | "drawing" | "tearing" | "revealing" | "done" | "error" | "stuck";
+type Phase = "signing" | "sealing" | "drawing" | "tearing" | "revealing" | "done" | "error" | "stuck" | "refunded";
 
 interface RevealCard {
   slot: number;
@@ -55,8 +56,16 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
   const [step, setStep] = useState(0);
   const [steps, setSteps] = useState(3);
   const [canRetry, setCanRetry] = useState(false);
+  // Pack qui ne progresse plus, mais relance réservée à l'acheteur (v3) : on le dit aux autres comptes.
+  const [stalled, setStalled] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [refunding, setRefunding] = useState(false);
+  // Montant rendu (yoctoNEAR) : stockage non utilisé à l'ouverture, ou prix + stockage au remboursement.
+  const [storageRefund, setStorageRefund] = useState<bigint | null>(null);
+  const [refunded, setRefunded] = useState<bigint | null>(null);
   const started = useRef(false);
+  const account = useRef(accountId);
+  account.current = accountId;
 
   // Données préchargées pendant la signature : définitions des cartes et fiches publiques.
   useEffect(() => {
@@ -75,9 +84,13 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
     const gas = BigInt(s.min_gas) > BigInt(MAX_GAS) ? s.min_gas : MAX_GAS;
     call("buy_pack", { series_id: s.series_id }, { deposit: s.required_deposit, gas })
       .then((out) => {
-        const ev = findEvent(eventsOf(out), "pack_bought");
+        const events = eventsOf(out);
+        const ev = findEvent(events, "pack_bought");
         const id = Number(ev?.pack_id ?? returnValue<string>(out));
         if (!Number.isFinite(id)) throw new Error("Pack id not found in the transaction.");
+        // v3 : stockage non utilisé rendu au tirage, lu dans `pack_revealed.storage` s'il est déjà dans la réponse.
+        const refund = revealStorageRefund(findEvent(events, "pack_revealed"));
+        if (refund != null) setStorageRefund(refund);
         setPackId(id);
         setPhase("sealing");
       })
@@ -99,6 +112,9 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
         setPack(p);
         setStep(p.step);
         if (p.status === "revealed") {
+          // Sinon, même montant relu dans `get_pack` (storage_used ne change plus après le tirage).
+          const unused = unusedStorage(p);
+          if (unused != null) setStorageRefund((r) => r ?? unused);
           const resolved = await resolveCards(p);
           // Visuels des 5 cartes chargés avant la déchirure, pour une révélation sans image vide
           // (attente plafonnée : l'animation ne doit jamais rester bloquée sur le réseau).
@@ -111,9 +127,15 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
           setPhase("stuck");
           return;
         }
+        if (p.status === "refunded") {
+          setRefunded((r) => r ?? refundAmount(p));
+          setPhase("refunded");
+          return;
+        }
         setPhase("drawing");
         const [h, cfg] = await Promise.all([blockHeight(), getConfig()]);
-        setCanRetry(h >= p.last_progress_height + cfg.retry_delay_blocks);
+        setStalled(h >= p.last_progress_height + cfg.retry_delay_blocks);
+        setCanRetry(canRetryReveal(p, account.current, h, cfg.retry_delay_blocks));
       } catch {
         // erreur réseau passagère : on réessaie au prochain tour
       }
@@ -140,6 +162,26 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
     }
   };
 
+  // Pack `stuck` : remboursement du prix et du stockage non utilisé (`refund_stuck_pack`, ouvert à tous, payé à
+  // l'acheteur). Le pack passe en `refunded`.
+  const refund = async () => {
+    if (packId == null) return;
+    setRefunding(true);
+    setError(null);
+    try {
+      const out = await call("refund_stuck_pack", { pack_id: packId }, { gas: "50000000000000" });
+      const total = refundedTotal(eventsOf(out), packId) ?? returnValue<string>(out);
+      const p = await getPack(packId).catch(() => null);
+      if (p) setPack(p);
+      setRefunded(total != null ? BigInt(total) : p ? refundAmount(p) : null);
+      setPhase("refunded");
+    } catch (e) {
+      setError(humanError(e));
+    } finally {
+      setRefunding(false);
+    }
+  };
+
   const mode: PackMode = pack?.mode ?? "base";
   const gold = mode === "gold" && ["tearing", "revealing", "done"].includes(phase);
 
@@ -152,7 +194,7 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
           {pack?.rush && <span className="pill pill--rush">Rush pack</span>}
           {gold && <span className="pill pill--gold">Gold pack</span>}
         </span>
-        {["done", "error", "stuck"].includes(phase) || request.kind === "replay" ? (
+        {["done", "error", "stuck", "refunded"].includes(phase) || request.kind === "replay" ? (
           <button className="btn btn--ghost" onClick={onClose}>
             Close
           </button>
@@ -168,7 +210,7 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
           {phase === "revealing" && (
             <RevealStage key="reveal" cards={cards} gold={mode === "gold"} onDone={() => setPhase("done")} />
           )}
-          {phase === "done" && <Summary key="done" cards={cards} packId={packId} />}
+          {phase === "done" && <Summary key="done" cards={cards} packId={packId} storageRefund={storageRefund} />}
           {phase === "error" && (
             <motion.div key="err" className="opening__message" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <h2>The pack was not bought</h2>
@@ -179,9 +221,33 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
           {phase === "stuck" && (
             <motion.div key="stuck" className="opening__message" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <h2>This pack could not be revealed</h2>
+              {pack && canRefund(pack) ? (
+                <>
+                  <p>
+                    The draw failed several times and the pack is marked as stuck on-chain. It can be refunded: the pack
+                    price and the unused storage deposit
+                    {refundAmount(pack) != null && <> ({formatNearExact(refundAmount(pack)!)} NEAR)</>} go back to the buyer
+                    of the pack, whoever asks for the refund.
+                  </p>
+                  <button className="btn btn--primary" onClick={refund} disabled={refunding || !accountId}>
+                    {refunding ? "Refunding…" : accountId ? "Refund" : "Connect a wallet to refund"}
+                  </button>
+                  {error && <p className="error">{error}</p>}
+                </>
+              ) : (
+                <p>
+                  The draw failed several times and the pack is marked as stuck on-chain. Please contact the team with
+                  your pack number: <strong>#{packId}</strong>.
+                </p>
+              )}
+            </motion.div>
+          )}
+          {phase === "refunded" && (
+            <motion.div key="refunded" className="opening__message" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <h2>This pack was refunded</h2>
               <p>
-                The draw failed several times and the pack is marked as stuck on-chain. Please contact the team with your
-                pack number: <strong>#{packId}</strong>.
+                The draw could not be completed, so the pack price and the unused storage deposit were sent back to the
+                buyer{refunded != null && <>: {formatNearExact(refunded)} NEAR</>}. No card was created.
               </p>
             </motion.div>
           )}
@@ -189,6 +255,11 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
       </div>
 
       <footer className="opening__bottom">
+        {phase === "drawing" && stalled && !canRetry && (
+          <div className="opening__retry">
+            <p className="muted">The draw is taking longer than expected. Only the buyer of this pack can restart it.</p>
+          </div>
+        )}
         {phase === "drawing" && canRetry && (
           <div className="opening__retry">
             <p>The draw is taking longer than expected. You can restart it; this does not change your odds.</p>
@@ -519,7 +590,15 @@ function BurnableLine({ card }: { card: RevealCard }) {
   );
 }
 
-function Summary({ cards, packId }: { cards: RevealCard[]; packId: number | null }) {
+function Summary({
+  cards,
+  packId,
+  storageRefund,
+}: {
+  cards: RevealCard[];
+  packId: number | null;
+  storageRefund: bigint | null;
+}) {
   return (
     <motion.div className="summary" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <h2>Your pack</h2>
@@ -545,6 +624,11 @@ function Summary({ cards, packId }: { cards: RevealCard[]; packId: number | null
         <p className="muted small">
           Burn a burnable card from your collection to receive its tokens. The token amount shown is estimated from
           public market prices.
+        </p>
+      )}
+      {storageRefund != null && storageRefund > 0n && (
+        <p className="muted small">
+          Unused storage deposit returned when the pack was opened: {formatNearExact(storageRefund)} NEAR.
         </p>
       )}
       {packId != null && <VerifyPanel packId={packId} />}

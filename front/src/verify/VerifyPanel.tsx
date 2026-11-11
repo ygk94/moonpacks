@@ -37,6 +37,8 @@ export function VerifyPanel({ packId }: { packId: number }) {
     setError(null);
     try {
       const pack = await getPack(packId);
+      if (pack?.status === "refunded" || pack?.status === "stuck")
+        throw new Error("This pack has no draw to verify: it could not be revealed.");
       if (!pack || pack.status !== "revealed") throw new Error("This pack is not revealed yet.");
       const seriesId = pack.series_id ?? SERIES_ID;
       const [{ table, stored }, history] = await Promise.all([loadTable(seriesId), fetchHistory(seriesId)]);

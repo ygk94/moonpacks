@@ -6,7 +6,8 @@ export const RARITY_RANK: Record<Rarity, number> = { common: 0, rare: 1, epic: 2
 
 export type CardKind = "visible" | "mythic";
 export type CardState = "normal" | "redeeming" | "burned";
-export type PackStatus = "pending" | "revealed" | "stuck";
+// `refunded` (v3) : pack `stuck` remboursé par `refund_stuck_pack`, état final.
+export type PackStatus = "pending" | "revealed" | "stuck" | "refunded";
 export type PackMode = "base" | "gold" | "rush";
 
 export interface Backing {
@@ -73,6 +74,8 @@ export interface PackView {
   owner_id: string;
   price_paid: string;
   storage_prepaid: string;
+  /** v3 : stockage mesuré du pack (octets). Absent sur app2. */
+  storage_used?: number;
   bought_at_height: number;
   status: PackStatus;
   attempt: number;

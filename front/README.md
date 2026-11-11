@@ -70,7 +70,11 @@ Pas de routeur ni de bibliothèque d'état : un routeur par hash suffit (`#/shop
   500 ms. Les cartes sont révélées une par une dès que le tirage est lu, la brûlable en dernier, avec une
   anticipation, un éclat et un temps de pose de plus en plus longs selon la rareté. Le gold pack a sa propre mise en
   scène : fond or, annonce à la déchirure, suspense sur la dernière carte. Si le pack ne progresse plus pendant
-  `retry_delay_blocks`, le bouton « Retry reveal » apparaît. Un pack `stuck` affiche un message. Le rejeu d'une
+  `retry_delay_blocks`, le bouton « Retry reveal » apparaît, pour l'acheteur seulement (v3 : `retry_reveal` lui est
+  réservé ; les autres comptes voient que seul l'acheteur peut relancer). Un pack `stuck` propose « Refund »
+  (`refund_stuck_pack`, contrat v3 : prix et stockage non utilisé rendus à l'acheteur, quel que soit le compte qui
+  le demande), puis affiche le statut `refunded` et le montant rendu. Sur `app2`, un pack `stuck` affiche un message
+  de contact. Le rejeu d'une
   ouverture passée se fait depuis Collection, onglet Packs, ou par l'URL `#/open?pack=N`.
 - **Vérification d'un tirage** (`src/verify/`) : un bouton « Verify this pack » dans le récapitulatif de
   l'ouverture et dans Collection, onglet Packs. Deux niveaux, portés de `verifier/` :
@@ -113,8 +117,9 @@ La liste complète des décisions, des tests et du travail restants est dans `do
    séries côté contrat. La boutique affiche déjà toutes les séries ouvertes.
 4. **Trending.** Il vient de l'indexeur (ventes et annonces sur 24 h, plus les dernières ventes), et à défaut des
    annonces en cours. Pour un déploiement public, il faudra héberger l'indexeur ; il vise un seul contrat.
-5. **Pack bloqué.** Le contrat n'accepte `retry_reveal` que sur un pack `pending`. Après `MAX_ATTEMPTS`, le pack
-   passe `stuck` et ne peut plus être relancé. Le front propose donc la relance avant ce stade.
+5. **Pack bloqué.** Le contrat n'accepte `retry_reveal` que sur un pack `pending`, et en v3 que de l'acheteur. Après
+   `MAX_ATTEMPTS`, le pack passe `stuck` : en v3, « Refund » appelle `refund_stuck_pack` (le pack passe `refunded`).
+   Le rejeu depuis Collection, onglet Packs, y mène aussi.
 6. **MetaMask sur iOS** et **WalletConnect** : WalletConnect est branché mais inactif tant que
    `VITE_WALLETCONNECT_PROJECT_ID` est vide (`projectId` gratuit sur cloud.reown.com). Son client n'est chargé
    que s'il est actif. Non testé sur un téléphone.
