@@ -1,0 +1,590 @@
+{
+ "couverture": {
+  "normal": 0.75,
+  "rush": 0.75,
+  "gold": 2.0000000499999997,
+  "flux_g_pop_mc": 0.7500259174642847,
+  "flux_g_pop_exact": 0.7500259174642847,
+  "flux_g_inf": 0.7500495085179668,
+  "rush_identique_au_normal": true
+ },
+ "frequences": {
+  "gold": {
+   "p0": 2e-05,
+   "k": 2e-08,
+   "p_max": 4e-05,
+   "N": null,
+   "plafond_atteint_au_pack": 1001,
+   "survie_au_plafond": 0.9704159672633502,
+   "duree_moyenne_cycle": 25248.181552041686,
+   "g_inf": 3.960681278922186e-05,
+   "g_pop_mc": 1.594290564144405e-05,
+   "golds_population_mc": 17,
+   "g_pop_exact": 2.0733970598441825e-05,
+   "packs_population": 1066305,
+   "part_joueurs_sans_gold": 0.99983,
+   "mc_cycles": {
+    "cycles": 1000000,
+    "duree_moyenne": 25226.855051,
+    "erreur_type": 24.954969886033698,
+    "g": 3.964029594566366e-05
+   },
+   "mc_flux": {
+    "joueurs": 100000,
+    "packs_par_joueur": 3000,
+    "packs": 300000000,
+    "golds": 11803,
+    "g": 3.934333333333333e-05,
+    "erreur_type_relative": 0.009204576180099611
+   }
+  },
+  "mythique": {
+   "par_emplacement": 2.5e-07,
+   "par_pack": {
+    "normal": 1e-06,
+    "gold": 0.010025528169262042,
+    "rush": 1e-06
+   },
+   "classiques": 1e-06,
+   "flux_g_pop": 1.207848272324731e-06,
+   "flux_g_inf": 1.3970396105002427e-06,
+   "part_gold_dans_flux_g_inf": 0.28422903282667006
+  }
+ },
+ "marge": [
+  {
+   "variante": "a",
+   "prix_usd": 0.2,
+   "couverture": 0.7500259174642847,
+   "prudent": {
+    "prix_usd": 0.2,
+    "prix_near": 0.08,
+    "couverture": 0.7500259174642847,
+    "gaz_near": 0.0048000000000000004,
+    "stockage_near": 0.009710000000000002,
+    "achat_near": 0.0004500155504785708,
+    "cout_equipe_near": 0.005250015550478571,
+    "cout_equipe_usd": 0.013125038876196427,
+    "marge_near": 0.014747911052378654,
+    "marge_usd": 0.036869777630946635,
+    "marge_part": 0.1843488881547332,
+    "marge_apres_reserve_near": 0.010747911052378654,
+    "debourse_acheteur_near": 0.08971,
+    "debourse_acheteur_usd": 0.224275,
+    "surcout_affiche_part": 0.12137500000000002,
+    "stockage_par_carte_near": 0.0019420000000000004
+   },
+   "frais_1": {
+    "prix_usd": 0.2,
+    "prix_near": 0.08,
+    "couverture": 0.7500259174642847,
+    "gaz_near": 0.0048000000000000004,
+    "stockage_near": 0.009710000000000002,
+    "achat_near": 0.0006000207339714278,
+    "cout_equipe_near": 0.005400020733971428,
+    "cout_equipe_usd": 0.01350005183492857,
+    "marge_near": 0.014597905868885798,
+    "marge_usd": 0.03649476467221449,
+    "marge_part": 0.18247382336107246,
+    "marge_apres_reserve_near": 0.010597905868885798,
+    "debourse_acheteur_near": 0.08971,
+    "debourse_acheteur_usd": 0.224275,
+    "surcout_affiche_part": 0.12137500000000002,
+    "stockage_par_carte_near": 0.0019420000000000004
+   },
+   "frais_05": {
+    "prix_usd": 0.2,
+    "prix_near": 0.08,
+    "couverture": 0.7500259174642847,
+    "gaz_near": 0.0048000000000000004,
+    "stockage_near": 0.009710000000000002,
+    "achat_near": 0.0003000103669857139,
+    "cout_equipe_near": 0.005100010366985715,
+    "cout_equipe_usd": 0.012750025917464287,
+    "marge_near": 0.01489791623587151,
+    "marge_usd": 0.03724479058967878,
+    "marge_part": 0.1862239529483939,
+    "marge_apres_reserve_near": 0.01089791623587151,
+    "debourse_acheteur_near": 0.08971,
+    "debourse_acheteur_usd": 0.224275,
+    "surcout_affiche_part": 0.12137500000000002,
+    "stockage_par_carte_near": 0.0019420000000000004
+   },
+   "gaz_acheteur": {
+    "prix_usd": 0.2,
+    "prix_near": 0.08,
+    "couverture": 0.7500259174642847,
+    "gaz_near": 0.0048000000000000004,
+    "stockage_near": 0.009710000000000002,
+    "achat_near": 0.0004500155504785708,
+    "cout_equipe_near": 0.0004500155504785708,
+    "cout_equipe_usd": 0.001125038876196427,
+    "marge_near": 0.019547911052378655,
+    "marge_usd": 0.04886977763094664,
+    "marge_part": 0.24434888815473318,
+    "marge_apres_reserve_near": 0.015547911052378655,
+    "debourse_acheteur_near": 0.09451000000000001,
+    "debourse_acheteur_usd": 0.236275,
+    "surcout_affiche_part": 0.181375,
+    "stockage_par_carte_near": 0.0019420000000000004
+   },
+   "packs_10_near": 679
+  },
+  {
+   "variante": "a",
+   "prix_usd": 0.5,
+   "couverture": 0.7500259174642847,
+   "prudent": {
+    "prix_usd": 0.5,
+    "prix_near": 0.2,
+    "couverture": 0.7500259174642847,
+    "gaz_near": 0.0048000000000000004,
+    "stockage_near": 0.009710000000000002,
+    "achat_near": 0.001125038876196427,
+    "cout_equipe_near": 0.005925038876196428,
+    "cout_equipe_usd": 0.01481259719049107,
+    "marge_near": 0.04406977763094663,
+    "marge_usd": 0.11017444407736658,
+    "marge_part": 0.22034888815473316,
+    "marge_apres_reserve_near": 0.03406977763094663,
+    "debourse_acheteur_near": 0.20971,
+    "debourse_acheteur_usd": 0.524275,
+    "surcout_affiche_part": 0.04855,
+    "stockage_par_carte_near": 0.0019420000000000004
+   },
+   "frais_1": {
+    "prix_usd": 0.5,
+    "prix_near": 0.2,
+    "couverture": 0.7500259174642847,
+    "gaz_near": 0.0048000000000000004,
+    "stockage_near": 0.009710000000000002,
+    "achat_near": 0.0015000518349285695,
+    "cout_equipe_near": 0.00630005183492857,
+    "cout_equipe_usd": 0.015750129587321426,
+    "marge_near": 0.04369476467221449,
+    "marge_usd": 0.10923691168053623,
+    "marge_part": 0.21847382336107243,
+    "marge_apres_reserve_near": 0.03369476467221449,
+    "debourse_acheteur_near": 0.20971,
+    "debourse_acheteur_usd": 0.524275,
+    "surcout_affiche_part": 0.04855,
+    "stockage_par_carte_near": 0.0019420000000000004
+   },
+   "frais_05": {
+    "prix_usd": 0.5,
+    "prix_near": 0.2,
+    "couverture": 0.7500259174642847,
+    "gaz_near": 0.0048000000000000004,
+    "stockage_near": 0.009710000000000002,
+    "achat_near": 0.0007500259174642847,
+    "cout_equipe_near": 0.005550025917464285,
+    "cout_equipe_usd": 0.013875064793660713,
+    "marge_near": 0.044444790589678776,
+    "marge_usd": 0.11111197647419693,
+    "marge_part": 0.22222395294839387,
+    "marge_apres_reserve_near": 0.034444790589678774,
+    "debourse_acheteur_near": 0.20971,
+    "debourse_acheteur_usd": 0.524275,
+    "surcout_affiche_part": 0.04855,
+    "stockage_par_carte_near": 0.0019420000000000004
+   },
+   "gaz_acheteur": {
+    "prix_usd": 0.5,
+    "prix_near": 0.2,
+    "couverture": 0.7500259174642847,
+    "gaz_near": 0.0048000000000000004,
+    "stockage_near": 0.009710000000000002,
+    "achat_near": 0.001125038876196427,
+    "cout_equipe_near": 0.001125038876196427,
+    "cout_equipe_usd": 0.0028125971904910674,
+    "marge_near": 0.04886977763094663,
+    "marge_usd": 0.12217444407736658,
+    "marge_part": 0.24434888815473316,
+    "marge_apres_reserve_near": 0.03886977763094663,
+    "debourse_acheteur_near": 0.21451,
+    "debourse_acheteur_usd": 0.5362750000000001,
+    "surcout_affiche_part": 0.07255,
+    "stockage_par_carte_near": 0.0019420000000000004
+   },
+   "packs_10_near": 227
+  }
+ ],
+ "arbitrage": {
+  "normal": 0.7325498024517999,
+  "rush": 0.733227610467437,
+  "cycle_pitie": 0.7325986360511157,
+  "gold_seul": 1.9655093838185382,
+  "borne": 0.85
+ },
+ "tables": {
+  "a": {
+   "resume": {
+    "normal": {
+     "min": 0.2,
+     "max": 2.0,
+     "moyenne": 0.75,
+     "ecart_type": 0.4357194510232473,
+     "q10": 0.3,
+     "q50": 0.65,
+     "q90": 1.4,
+     "sous_50": 0.30962900000000004,
+     "au_dessus_100": 0.204532,
+     "paliers": 27,
+     "total_poids": 1000000
+    },
+    "gold": {
+     "min": 1.0,
+     "max": 5.0,
+     "moyenne": 2.0000000499999997,
+     "ecart_type": 0.8022788776354507,
+     "q10": 1.1,
+     "q50": 1.8,
+     "q90": 3.0,
+     "sous_50": 0.0,
+     "au_dessus_100": 0.9203899999999999,
+     "paliers": 18,
+     "total_poids": 1000000
+    },
+    "rush": {
+     "min": 0.2,
+     "max": 2.0,
+     "moyenne": 0.75,
+     "ecart_type": 0.4357194510232473,
+     "q10": 0.3,
+     "q50": 0.65,
+     "q90": 1.4,
+     "sous_50": 0.30962900000000004,
+     "au_dessus_100": 0.204532,
+     "paliers": 27,
+     "total_poids": 1000000
+    }
+   },
+   "global": {
+    "min": 0.2,
+    "max": 5.0,
+    "moyenne": 0.7500199286328488,
+    "ecart_type": 0.4357563370563987,
+    "q10": 0.3,
+    "q50": 0.65,
+    "q90": 1.4,
+    "sous_50": 0.30962406361406913,
+    "au_dessus_100": 0.20454341285654667
+   },
+   "rush_simplifie": false,
+   "tables": {
+    "normal": [
+     [
+      2000,
+      40032
+     ],
+     [
+      2500,
+      38882
+     ],
+     [
+      3000,
+      49899
+     ],
+     [
+      3500,
+      57307
+     ],
+     [
+      4000,
+      61229
+     ],
+     [
+      4500,
+      62280
+     ],
+     [
+      5000,
+      61193
+     ],
+     [
+      5500,
+      58640
+     ],
+     [
+      6000,
+      55170
+     ],
+     [
+      6500,
+      51196
+     ],
+     [
+      7000,
+      47018
+     ],
+     [
+      7500,
+      42843
+     ],
+     [
+      8000,
+      38805
+     ],
+     [
+      8500,
+      34988
+     ],
+     [
+      9000,
+      31438
+     ],
+     [
+      9500,
+      28176
+     ],
+     [
+      10000,
+      36372
+     ],
+     [
+      11000,
+      40371
+     ],
+     [
+      12000,
+      32102
+     ],
+     [
+      13000,
+      25524
+     ],
+     [
+      14000,
+      20317
+     ],
+     [
+      15000,
+      16205
+     ],
+     [
+      16000,
+      12959
+     ],
+     [
+      17000,
+      10395
+     ],
+     [
+      18000,
+      8365
+     ],
+     [
+      19000,
+      6755
+     ],
+     [
+      20000,
+      31539
+     ]
+    ],
+    "gold": [
+     [
+      10000,
+      79610
+     ],
+     [
+      11000,
+      39430
+     ],
+     [
+      12000,
+      46739
+     ],
+     [
+      13000,
+      52419
+     ],
+     [
+      14000,
+      56249
+     ],
+     [
+      15000,
+      58241
+     ],
+     [
+      16000,
+      58567
+     ],
+     [
+      17000,
+      57495
+     ],
+     [
+      18000,
+      55324
+     ],
+     [
+      19000,
+      52352
+     ],
+     [
+      20000,
+      81627
+     ],
+     [
+      22500,
+      98315
+     ],
+     [
+      25000,
+      102984
+     ],
+     [
+      30000,
+      81729
+     ],
+     [
+      35000,
+      40720
+     ],
+     [
+      40000,
+      19715
+     ],
+     [
+      45000,
+      9470
+     ],
+     [
+      50000,
+      9014
+     ]
+    ],
+    "rush": [
+     [
+      2000,
+      40032
+     ],
+     [
+      2500,
+      38882
+     ],
+     [
+      3000,
+      49899
+     ],
+     [
+      3500,
+      57307
+     ],
+     [
+      4000,
+      61229
+     ],
+     [
+      4500,
+      62280
+     ],
+     [
+      5000,
+      61193
+     ],
+     [
+      5500,
+      58640
+     ],
+     [
+      6000,
+      55170
+     ],
+     [
+      6500,
+      51196
+     ],
+     [
+      7000,
+      47018
+     ],
+     [
+      7500,
+      42843
+     ],
+     [
+      8000,
+      38805
+     ],
+     [
+      8500,
+      34988
+     ],
+     [
+      9000,
+      31438
+     ],
+     [
+      9500,
+      28176
+     ],
+     [
+      10000,
+      36372
+     ],
+     [
+      11000,
+      40371
+     ],
+     [
+      12000,
+      32102
+     ],
+     [
+      13000,
+      25524
+     ],
+     [
+      14000,
+      20317
+     ],
+     [
+      15000,
+      16205
+     ],
+     [
+      16000,
+      12959
+     ],
+     [
+      17000,
+      10395
+     ],
+     [
+      18000,
+      8365
+     ],
+     [
+      19000,
+      6755
+     ],
+     [
+      20000,
+      31539
+     ]
+    ]
+   }
+  }
+ },
+ "population": {
+  "joueurs": 100000,
+  "packs": 1066305,
+  "packs_moyens": 10.66305,
+  "packs_medians": 4.0,
+  "part_packs_top5": 0.39880428207689167,
+  "g_pop": 1.594290564144405e-05,
+  "golds": 17,
+  "part_joueurs_sans_gold": 0.99983,
+  "part_gold_garantis": 0.0,
+  "compteur_moyen_final": 10.65185,
+  "g_inf": 3.960681278922186e-05
+ },
+ "gold_identique_serie4": true,
+ "couts": {
+  "octets_par_pack": 971,
+  "gaz_tgas": 48
+ }
+}

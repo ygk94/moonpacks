@@ -39,6 +39,9 @@ python3 -m venv .venv
 .venv/bin/python -m memaster_sim.serie4 configs
 .venv/bin/python -m memaster_sim.serie4 run
 
+# série 5 (pitié sans garantie, mythique 1 pour 10⁶, gold 99/1, V moyenne 75 %) : tout (environ 5 s)
+.venv/bin/python -m memaster_sim.serie5
+
 # tests
 .venv/bin/python -m pytest -q tests
 ```
@@ -61,16 +64,18 @@ python3 -m venv .venv
 | `configs/serie4-valeur.yaml` | Série 4 : formes et cibles des tables V, multiplicateurs, gold pack, pitié, rush, coûts |
 | `memaster_sim/valeur.py` | Tables de valeur V (calibrage, quantiles, format publié), répartition entre brûlables, gold pack, réserve |
 | `memaster_sim/serie4.py` | Exécution de la série 4, résultats et `tables-valeur.json` dans `resultats/serie4/` |
+| `configs/serie5.yaml` | Série 5 : pitié {p0, k, p_max, N: null}, mythique 5 / 2·10⁷ par emplacement, gold 99/1, rush 75 %, coûts |
+| `memaster_sim/serie5.py` | Série 5 (réutilise `serie4.py`) : fréquences de gold et de mythique, Monte-Carlo, résultats et `tables-valeur.json` dans `resultats/serie5/` |
 | `memaster_sim/couts.py` | Coûts réels d'un pack (gaz, stockage, achat groupé), marge, prix de seuil, packs pour les coûts fixes |
 | `memaster_sim/gold.py` | Table « or », mélange de tables avec un κ commun, réserve avec des gold packs (indépendants ou groupés) |
-| `memaster_sim/pitie.py` | Compteur de pitié : loi du cycle, g stationnaire, population de joueurs |
+| `memaster_sim/pitie.py` | Compteur de pitié (avec garantie N, ou sans garantie avec plafond p_max) : loi du cycle, g stationnaire (queue géométrique exacte), g_pop exact par renouvellement, population, contrôles Monte-Carlo |
 | `memaster_sim/rush.py` | Gold rush : flux d'achats de Poisson avec pics, fenêtre glissante, palier fixe ou relatif, pause |
 | `memaster_sim/rarete_burn.py` | Rareté pilotée par les burns : poids × en circulation / émises, trois renormalisations, plancher |
 | `memaster_sim/resurrection.py` | Résurrection des coins morts : coût des exemplaires existants, enveloppe et fonds |
 | `memaster_sim/modele.py` | Config, tables d'issues, κ, formules exactes (espérance, variance, borne β, R₀ normale) |
 | `memaster_sim/simulation.py` | Tirages vectorisés, statistiques, borne β simulée, simulation de ruine |
 | `memaster_sim/rapport.py` | Sorties markdown et JSON, grilles de sensibilité |
-| `tests/` | Pytest : tirages, exemple 4.4, contraintes de la série 1, chargeur du catalogue v2 et configs de la série 2, coûts et mécaniques de la série 3 |
+| `tests/` | Pytest : tirages, exemple 4.4, contraintes de la série 1, chargeur du catalogue v2 et configs de la série 2, coûts et mécaniques de la série 3, tables V des séries 4 et 5 |
 | `resultats/` | Sorties générées (régénérables) |
 
 ## Écrire une config
