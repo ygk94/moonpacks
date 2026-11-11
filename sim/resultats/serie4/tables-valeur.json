@@ -1,0 +1,352 @@
+{
+ "_format": "Tables de valeur V par pack (série 4, sim/memaster_sim/valeur.py). value_tables.<type>.tiers = liste de [bps, poids] : V = prix du pack × bps / 10 000, tiré avec la probabilité poids / weight_total ; bps strictement croissants, poids entiers > 0, Σ poids = weight_total. <type> = base (pack normal), gold (gold pack de pitié), rush (pack rush). split_multipliers = multiplicateur entier par rareté : la carte brûlable i du pack reçoit V × m_i / Σ m_j (j brûlables du pack), arrondi vers le bas, le reste à la carte du dernier emplacement. Tout pack a au moins une brûlable : le dernier emplacement est tiré parmi les brûlables (rareté de la table de l'emplacement, retombée vers le bas, puis vers le haut s'il n'y a rien en dessous). gold_pack décrit le gold pack : rareté minimale des emplacements 1 à 4 (table standard restreinte à cette rareté et au-dessus), poids du dernier emplacement (ppm). mean_bps / median_bps / sha256 sont informatifs (sha256 du JSON compact des tiers) : le contrat hache la table de série entière.",
+ "format_version": 1,
+ "unit": "bps_of_pack_price",
+ "weight_total": 1000000,
+ "variant": "a",
+ "target": "moyenne 75 %",
+ "rush_simplified": false,
+ "expected_coverage": {
+  "base": 0.75,
+  "gold": 2.0,
+  "rush": 0.8,
+  "flow": 0.810338
+ },
+ "value_tables": {
+  "base": {
+   "tiers": [
+    [
+     2000,
+     40032
+    ],
+    [
+     2500,
+     38882
+    ],
+    [
+     3000,
+     49899
+    ],
+    [
+     3500,
+     57307
+    ],
+    [
+     4000,
+     61229
+    ],
+    [
+     4500,
+     62280
+    ],
+    [
+     5000,
+     61193
+    ],
+    [
+     5500,
+     58640
+    ],
+    [
+     6000,
+     55170
+    ],
+    [
+     6500,
+     51196
+    ],
+    [
+     7000,
+     47018
+    ],
+    [
+     7500,
+     42843
+    ],
+    [
+     8000,
+     38805
+    ],
+    [
+     8500,
+     34988
+    ],
+    [
+     9000,
+     31438
+    ],
+    [
+     9500,
+     28176
+    ],
+    [
+     10000,
+     36372
+    ],
+    [
+     11000,
+     40371
+    ],
+    [
+     12000,
+     32102
+    ],
+    [
+     13000,
+     25524
+    ],
+    [
+     14000,
+     20317
+    ],
+    [
+     15000,
+     16205
+    ],
+    [
+     16000,
+     12959
+    ],
+    [
+     17000,
+     10395
+    ],
+    [
+     18000,
+     8365
+    ],
+    [
+     19000,
+     6755
+    ],
+    [
+     20000,
+     31539
+    ]
+   ],
+   "mean_bps": 7500.0,
+   "median_bps": 6500,
+   "min_bps": 2000,
+   "max_bps": 20000,
+   "sha256": "a5bc24c16acf5a28493985118286167b1414de5849de3ca36defeb9eeaa31706"
+  },
+  "gold": {
+   "tiers": [
+    [
+     10000,
+     79610
+    ],
+    [
+     11000,
+     39430
+    ],
+    [
+     12000,
+     46739
+    ],
+    [
+     13000,
+     52419
+    ],
+    [
+     14000,
+     56249
+    ],
+    [
+     15000,
+     58241
+    ],
+    [
+     16000,
+     58567
+    ],
+    [
+     17000,
+     57495
+    ],
+    [
+     18000,
+     55324
+    ],
+    [
+     19000,
+     52352
+    ],
+    [
+     20000,
+     81627
+    ],
+    [
+     22500,
+     98315
+    ],
+    [
+     25000,
+     102984
+    ],
+    [
+     30000,
+     81729
+    ],
+    [
+     35000,
+     40720
+    ],
+    [
+     40000,
+     19715
+    ],
+    [
+     45000,
+     9470
+    ],
+    [
+     50000,
+     9014
+    ]
+   ],
+   "mean_bps": 20000.0,
+   "median_bps": 18000,
+   "min_bps": 10000,
+   "max_bps": 50000,
+   "sha256": "a852c3058b1d6492e869a8bc29f58312620f2b3561f292ef2bc3e53f34c17051"
+  },
+  "rush": {
+   "tiers": [
+    [
+     2000,
+     30834
+    ],
+    [
+     2500,
+     32077
+    ],
+    [
+     3000,
+     42667
+    ],
+    [
+     3500,
+     50512
+    ],
+    [
+     4000,
+     55410
+    ],
+    [
+     4500,
+     57687
+    ],
+    [
+     5000,
+     57872
+    ],
+    [
+     5500,
+     56513
+    ],
+    [
+     6000,
+     54090
+    ],
+    [
+     6500,
+     50993
+    ],
+    [
+     7000,
+     47523
+    ],
+    [
+     7500,
+     43897
+    ],
+    [
+     8000,
+     40270
+    ],
+    [
+     8500,
+     36747
+    ],
+    [
+     9000,
+     33394
+    ],
+    [
+     9500,
+     30250
+    ],
+    [
+     10000,
+     39546
+    ],
+    [
+     11000,
+     44585
+    ],
+    [
+     12000,
+     36077
+    ],
+    [
+     13000,
+     29143
+    ],
+    [
+     14000,
+     23541
+    ],
+    [
+     15000,
+     19034
+    ],
+    [
+     16000,
+     15417
+    ],
+    [
+     17000,
+     12516
+    ],
+    [
+     18000,
+     10186
+    ],
+    [
+     19000,
+     8314
+    ],
+    [
+     20000,
+     40905
+    ]
+   ],
+   "mean_bps": 8000.0,
+   "median_bps": 7000,
+   "min_bps": 2000,
+   "max_bps": 20000,
+   "sha256": "2e07e23879b987686a3517ea09c9418986a352572c146cc074f60ead4556652c"
+  }
+ },
+ "split_multipliers": {
+  "common": 1,
+  "rare": 2,
+  "epic": 3,
+  "legendary": 6,
+  "mythic": 20
+ },
+ "gold_pack": {
+  "slot_min_rarity": [
+   "rare",
+   "rare",
+   "epic",
+   "epic"
+  ],
+  "last_slot_weights_ppm": {
+   "legendary": 800000,
+   "mythic": 200000
+  },
+  "no_common": true
+ }
+}

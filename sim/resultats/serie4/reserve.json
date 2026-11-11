@@ -1,0 +1,74 @@
+[
+ {
+  "trajectoires": 5000,
+  "horizon": 10000,
+  "v_max": 5.0,
+  "baisse_moyenne": 2.658689701755462,
+  "r0_0.05": 14.00259036946244,
+  "r0_0.01": 19.24299167377229,
+  "cas": "(a)",
+  "variante": "a",
+  "jackpot": false,
+  "couverture": 0.8103377293287098
+ },
+ {
+  "trajectoires": 2000,
+  "horizon": 100000,
+  "v_max": 5.0,
+  "baisse_moyenne": 2.6090761220177616,
+  "r0_0.05": 13.624956056550547,
+  "r0_0.01": 19.041014974076496,
+  "cas": "(a)",
+  "variante": "a",
+  "jackpot": false,
+  "couverture": 0.8103377293287098
+ },
+ {
+  "trajectoires": 5000,
+  "horizon": 10000,
+  "v_max": 5.0,
+  "baisse_moyenne": 3.03327897001042,
+  "r0_0.05": 15.104104203229657,
+  "r0_0.01": 21.32755992181016,
+  "cas": "(b)",
+  "variante": "b",
+  "jackpot": false,
+  "couverture": 0.9261223785754076
+ },
+ {
+  "trajectoires": 2000,
+  "horizon": 100000,
+  "v_max": 5.0,
+  "baisse_moyenne": 3.0596797444826747,
+  "r0_0.05": 15.190900490214092,
+  "r0_0.01": 21.19630824503401,
+  "cas": "(b)",
+  "variante": "b",
+  "jackpot": false,
+  "couverture": 0.9261223785754076
+ },
+ {
+  "trajectoires": 5000,
+  "horizon": 10000,
+  "v_max": 10.0,
+  "baisse_moyenne": 2.9549026033127865,
+  "r0_0.05": 20.36388952668249,
+  "r0_0.01": 27.01325640730467,
+  "cas": "(a) + mythique hors V à 5 × prix, 2 % du gold",
+  "variante": "a",
+  "jackpot": true,
+  "couverture": 0.8154629974902583
+ },
+ {
+  "trajectoires": 2000,
+  "horizon": 100000,
+  "v_max": 10.0,
+  "baisse_moyenne": 3.0554630304872465,
+  "r0_0.05": 20.434047965210343,
+  "r0_0.01": 26.545025229086555,
+  "cas": "(a) + mythique hors V à 5 × prix, 2 % du gold",
+  "variante": "a",
+  "jackpot": true,
+  "couverture": 0.8154629974902583
+ }
+]
