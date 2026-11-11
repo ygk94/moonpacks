@@ -1997,14 +1997,14 @@ Lignes « À décider » de v1 encore valides, jetons mis en doute par les cherc
 | 938 Jesus Coin (2017) | JC | 269 Jesus Coin | JESUS |
 | AD80 HempCoin (HMP) | HMP | AD23 HempCoin | THC |
 | 1425 Pandacoin (PANDA) | PANDA | 334 Pandacoin | PND |
-| 508 Doge Token | DOGET | (scellé) | ? |
 | 1008 SquidGameToken | SGT | AD7 Squid Game | SQUID |
 | 1048 Mars Inu | MARSINU | 230 Marscoin | MARSCOIN |
 | 823 Bitcoin 2.0 | BTC2.0 | 579 Bitcoin20 | BTC20 |
 | 1089 Peepo (2024) | PEPO | 772 Peepo | PEEPO |
-| 1585 Pepe Inu | PEPEINU | (scellé) | ? |
 | 1579 Nano Dogecoin | NDC | 1578 Nano Doge Token | NANODOGE |
 | 1189 Sauce Inu | SAUCEINU | 1216 saucecoin | SAUCE |
+
+2 homonymes d'une mythique scellée, non listés pour ne pas révéler son nom.
 
 **Corrections non appliquées** :
 

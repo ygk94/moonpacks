@@ -9,14 +9,18 @@ Entrées (relatives à la racine du dépôt) :
   --extra FICHIER                         autre lot au même format (répétable)
   docs/data/coingecko-meme-2026-11-11.csv relevé CoinGecko (état, rapprochement)
 
-Sorties : docs/catalogue-v2.md et docs/data/catalogue-v2.json.
+Sorties : docs/catalogue-v2.md et docs/data/catalogue-v2.json (publics, sans le vrai nom des mythiques),
+          docs/data/secrets/mythiques.json (vrais noms des mythiques, ignoré par git, mode 600).
+  --demo : en plus, docs/catalogue-demo.md et docs/data/catalogue-demo.json (catalogue de démo filtré,
+           champ `brulable_possible` et sa raison).
 
-Relancer : python3 docs/recherche-v2/consolider.py [--extra lot.md] [--out-dir DIR]
+Relancer : python3 docs/recherche-v2/consolider.py [--demo] [--extra lot.md] [--out-dir DIR]
 Python 3 stdlib uniquement, aucun appel réseau.
 """
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import re
@@ -28,7 +32,12 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DATE = "11/11/2026"
 
 RARETES = ["mythique", "légendaire", "épique", "rare", "commune"]
-MYTHIQUES_V1 = {"1": "DOGE", "2": "SHIB", "3": "PEPE"}  # n° v1 -> ticker attendu
+# n° v1 -> sha256 (16 premiers hex) du ticker attendu : le vrai ticker ne figure pas dans un fichier suivi.
+MYTHIQUES_V1 = {"1": "6776fd13088f74ab", "2": "a5915d515f620ea2", "3": "e63ffac3f5e5cf4a"}
+
+
+def empreinte_ticker(t):
+    return hashlib.sha256(norm_ticker(t).encode("utf-8")).hexdigest()[:16]
 BURN = "à définir"
 
 # Doublons relevés par R5 : (gardé, absorbé)
@@ -787,7 +796,7 @@ def construire(root, extras=(), r4=True):
             cartes[abs_].notes.append("fusionnée")
 
     for num, tk in MYTHIQUES_V1.items():
-        if num in cartes and norm_ticker(cartes[num].ticker) == tk:
+        if num in cartes and empreinte_ticker(cartes[num].ticker) == tk:
             cartes[num].mythique = True
 
     # fichiers de recherche dans l'ordre de récence
@@ -922,7 +931,7 @@ def construire(root, extras=(), r4=True):
     return {
         "actives": actives, "retraits": retraits, "fusions": journal_fusions,
         "ignores": journal_ignores, "homonymes": homonymes, "corr_refusees": corr_refusees,
-        "reserve": reserve, "lus": lus,
+        "reserve": reserve, "lus": lus, "cg": cg,
         "surclassements": lire_surclassements(d("docs", "recherche-v2", "surclassements.md")),
     }
 
@@ -1066,18 +1075,45 @@ def objet_json(c):
     if c.a_decider:
         o["motif"] = c.motif
     if c.mythique:
-        secret = OrderedDict((k, o[k]) for k in ("id", "nom", "ticker", "chaine", "chaine_normalisee",
-                                                  "lancement", "epoque", "pic", "pic_usd", "nature_pic",
-                                                  "etat", "histoire", "source", "origines",
-                                                  "coingecko_id", "adresse"))
+        # Scellée : aucun champ public ne révèle le jeton ; les vrais noms vont dans secret_json().
         for k in ("nom", "ticker", "chaine", "chaine_normalisee", "lancement", "epoque", "pic", "nature_pic",
                   "etat", "histoire", "source", "coingecko_id", "adresse"):
             o[k] = "?"
         o["pic_usd"] = None
         o["origines"] = []
         o["visuel"] = "?"
-        o["secret"] = secret
     return o
+
+
+CHAMPS_SECRET = ("id", "numero", "nom", "ticker", "chaine", "chaine_normalisee", "lancement", "epoque", "pic",
+                 "pic_usd", "nature_pic", "etat", "histoire", "source", "origines", "coingecko_id", "adresse")
+
+
+def secret_json(c):
+    """Vraie identité d'une mythique : uniquement pour docs/data/secrets/ (hors git)."""
+    o = OrderedDict([
+        ("id", c.id), ("numero", c.numero), ("nom", c.nom), ("ticker", c.ticker), ("chaine", c.chaine),
+        ("chaine_normalisee", norm_chaine(c.chaine) or "à vérifier"), ("lancement", c.lancement),
+        ("epoque", c.epoque), ("pic", c.pic_txt), ("pic_usd", c.pic_v), ("nature_pic", c.pic_nat),
+        ("etat", c.etat or "à vérifier"), ("histoire", c.histoire), ("source", " ; ".join(c.sources[:4])),
+        ("origines", c.origines), ("coingecko_id", c.cg_ids[0] if c.cg_ids else ""), ("adresse", c.adresse),
+    ])
+    return OrderedDict((k, o[k]) for k in CHAMPS_SECRET)
+
+
+def ecrire_secrets(path, cartes):
+    """Écrit les vrais noms des mythiques en mode 600 (dossier ignoré par git)."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    donnees = OrderedDict([
+        ("avertissement", "Vrais noms des mythiques scellées : ne jamais committer ni publier."),
+        ("date", DATE),
+        ("mythiques", [secret_json(c) for c in cartes if c.mythique]),
+    ])
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(donnees, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+    os.chmod(path, 0o600)
 
 
 def cell(s):
@@ -1236,10 +1272,15 @@ def ecrire_md(path, cat, dec, res, args_lus):
     L.append("")
     L.append("| Nouveau | Ticker | Carte existante | Ticker |")
     L.append("|---|---|---|---|")
+    # Un homonyme d'une mythique trahirait son nom : ces lignes sont seulement comptées.
     for c, e in res["homonymes"]:
-        en = "(scellé)" if e.mythique else "%s %s" % (e.numero, e.nom)
-        L.append("| %s %s | %s | %s | %s |" % (c.numero, cell(c.nom), cell(c.ticker), cell(en),
-                                               "?" if e.mythique else cell(e.ticker)))
+        if not e.mythique:
+            L.append("| %s %s | %s | %s %s | %s |" % (c.numero, cell(c.nom), cell(c.ticker), e.numero, cell(e.nom),
+                                                     cell(e.ticker)))
+    n_myth = sum(1 for _, e in res["homonymes"] if e.mythique)
+    if n_myth:
+        L.append("")
+        L.append("%d homonymes d'une mythique scellée, non listés pour ne pas révéler son nom." % n_myth)
     L.append("")
     L.append("**Corrections non appliquées** :")
     L.append("")
@@ -1324,26 +1365,249 @@ def ecrire_md(path, cat, dec, res, args_lus):
         f.write("\n".join(L))
 
 
+# ----------------------------------------------------------------- catalogue de démo (--demo)
+
+DRAPEAUX_DEMO = ("politique", "personne réelle", "obscène", "arnaque avérée")
+MOTIF_POLITICIEN = "politicien (nom ou histoire, sans drapeau)"
+MOTIF_ARNAQUE_ETAT = "arnaque avérée (état)"
+MOTIF_A_DECIDER = "à décider"
+# Politicien désigné par le nom, le ticker ou l'histoire d'une carte sans drapeau « politique ».
+# Les noms longs et sans ambiguïté sont cherchés aussi en milieu de mot (HarryPotterObamaSonic10Inu).
+RE_POLITICIEN = re.compile(r"\b(?:%s|kennedy|hillary|clinton|macron|bukele)|"
+                           r"trump|biden|obama|melania|kamala|desantis|pelosi|zelensk|rfk|川普"
+                           % DRAPEAU_MOTS["politique"], re.I)
+SEUIL_VOLUME, SEUIL_CAP = 2e4, 1e6
+MIN_BRULABLES = 150
+BASES = ("commune", "rare")
+# Réintégration si la matière manque : du moins problématique au plus problématique, jamais d'arnaque.
+PALIERS_REINTEGRATION = [
+    {"personne réelle"},
+    {"personne réelle", MOTIF_POLITICIEN},
+    {"personne réelle", MOTIF_POLITICIEN, "politique"},
+    {"personne réelle", MOTIF_POLITICIEN, "politique", "obscène"},
+    {"personne réelle", MOTIF_POLITICIEN, "politique", "obscène", MOTIF_A_DECIDER},
+]
+
+
+def usd(v):
+    if v < 1e3:
+        return "%.0f $" % v
+    if v >= 1e9:
+        return ("%.2f Md$" % (v / 1e9)).replace(".", ",")
+    if v >= 1e6:
+        return ("%.1f M$" % (v / 1e6)).replace(".", ",")
+    return "%.0f k$" % (v / 1e3)
+
+
+def liquidite(c, cg):
+    """(id, volume 24 h, capitalisation) du premier id CoinGecko de la carte présent dans le relevé."""
+    for cid in c.cg_ids:
+        r = cg.get(cid)
+        if r:
+            try:
+                return cid, float(r.get("total_volume") or 0), float(r.get("market_cap") or 0)
+            except ValueError:
+                return cid, 0.0, 0.0
+    return None
+
+
+def brulable(c, cg):
+    """(brûlable possible, raison) : jeton encore achetable (pas mort, liquidité CoinGecko du 11/11)."""
+    if c.mythique:
+        return False, "mythique scellée : jamais brûlable"
+    if mort(c.etat):
+        return False, "état « mort »"
+    if bucket_etat(c.etat) == "arnaque avérée":
+        return False, "état « arnaque avérée »"
+    liq = liquidite(c, cg)
+    if not liq:
+        return False, "aucun jeton du relevé CoinGecko du 11/11 rapproché : liquidité non documentée"
+    cid, vol, cap = liq
+    mesure = "CoinGecko `%s` : volume 24 h %s, capitalisation %s" % (cid, usd(vol), usd(cap))
+    if vol < SEUIL_VOLUME or cap < SEUIL_CAP:
+        return False, "liquidité insuffisante (%s ; seuils 20 k$ et 1 M$)" % mesure
+    return True, "achetable : état « %s », %s" % (bucket_etat(c.etat), mesure)
+
+
+def motifs_exclusion(c):
+    if c.mythique:
+        return []
+    m = [MOTIF_A_DECIDER] if c.a_decider else []
+    m += [d for d in DRAPEAUX_DEMO if d in c.drapeaux]
+    texte = sans_accents(" ".join((c.nom, c.ticker, c.histoire)).lower())
+    if "politique" not in c.drapeaux and RE_POLITICIEN.search(texte):
+        m.append(MOTIF_POLITICIEN)
+    if "arnaque avérée" not in c.drapeaux and bucket_etat(c.etat) == "arnaque avérée":
+        m.append(MOTIF_ARNAQUE_ETAT)
+    return m
+
+
+def construire_demo(cat, dec, cg, min_brulables=MIN_BRULABLES):
+    """Catalogue de démo : sans drapeau, sans politicien, sans « À décider » ; réintégration si besoin."""
+    rang = {id(c): i for i, c in enumerate(cat + dec)}
+    for c in cat + dec:
+        c.brulable, c.raison_brulable = brulable(c, cg)
+        c.liquidite = None if c.mythique else liquidite(c, cg)
+        c.motifs_exclusion = motifs_exclusion(c)
+        c.reintegree = ""
+    garde = [c for c in cat if not c.motifs_exclusion]
+    exclus = [c for c in cat + dec if c.motifs_exclusion]
+
+    def assez():
+        return (sum(c.brulable for c in garde) >= min_brulables
+                and any(c.brulable and c.rarete in BASES for c in garde))
+
+    for palier in PALIERS_REINTEGRATION:
+        if assez():
+            break
+        candidats = sorted((c for c in exclus if c.brulable and not c.reintegree
+                            and set(c.motifs_exclusion) <= palier),
+                           key=lambda c: (c.rarete not in BASES, rang[id(c)]))
+        for c in candidats:
+            if assez():
+                break
+            c.reintegree = ", ".join(c.motifs_exclusion)
+            garde.append(c)
+    garde.sort(key=lambda c: (RARETES.index(c.rarete), rang[id(c)]))
+    exclus = [c for c in exclus if not c.reintegree]
+    return {"cartes": garde, "exclus": exclus, "atteint": assez(), "min": min_brulables}
+
+
+def objet_json_demo(c):
+    o = objet_json(c)
+    o["section_v2"] = o["section"]
+    o["section"] = "catalogue"  # lisible tel quel par art/memaster_art/catalogue_v2.py
+    o["brulable_possible"] = c.brulable
+    o["raison_brulable"] = c.raison_brulable
+    if c.liquidite:
+        cid, vol, cap = c.liquidite
+        o["liquidite"] = OrderedDict([("coingecko_id", cid), ("volume_24h_usd", vol), ("capitalisation_usd", cap),
+                                      ("releve", "docs/data/coingecko-meme-2026-11-11.csv")])
+    else:
+        o["liquidite"] = None
+    o["reintegree"] = c.reintegree
+    return o
+
+
+def ecrire_md_demo(path, demo):
+    cartes, exclus = demo["cartes"], demo["exclus"]
+    r = Counter(c.rarete for c in cartes)
+    b = Counter(c.rarete for c in cartes if c.brulable)
+    nb = sum(b.values())
+    L = ["# Catalogue de démo des cartes Memaster", ""]
+    L.append("**Date :** %s. Généré par `python3 docs/recherche-v2/consolider.py --demo` à partir du catalogue v2 : "
+             "ne pas éditer à la main. Ce document n'est pas un conseil en investissement." % DATE)
+    L.append("")
+    L.append("**Total : %d cartes** (dont %d mythiques scellées), **%d brûlables possibles** (objectif ≥ %d, "
+             "dont au moins une commune ou une rare : %s)." % (
+                 len(cartes), r["mythique"], nb, demo["min"], "atteint" if demo["atteint"] else "**non atteint**"))
+    L.append("")
+    L.append("## Règles")
+    L.append("")
+    L.append("- Base : section « catalogue » de `docs/data/catalogue-v2.json`. Aucune « À décider ».")
+    L.append("- Exclues : toute carte à drapeau `politique`, `personne réelle`, `obscène` ou `arnaque avérée` ; "
+             "toute carte sans drapeau dont le nom, le ticker ou l'histoire désigne un politicien (mots-clés "
+             "du drapeau `politique`, plus RFK, Kennedy, 川普, etc.) ; tout état « arnaque avérée ».")
+    L.append("- **Brûlable possible** (`brulable_possible` dans le JSON, raison dans `raison_brulable`) : état autre "
+             "que « mort », et jeton rapproché dans `docs/data/coingecko-meme-2026-11-11.csv` avec volume 24 h "
+             "≥ 20 000 $ **et** capitalisation ≥ 1 M$ (valeurs dans `liquidite`). Mythiques : jamais brûlables. "
+             "Une carte sans id CoinGecko rapproché n'est pas brûlable (liquidité non documentée).")
+    L.append("- Si moins de %d brûlables, ou aucune commune ni rare brûlable, les exclues brûlables reviennent par "
+             "paliers : `personne réelle`, puis politicien sans drapeau, `politique`, `obscène`, « À décider » ; "
+             "jamais `arnaque avérée`." % demo["min"])
+    L.append("- N° et `id` : ceux du catalogue v2 (numérotation à trous, ids stables pour les visuels).")
+    L.append("")
+    L.append("## Décompte")
+    L.append("")
+    L.append("| Rareté | Cartes | Brûlables possibles |")
+    L.append("|---|---|---|")
+    for k in RARETES:
+        L.append("| %s | %d | %d |" % (k, r[k], b[k]))
+    L.append("| **Total** | **%d** | **%d** |" % (len(cartes), nb))
+    L.append("")
+    rein = [c for c in cartes if c.reintegree]
+    L.append("## Réintégrées (%d)" % len(rein))
+    L.append("")
+    if rein:
+        L.append("| N° v2 | Nom | Ticker | Rareté | Motif d'exclusion levé |")
+        L.append("|---|---|---|---|---|")
+        for c in rein:
+            L.append("| %s | %s | %s | %s | %s |" % (c.numero, cell(c.nom), cell(c.ticker), c.rarete,
+                                                    cell(c.reintegree)))
+    else:
+        L.append("Aucune : l'objectif est atteint sans réintégrer de carte exclue.")
+    L.append("")
+    par_motif = Counter(m for c in exclus for m in c.motifs_exclusion)
+    L.append("## Exclues (%d)" % len(exclus))
+    L.append("")
+    L.append("| Motif | Cartes |")
+    L.append("|---|---|")
+    for k, v in par_motif.most_common():
+        L.append("| %s | %d |" % (k, v))
+    L.append("| (une carte peut avoir plusieurs motifs) | |")
+    L.append("")
+    pol = [c for c in exclus if MOTIF_POLITICIEN in c.motifs_exclusion]
+    L.append("### Politiciens sans drapeau (%d)" % len(pol))
+    L.append("")
+    L.append("| N° v2 | Nom | Ticker | Rareté | Brûlable si gardée |")
+    L.append("|---|---|---|---|---|")
+    for c in pol:
+        L.append("| %s | %s | %s | %s | %s |" % (c.numero, cell(c.nom), cell(c.ticker), c.rarete,
+                                                "oui" if c.brulable else "non"))
+    L.append("")
+    L.append("### Liste complète")
+    L.append("")
+    L.append("| N° v2 | Nom | Ticker | Rareté | Motifs | Brûlable si gardée |")
+    L.append("|---|---|---|---|---|---|")
+    for c in exclus:
+        L.append("| %s | %s | %s | %s | %s | %s |" % (c.numero, cell(c.nom), cell(c.ticker), c.rarete,
+                                                     cell(", ".join(c.motifs_exclusion)),
+                                                     "oui" if c.brulable else "non"))
+    L.append("")
+    L.append("## Cartes")
+    L.append("")
+    L.append("| N° v2 | Nom | Ticker | Chaîne | Rareté | État | Brûlable | Raison |")
+    L.append("|---|---|---|---|---|---|---|---|")
+    for c in cartes:
+        if c.mythique:
+            L.append("| %s | ? | ? | ? | mythique | ? | non | %s |" % (c.numero, c.raison_brulable))
+            continue
+        L.append("| %s | %s | %s | %s | %s | %s | %s | %s |" % (
+            c.numero, cell(c.nom), cell(c.ticker), cell(norm_chaine(c.chaine) or "à vérifier"), c.rarete,
+            cell(c.etat or "à vérifier"), "oui" if c.brulable else "non", cell(c.raison_brulable)))
+    L.append("")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(L))
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--root", default=ROOT, help="racine du dépôt")
     ap.add_argument("--extra", action="append", default=[], help="lot supplémentaire au format consigne")
     ap.add_argument("--sans-r4", action="store_true", help="ignorer r4-autres-chaines.md même s'il existe")
-    ap.add_argument("--out-dir", default=None, help="dossier de sortie (défaut : docs/ et docs/data/)")
+    ap.add_argument("--out-dir", default=None,
+                    help="dossier de sortie (défaut : docs/ et docs/data/ ; secrets dans DIR/secrets/)")
+    ap.add_argument("--demo", action="store_true",
+                    help="produire aussi catalogue-demo.md et catalogue-demo.json (catalogue de démo filtré)")
+    ap.add_argument("--min-brulables", type=int, default=MIN_BRULABLES,
+                    help="démo : brûlables possibles visés avant réintégration (défaut %d)" % MIN_BRULABLES)
     a = ap.parse_args(argv)
 
     res = construire(a.root, a.extra, r4=not a.sans_r4)
     cat, dec = finaliser(res["actives"], res["surclassements"])
     if a.out_dir:
         os.makedirs(a.out_dir, exist_ok=True)
-        md, js = os.path.join(a.out_dir, "catalogue-v2.md"), os.path.join(a.out_dir, "catalogue-v2.json")
+        dmd, djs = a.out_dir, a.out_dir
+        sec = os.path.join(a.out_dir, "secrets", "mythiques.json")
     else:
-        md = os.path.join(a.root, "docs", "catalogue-v2.md")
-        js = os.path.join(a.root, "docs", "data", "catalogue-v2.json")
+        dmd, djs = os.path.join(a.root, "docs"), os.path.join(a.root, "docs", "data")
+        sec = os.path.join(a.root, "docs", "data", "secrets", "mythiques.json")
+    md, js = os.path.join(dmd, "catalogue-v2.md"), os.path.join(djs, "catalogue-v2.json")
     ecrire_md(md, cat, dec, res, res["lus"])
     with open(js, "w", encoding="utf-8") as f:
         json.dump([objet_json(c) for c in cat + dec], f, ensure_ascii=False, indent=1)
         f.write("\n")
+    ecrire_secrets(sec, cat)
     r = Counter(c.rarete for c in cat)
     ab = [c for c in cat + dec if c.aberrant]
     print("pics aberrants : %d (épiques retombés : %d) ; surclassements : %d cartes" % (
@@ -1352,7 +1616,21 @@ def main(argv=None):
     print("catalogue : %d cartes (%s) ; à décider : %d ; fusions : %d ; non reprises : %d ; réserve : %d"
           % (len(cat), ", ".join("%s %d" % (k, r[k]) for k in RARETES), len(dec), len(res["fusions"]),
              len(res["ignores"]), len(res["reserve"])))
-    print("écrit : %s\n        %s" % (md, js))
+    print("écrit : %s\n        %s\n        %s (secrets, hors git)" % (md, js, sec))
+    if a.demo:
+        demo = construire_demo(cat, dec, res["cg"], a.min_brulables)
+        dm, dj = os.path.join(dmd, "catalogue-demo.md"), os.path.join(djs, "catalogue-demo.json")
+        ecrire_md_demo(dm, demo)
+        with open(dj, "w", encoding="utf-8") as f:
+            json.dump([objet_json_demo(c) for c in demo["cartes"]], f, ensure_ascii=False, indent=1)
+            f.write("\n")
+        rd = Counter(c.rarete for c in demo["cartes"])
+        bd = Counter(c.rarete for c in demo["cartes"] if c.brulable)
+        print("démo : %d cartes (%s) ; brûlables : %d (%s) ; exclues : %d ; réintégrées : %d%s"
+              % (len(demo["cartes"]), ", ".join("%s %d" % (k, rd[k]) for k in RARETES), sum(bd.values()),
+                 ", ".join("%s %d" % (k, bd[k]) for k in RARETES), len(demo["exclus"]),
+                 sum(1 for c in demo["cartes"] if c.reintegree), "" if demo["atteint"] else " ; OBJECTIF NON ATTEINT"))
+        print("écrit : %s\n        %s" % (dm, dj))
     return 0
 
 
