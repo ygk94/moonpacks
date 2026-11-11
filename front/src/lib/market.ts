@@ -1,6 +1,8 @@
 // Achat sur le marché : répartition du prix (NEP-199, `nft_payout`) affichée avant de confirmer.
 // L'acheteur paie exactement le prix de l'annonce ; les redevances de la série sont prises sur ce prix.
 
+import { formatNearExact } from "./format";
+
 export interface PayoutBreakdown {
   price: bigint;
   royalties: { account: string; amount: bigint }[];
@@ -19,4 +21,11 @@ export function payoutBreakdown(payout: { payout: Record<string, string> }, sell
   const royaltyTotal = royalties.reduce((s, r) => s + r.amount, 0n);
   const seller = BigInt(payout.payout[sellerId] ?? "0");
   return { price: p, royalties, royaltyTotal, seller };
+}
+
+/** Texte du dépôt d'annonce, lu dans `get_config.listing_deposit` (yoctoNEAR) ; sans config, sans montant. */
+export function listingDepositNote(depositYocto: string | null | undefined): string {
+  return depositYocto && /^\d+$/.test(depositYocto)
+    ? `A ${formatNearExact(depositYocto)} NEAR listing deposit is returned when the listing ends.`
+    : "A small listing deposit is returned when the listing ends.";
 }

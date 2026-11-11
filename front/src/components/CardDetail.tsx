@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { estimateTokens, type TokenEstimate } from "../lib/backing";
 import { waitBurnOutcome } from "../lib/burn";
+import { listingDepositNote } from "../lib/market";
 import { burnStorageRefund } from "../lib/pack";
 import { loadCatalog, STATE_LABEL, type CatalogEntry } from "../lib/catalog";
 import { formatNearExact, formatQty, formatUsd, parseNear, RARITY_LABEL, yoctoToNumber } from "../lib/format";
@@ -33,6 +34,14 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
   const [listPrice, setListPrice] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Dépôt d'annonce lu dans `get_config` (pas écrit en dur).
+  const [listingDeposit, setListingDeposit] = useState<string | null>(null);
+  useEffect(() => {
+    getConfig().then(
+      (c) => setListingDeposit(c.listing_deposit),
+      () => undefined,
+    );
+  }, []);
 
   const reload = () => getCard(tokenId).then(setCard, () => setCard(null));
   useEffect(() => {
@@ -202,7 +211,7 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
                       List
                     </button>
                   </div>
-                  <small className="muted">A 0.005 NEAR listing deposit is returned when the listing ends.</small>
+                  <small className="muted">{listingDepositNote(listingDeposit)}</small>
                 </div>
               ))}
           </div>
