@@ -19,7 +19,8 @@ puis lance Vite :
   en a 1 646), plus le dos « ? » commun aux mythiques. Ils ne sont régénérés que si le catalogue ou `art/` change.
 
 Ces fichiers sont ignorés par git. Autres commandes : `npm run build` (vérification des types et build de prod dans
-`dist/`), `npm run typecheck` et `npm test` (vitest).
+`dist/`, suivi du contrôle anti-fuite des mythiques), `npm run typecheck`, `npm test` (vitest, puis le même
+contrôle) et `npm run check:mythics`.
 
 ## Indexeur (facultatif)
 
@@ -38,8 +39,10 @@ neardata renvoie vite des 429. Il ne lit une transaction qu'une fois passés 20 
 En dev, le front l'interroge sur `http://localhost:8787`, ou sur `VITE_INDEXER_URL` si elle est définie. S'il ne
 répond pas, « Trending » se rabat sur les annonces du contrat.
 
-Limite : `/v0/account` renvoie la liste en une fois. La pagination n'est pas gérée, et l'indexeur écrit un
-avertissement si la liste est tronquée. C'est sans effet à l'échelle de la démo (45 transactions au 11/11).
+Pagination : `/v0/account` est lu en ordre croissant, par pages de 100 (`resume_token`). Le curseur n'avance
+qu'après une page pleine et entièrement lue, et le dédoublonnage par hash couvre la relecture de la dernière page.
+`/history?series_id=0` renvoie les événements utiles au rejeu complet d'une série (achats, tirages, burns,
+résurrections), dans l'ordre d'exécution.
 
 ## Configuration
 
@@ -70,14 +73,21 @@ Pas de routeur ni de bibliothèque d'état : un routeur par hash suffit (`#/shop
   `retry_delay_blocks`, le bouton « Retry reveal » apparaît. Un pack `stuck` affiche un message. Le rejeu d'une
   ouverture passée se fait depuis Collection, onglet Packs, ou par l'URL `#/open?pack=N`.
 - **Vérification d'un tirage** (`src/verify/`) : un bouton « Verify this pack » dans le récapitulatif de
-  l'ouverture et dans Collection, onglet Packs. Il reprend la logique de `verifier/` au niveau « sans état » :
-  hash de la table recalculé, chaîne des graines jusqu'à `acc`, jet de rareté de chaque emplacement et retombée,
-  rareté de la carte, palier de valeur du pack. Le choix exact de la carte dans sa rareté et la décision gold
-  demandent tout l'historique, donc le vérificateur en ligne de commande. Testé sur les 31 packs réels de
-  `docs/data/testnet-2026-11-11-v2/`.
+  l'ouverture et dans Collection, onglet Packs. Deux niveaux, portés de `verifier/` :
+  - **sans état** (`verify.ts`) : hash de la table recalculé, chaîne des graines jusqu'à `acc`, jet de rareté de
+    chaque emplacement et retombée, rareté de la carte, palier de valeur ;
+  - **rejeu complet** (`replay.ts`, avec l'historique de l'indexeur) : toute la série est rejouée depuis son
+    ouverture (compteurs, burns, résurrections, gold rush), puis chaque carte est recalculée exactement, avec la
+    décision gold pack et la répartition de la valeur. Les libellés ne montrent jamais le compteur de pitié.
+  Testé sur les 31 packs réels de `docs/data/testnet-2026-11-11-v2/` (cartes identiques à l'index près), et en
+  direct sur les packs 0, 12 et 30. Une graine, une carte ou un achat manquant falsifié est détecté.
 - **Cartes ressuscitées** : badge « Back from the dead », lu dans la vue `get_resurrected` du contrat.
-- **Mythiques** : toujours la carte « ? ». Aucun nom ni fichier de mythique n'est servi (`prepare-assets` refuse un
-  fichier `mythique-*`).
+- **Mythiques** : toujours la carte « ? ». Aucun nom ni fichier de mythique n'est servi. `scripts/check-mythics.mjs`
+  le contrôle après chaque build et dans `npm test` : pas de fiche ni de fichier mythique publics et, si le fichier
+  secret `docs/data/secrets/mythiques.json` est présent, aucun vrai nom, ticker, id ou adresse de mythique dans
+  `src/`, `public/`, `dist/` et `indexer/`. Le terme trouvé n'est jamais affiché dans le journal.
+- **Performance** : les pages secondaires sont chargées à la demande et l'écran d'ouverture est préchargé ; les
+  visuels des 5 cartes sont chargés pendant le tirage, avant la déchirure (attente plafonnée à 1,5 s).
 - **Pas de pourcentage de rentabilité ni de « valeur garantie »** : on n'affiche que des quantités de jetons et des
   cours publics.
 - **Pas de compteur de pitié.** Le gold pack n'est annoncé nulle part avant la déchirure.
@@ -103,13 +113,15 @@ La liste complète des décisions, des tests et du travail restants est dans `do
    annonces en cours. Pour un déploiement public, il faudra héberger l'indexeur ; il vise un seul contrat.
 5. **Pack bloqué.** Le contrat n'accepte `retry_reveal` que sur un pack `pending`. Après `MAX_ATTEMPTS`, le pack
    passe `stuck` et ne peut plus être relancé. Le front propose donc la relance avant ce stade.
-6. **MetaMask sur iOS** et **WalletConnect** : il faut un `projectId` WalletConnect (variable d'environnement) pour
-   activer les wallets mobiles. Ce n'est pas encore branché.
+6. **MetaMask sur iOS** et **WalletConnect** : WalletConnect est branché mais inactif tant que
+   `VITE_WALLETCONNECT_PROJECT_ID` est vide (`projectId` gratuit sur cloud.reown.com). Son client n'est chargé
+   que s'il est actif. Non testé sur un téléphone.
 
 ## Testé
 
-- `npm test` : 26 tests. Formats, événements, traduction des erreurs, ordre de révélation, vérification d'un
-  tirage sur les vrais packs du testnet (et rejet d'une graine ou d'une rareté falsifiée), logique de l'indexeur.
+- `npm test` : 35 tests. Formats, événements, traduction des erreurs, ordre de révélation, vérification sans
+  état et rejeu complet sur les vrais packs du testnet (falsifications rejetées), logique de l'indexeur,
+  contrôle anti-fuite des mythiques.
 - Build et vérification des types.
 - Contre le contrat v2 sur testnet, dans un navigateur : boutique (prix, dépôt, gold rush), rejeu complet de packs
   réels jusqu'au récapitulatif, page des taux (taux, hash de table, hash du code), vérification des packs 0, 12 et

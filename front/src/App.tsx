@@ -1,17 +1,27 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { DemoBanner, Header } from "./components/Header";
 import { useRoute } from "./lib/router";
-import { Collection } from "./pages/Collection";
-import { Legal } from "./pages/Legal";
-import { Market } from "./pages/Market";
-import { Opening, type OpeningRequest } from "./pages/Opening";
+import type { OpeningRequest } from "./pages/Opening";
 import { Shop } from "./pages/Shop";
-import { Transparency } from "./pages/Transparency";
+
+// Pages secondaires chargées à la demande : la boutique s'affiche plus vite.
+const loadOpening = () => import("./pages/Opening");
+const Opening = lazy(() => loadOpening().then((m) => ({ default: m.Opening })));
+const Collection = lazy(() => import("./pages/Collection").then((m) => ({ default: m.Collection })));
+const Market = lazy(() => import("./pages/Market").then((m) => ({ default: m.Market })));
+const Transparency = lazy(() => import("./pages/Transparency").then((m) => ({ default: m.Transparency })));
+const Legal = lazy(() => import("./pages/Legal").then((m) => ({ default: m.Legal })));
 
 export function App() {
   const { path, params } = useRoute();
   const [opening, setOpening] = useState<OpeningRequest | null>(null);
+
+  // L'écran d'ouverture est préchargé dès l'arrivée : il doit démarrer à la signature, sans attente.
+  useEffect(() => {
+    const t = setTimeout(() => void loadOpening(), 800);
+    return () => clearTimeout(t);
+  }, []);
 
   // Lien direct vers le rejeu d'une ouverture : #/open?pack=12
   const replay = path === "/open" && params.get("pack") != null ? Number(params.get("pack")) : null;
@@ -33,7 +43,9 @@ export function App() {
     <div className="app">
       <DemoBanner />
       <Header />
-      <main className="main">{page}</main>
+      <main className="main">
+        <Suspense fallback={<p className="muted">Loading…</p>}>{page}</Suspense>
+      </main>
       <footer className="footer">
         <span>Memaster · NEAR testnet demo</span>
         <a href="#/rates">Drop rates</a>
@@ -42,7 +54,9 @@ export function App() {
       <AnimatePresence>
         {request && (
           <motion.div className="overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <Opening key={request.kind === "replay" ? `r${request.packId}` : "buy"} request={request} onClose={close} />
+            <Suspense fallback={<div className="opening opening--loading"><div className="opening__bg" /></div>}>
+              <Opening key={request.kind === "replay" ? `r${request.packId}` : "buy"} request={request} onClose={close} />
+            </Suspense>
           </motion.div>
         )}
       </AnimatePresence>

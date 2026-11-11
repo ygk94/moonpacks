@@ -459,3 +459,4 @@ input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .sales__ticker { font-weight: 700; }
 .sales__price { font-weight: 700; }
 @media (max-width: 520px) { .sales__list li { grid-template-columns: 36px 1fr auto; } .sales__list li small { display: none; } }
+.verify__result h4 { margin: 0.7rem 0 0.2rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }

@@ -1,8 +1,8 @@
 // Connexion wallet (near-connect) : MetaMask (comptes 0x…, NEP-518) en tête, wallets NEAR natifs en secours.
 
-import { NearConnector, type NearWalletBase } from "@hot-labs/near-connect";
+import { NearConnector, type NearConnectorOptions, type NearWalletBase } from "@hot-labs/near-connect";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { CONTRACT_ID, NETWORK, RPC_URL } from "../config";
+import { CONTRACT_ID, NETWORK, RPC_URL, WALLETCONNECT_PROJECT_ID } from "../config";
 import { failureOf } from "./events";
 import { txStatus, type TxOutcome } from "./rpc";
 
@@ -36,11 +36,29 @@ interface WalletState {
 
 const Ctx = createContext<WalletState | null>(null);
 
+// WalletConnect (wallets mobiles, MetaMask sur iOS) : actif seulement si un projectId est fourni
+// (VITE_WALLETCONNECT_PROJECT_ID, gratuit sur cloud.reown.com). Le client est chargé à la demande.
+const walletConnect = WALLETCONNECT_PROJECT_ID
+  ? import("@walletconnect/sign-client").then((m) =>
+      m.default.init({
+        projectId: WALLETCONNECT_PROJECT_ID,
+        metadata: {
+          name: "Memaster (testnet demo)",
+          description: "Memecoin booster packs on NEAR testnet",
+          url: window.location.origin,
+          icons: [`${window.location.origin}/cards/dos-mythique.svg`],
+        },
+      }),
+    )
+  : undefined;
+
 const connector = new NearConnector({
   network: NETWORK,
   providers: { testnet: [RPC_URL] },
   features: { testnet: true, signAndSendTransaction: true },
   autoConnect: true,
+  // Les types de near-connect et du client WalletConnect diffèrent sur des détails sans effet ici.
+  walletConnect: walletConnect as unknown as NearConnectorOptions["walletConnect"],
 });
 
 const isEvmAccount = (id: string | null) => !!id && /^0x[0-9a-f]{40}$/i.test(id);

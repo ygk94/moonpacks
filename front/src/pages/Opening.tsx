@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardBack } from "../components/Card";
 import { PackArt } from "../components/PackArt";
 import { estimateTokens, type TokenEstimate } from "../lib/backing";
-import { loadCatalog, type CatalogEntry } from "../lib/catalog";
+import { cardImage, loadCatalog, type CatalogEntry } from "../lib/catalog";
 import { formatQty, RARITY_LABEL } from "../lib/format";
 import { burnableLast } from "../lib/reveal";
 import { navigate } from "../lib/router";
@@ -99,7 +99,11 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
         setPack(p);
         setStep(p.step);
         if (p.status === "revealed") {
-          setCards(await resolveCards(p));
+          const resolved = await resolveCards(p);
+          // Visuels des 5 cartes chargés avant la déchirure, pour une révélation sans image vide
+          // (attente plafonnée : l'animation ne doit jamais rester bloquée sur le réseau).
+          await preloadImages(resolved.map((c) => cardImage(c.rarity === "mythic" ? null : c.cardId)), 1500);
+          setCards(resolved);
           if (!stop) setPhase("tearing");
           return;
         }
@@ -224,6 +228,20 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
       </footer>
     </div>
   );
+}
+
+function preloadImages(urls: string[], timeoutMs: number): Promise<void> {
+  const all = Promise.all(
+    [...new Set(urls)].map(
+      (src) =>
+        new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = img.onerror = () => resolve();
+          img.src = src;
+        }),
+    ),
+  ).then(() => undefined);
+  return Promise.race([all, new Promise<void>((r) => setTimeout(r, timeoutMs))]);
 }
 
 function maxGas(min: string): string {

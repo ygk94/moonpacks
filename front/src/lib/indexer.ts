@@ -41,3 +41,7 @@ export const fetchTrending = (hours = 24) =>
   get<{ hours: number; items: TrendingItem[] }>(`/trending?hours=${hours}&limit=8`);
 
 export const fetchSales = () => get<{ items: SaleItem[] }>("/sales?limit=12");
+
+/** Historique d'une série (achats, tirages, burns, résurrections) dans l'ordre d'exécution, pour le rejeu. */
+export const fetchHistory = (seriesId: number) =>
+  get<{ complete: boolean; items: { event: string; data: Record<string, unknown> }[] }>(`/history?series_id=${seriesId}`);

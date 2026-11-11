@@ -8,6 +8,7 @@
 //   GET /trending?hours=24&limit=8    cartes les plus vendues ou listées sur la fenêtre
 //   GET /sales?limit=20               dernières ventes
 //   GET /resurrected                  cartes devenues brûlables (card_resurrected)
+//   GET /history?series_id=0          événements utiles au rejeu complet d'une série (vérificateur)
 //   GET /events?event=…&limit=50      événements bruts
 // Lancement : npm run indexer (depuis front/). Variables : voir .env.example (INDEXER_*).
 
@@ -33,6 +34,7 @@ mkdirSync(dirname(DB_PATH), { recursive: true });
 const db = new DatabaseSync(DB_PATH);
 db.exec(`
   PRAGMA journal_mode = WAL;
+  CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
   CREATE TABLE IF NOT EXISTS txs (hash TEXT PRIMARY KEY, height INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -105,16 +107,34 @@ const cardIdOf = (s, i) => series.get(s)?.[i];
 let head = 0;
 let total = 0;
 
+// Pagination de `/v0/account` : ordre croissant (`desc: false`), pages de PAGE transactions, `resume_token` pour
+// la suite. Le jeton n'est rendu que pour une page pleine ; on ne l'enregistre (`meta.cursor`) qu'une fois toute
+// la page lue et réglée, et le dédoublonnage par hash couvre la relecture de la dernière page partielle.
+const PAGE = Number(env.INDEXER_PAGE_SIZE ?? 100);
+const getMeta = db.prepare("SELECT value FROM meta WHERE key = ?");
+const setMeta = db.prepare("INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value");
+
 async function tick() {
   head = (await rpc("block", { finality: "final" })).header.height;
-  const list = await post(`${TX_API}/v0/account`, { account_id: CONTRACT });
-  total = list.txs_count ?? 0;
-  if ((list.account_txs?.length ?? 0) < total) {
-    console.warn(`[indexer] the API returned ${list.account_txs.length} of ${total} transactions (pagination not handled)`);
+  let cursor = getMeta.get("cursor")?.value ?? null;
+  for (;;) {
+    const page = await post(`${TX_API}/v0/account`, {
+      account_id: CONTRACT,
+      desc: false,
+      limit: PAGE,
+      ...(cursor ? { resume_token: cursor } : {}),
+    });
+    total = page.txs_count ?? total;
+    const txs = page.account_txs ?? [];
+    const settled = txs.filter((t) => t.tx_block_height + SETTLE_BLOCKS <= head);
+    await ingest(settled.filter((t) => !hasTx.get(t.transaction_hash)));
+    if (settled.length < txs.length || txs.length < PAGE || !page.resume_token) return;
+    cursor = page.resume_token;
+    setMeta.run("cursor", cursor);
   }
-  const todo = (list.account_txs ?? []).filter(
-    (t) => t.tx_block_height + SETTLE_BLOCKS <= head && !hasTx.get(t.transaction_hash),
-  );
+}
+
+async function ingest(todo) {
   for (let i = 0; i < todo.length; i += 20) {
     const part = todo.slice(i, i + 20);
     const { transactions } = await post(`${TX_API}/v0/transactions`, { tx_hashes: part.map((t) => t.transaction_hash) });
@@ -175,6 +195,14 @@ const qResurrected = db.prepare(`
   FROM events e WHERE e.event = 'card_resurrected' ORDER BY e.height
 `);
 const qEvents = db.prepare("SELECT height, ts, event, data FROM events WHERE event = ? ORDER BY height DESC, id DESC LIMIT ?");
+// Historique d'une série pour le rejeu du vérificateur, dans l'ordre d'exécution : hauteur, puis pack_id
+// (consigne, § 6), puis ordre d'insertion. Les numéros burn_seq et resurrect_seq rattrapent le reste.
+const qHistory = db.prepare(`
+  SELECT event, data FROM events
+  WHERE event IN ('pack_bought', 'pack_revealed', 'card_redeemed', 'card_resurrected')
+    AND json_extract(data, '$.series_id') = ?
+  ORDER BY height, ifnull(json_extract(data, '$.pack_id'), -1), id
+`);
 
 function send(res, code, body) {
   res.writeHead(code, {
@@ -206,6 +234,11 @@ createServer((req, res) => {
       }
       case "/sales":
         return send(res, 200, { items: qSales.all(num(p.get("limit"), 1, 100, 20)).map(hideMythic) });
+      case "/history": {
+        const sid = num(p.get("series_id"), 0, 1e9, 0);
+        const items = qHistory.all(sid).map((r) => ({ event: r.event, data: JSON.parse(r.data) }));
+        return send(res, 200, { series_id: sid, complete: total > 0 && countTx.get().n >= total, items });
+      }
       case "/resurrected":
         return send(res, 200, { items: qResurrected.all() });
       case "/events": {

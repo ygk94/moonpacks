@@ -12,6 +12,9 @@ export const BLOCK_TIME_S = Number(env.VITE_BLOCK_TIME_S ?? 0.6);
 // vide : désactivé. Sans réponse, le front se rabat sur les annonces du contrat.
 export const INDEXER_URL: string = (env.VITE_INDEXER_URL ?? (env.DEV ? "http://localhost:8787" : "")).replace(/\/$/, "");
 
+// WalletConnect : vide = désactivé (voir src/near/wallet.tsx).
+export const WALLETCONNECT_PROJECT_ID: string = env.VITE_WALLETCONNECT_PROJECT_ID ?? "";
+
 export const EXPLORER = NETWORK === "testnet" ? "https://testnet.nearblocks.io" : "https://nearblocks.io";
 
 if (NETWORK !== "testnet") {

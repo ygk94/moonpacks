@@ -6,14 +6,16 @@
   "scripts": {
     "prepare-assets": "node scripts/prepare-assets.mjs",
     "dev": "node scripts/prepare-assets.mjs && vite",
-    "build": "node scripts/prepare-assets.mjs && tsc -b && vite build",
+    "build": "node scripts/prepare-assets.mjs && tsc -b && vite build && node scripts/check-mythics.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "indexer": "node indexer/indexer.mjs",
-    "test": "vitest run"
+    "test": "vitest run && node scripts/check-mythics.mjs",
+    "check:mythics": "node scripts/check-mythics.mjs"
   },
   "dependencies": {
     "@hot-labs/near-connect": "0.12.0",
+    "@walletconnect/sign-client": "2.26.0",
     "framer-motion": "14.7.1",
     "react": "19.3.1",
     "react-dom": "19.3.1"

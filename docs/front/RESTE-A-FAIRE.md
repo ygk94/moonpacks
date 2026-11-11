@@ -12,7 +12,7 @@ Le web demandé par `docs/front/CONSIGNE.md` est écrit dans `front/`. Le détai
   compteur de pitié, pas de fausse urgence, bandeau « Demo · NEAR testnet » permanent.
 - Visuels : ceux de `art/`, avec une nouvelle option `--langue en` (les SVG étaient en français).
 - Indexeur facultatif (`front/indexer/`), pour « Trending » et les dernières ventes.
-- 26 tests (`npm test`) et un build propre.
+- 35 tests (`npm test`), un build propre et un contrôle automatique « aucun nom de mythique ».
 
 Lancement :
 
@@ -53,13 +53,19 @@ le gaz. Avec MetaMask, il faut donc alimenter le compte `0x…` (NEP-518).
 
 ## 3. Travail restant
 
+Déjà fait depuis la première version de ce document : vérification complète dans le navigateur (carte exacte et
+décision gold, via l'historique de l'indexeur), pagination de l'indexeur, WalletConnect par variable
+d'environnement, chargement plus rapide de l'ouverture, contrôle anti-fuite des mythiques.
+
+**À lancer de ton côté** : `cd front && npm run check:mythics`. Le fichier secret des mythiques n'est que sur ta
+machine ; sans lui, le contrôle se limite à la structure.
+
+
 | Sujet | Détail |
 |---|---|
 | **App iOS** | Tout est à faire, après la décision 2 |
 | **Images des NFT dans les wallets** | Les métadonnées on-chain pointent vers `ipfs://TODO/<carte>.svg` (`media_template` de `build_series.py`). Les wallets et explorateurs montreront une image cassée. Il faut héberger les visuels (version anglaise : `--langue en`) et mettre la bonne URL dans la série |
 | **Hébergement de l'indexeur** | Il tourne en local (SQLite). Pour une démo publique, il faut l'héberger quelque part et définir `VITE_INDEXER_URL` |
-| **Pagination de l'indexeur** | `/v0/account` de fastnear renvoie la liste d'un coup, et la pagination n'est pas gérée. Sans effet à 45 transactions ; à revoir si l'activité monte |
-| **Vérification complète dans le navigateur** | Elle s'arrête au niveau « sans état » : table, graines, raretés, valeur. Le choix exact de la carte et la décision gold demandent tout l'historique (`memaster_verifier --history`). L'indexeur a déjà les événements nécessaires |
 | **Pack `stuck`** | Après `MAX_ATTEMPTS`, le contrat refuse `retry_reveal` et ne rembourse rien. Le front affiche alors un message de contact. Faut-il une voie de remboursement ? |
 | **Messages d'erreur du contrat** | Ils sont en français ; le front les traduit (`front/src/near/errors.ts`). Un nouveau message du contrat s'affichera en français tant qu'il n'est pas ajouté à cette liste |
 
