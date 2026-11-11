@@ -2,7 +2,7 @@
 
 Contrat unique pour les cartes NFT, les boosters, le tirage, les mythiques secrètes, le marché intégré, le burn et les
 mécaniques de série (pitié, rareté pilotée par les burns, gold rush, résurrection : `docs/mecaniques-spec.md`).
-Phase 3 de `docs/plan.md`. **Rien n'a été déployé, ni sur testnet ni sur mainnet.**
+Phase 3 de `docs/plan.md`. **Déployé sur testnet le 11/11/2026 (`app.memaster-demo-j7xg7z.testnet`, mesures dans `docs/testnet.md`), jamais sur mainnet.**
 
 - near-sdk **5.30.1** et near-contract-standards **5.30.1** (dernières versions sur crates.io le 11/11/2026)
 - tests sandbox : near-workspaces **0.24.0** (avec near-sandbox 0.4.0), build par cargo-near-build 0.11.5
