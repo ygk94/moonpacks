@@ -1,0 +1,4 @@
+# Logos tiers : usage interne, droits des auteurs (voir docs/visuels-droits.md)
+docs/images/
+.env*
+.DS_Store
