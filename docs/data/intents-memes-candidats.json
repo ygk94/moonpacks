@@ -1,0 +1,618 @@
+{
+ "_doc": "Memecoins de 1Click /v0/tokens (hors cartes scellées), devis dry à 0,04 $, présence dans le catalogue v2. Généré par contract/scripts/intents_memes.py : ne pas éditer à la main. Aucune série n'est modifiée. Une pièce = une carte, quelle que soit la chaîne.",
+ "tokens": "docs/data/intents-tokens-2026-11-12.json",
+ "tokens_date": "2026-11-11T23:05:30.654Z",
+ "devis": "docs/data/intents-devis-memes-2026-11-12.json",
+ "devis_date": "2026-11-11T23:19:25Z",
+ "resume": {
+  "légendaire": {
+   "pieces": 8,
+   "brulables": 6,
+   "brulables_au_catalogue": 5,
+   "liste_brulables": [
+    "book-of-meme-bome",
+    "dogwifhat-wif",
+    "official-trump-trump",
+    "pudgy-penguins-pengu",
+    "spx6900-spx",
+    "turbo-turbo"
+   ]
+  },
+  "épique": {
+   "pieces": 2,
+   "brulables": 1,
+   "brulables_au_catalogue": 1,
+   "liste_brulables": [
+    "cash-cat-cashcat"
+   ]
+  },
+  "rare": {
+   "pieces": 0,
+   "brulables": 0,
+   "brulables_au_catalogue": 0,
+   "liste_brulables": []
+  },
+  "commune": {
+   "pieces": 10,
+   "brulables": 4,
+   "brulables_au_catalogue": 4,
+   "liste_brulables": [
+    "black-dragon-blackdragon",
+    "jambo-meme-cooking-jambo",
+    "nearkat-nearkat",
+    "shitzu-shitzu"
+   ]
+  }
+ },
+ "actifs": [
+  {
+   "asset_id": "nep141:sol-57d087fd8c460f612f8701f5499ad8b2eec5ab68.omft.near",
+   "symbol": "BOME",
+   "blockchain": "sol",
+   "contract_address": "ukHH6c7mMyiWCf1b9pnWe25TSpkDDt3H5pQZgZ74J82",
+   "decimals": 6,
+   "coingecko_id": "book-of-meme",
+   "prix_usd_1click": 0.00060384,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 2.29
+   },
+   "catalogue_v2": {
+    "card_id": "book-of-meme-bome",
+    "section": "catalogue",
+    "rarete": "légendaire",
+    "etat": "en déclin (-95 % ou pire)",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "légendaire",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:base-0x532f27101965dd16442e59d40670faf5ebb142e4.omft.near",
+   "symbol": "BRETT",
+   "blockchain": "base",
+   "contract_address": "0x532f27101965dd16442e59d40670faf5ebb142e4",
+   "decimals": 18,
+   "coingecko_id": "based-brett",
+   "prix_usd_1click": 0.00363703,
+   "devis_004": {
+    "ok": false,
+    "erreur": "HTTP 400 : No liquidity available"
+   },
+   "catalogue_v2": {
+    "card_id": "brett-brett",
+    "section": "catalogue",
+    "rarete": "légendaire",
+    "etat": "en déclin (-95 % ou pire)",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "légendaire",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": false
+  },
+  {
+   "asset_id": "nep141:sol-b9c68f94ec8fd160137af8cdfe5e61cd68e2afba.omft.near",
+   "symbol": "$WIF",
+   "blockchain": "sol",
+   "contract_address": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+   "decimals": 6,
+   "coingecko_id": "dogwifcoin",
+   "prix_usd_1click": 0.155934,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 2.59
+   },
+   "catalogue_v2": {
+    "card_id": "dogwifhat-wif",
+    "section": "catalogue",
+    "rarete": "légendaire",
+    "etat": "en déclin (-95 % ou pire)",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "légendaire",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:sol-d600e625449a4d9380eaf5e3265e54c90d34e260.omft.near",
+   "symbol": "MELANIA",
+   "blockchain": "sol",
+   "contract_address": "FUAfBo2jgks6gB4Z4LfZkqSZgzNucisEHqnNebaRxM1P",
+   "decimals": 6,
+   "coingecko_id": "melania-meme",
+   "prix_usd_1click": 0.056308,
+   "devis_004": {
+    "ok": false,
+    "erreur": "HTTP 400 : No liquidity available"
+   },
+   "catalogue_v2": {
+    "card_id": "melania-meme-melania",
+    "section": "à décider",
+    "rarete": "légendaire",
+    "etat": "en déclin (-95 % ou pire)",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "légendaire",
+   "source_rarete": "catalogue v2 (à décider)",
+   "brulable_possible": false
+  },
+  {
+   "asset_id": "nep141:sol-c58e6539c2f2e097c251f8edf11f9c03e581f8d4.omft.near",
+   "symbol": "TRUMP",
+   "blockchain": "sol",
+   "contract_address": "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN",
+   "decimals": 6,
+   "coingecko_id": "official-trump",
+   "prix_usd_1click": 1.12,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 2.17
+   },
+   "catalogue_v2": {
+    "card_id": "official-trump-trump",
+    "section": "à décider",
+    "rarete": "légendaire",
+    "etat": "en déclin (-95 % ou pire)",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "légendaire",
+   "source_rarete": "catalogue v2 (à décider)",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:sol-0xaad74c68eecfc9f8c5bdcea614f6167048c795ef.omdep.near",
+   "symbol": "PENGU",
+   "blockchain": "sol",
+   "contract_address": "2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv",
+   "decimals": 6,
+   "coingecko_id": "pudgy-penguins",
+   "prix_usd_1click": 0.0062673,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 1.98
+   },
+   "catalogue_v2": {
+    "card_id": "pudgy-penguins-pengu",
+    "section": "catalogue",
+    "rarete": "légendaire",
+    "etat": "en déclin",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "légendaire",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:eth-0xe0f63a424a4439cbe457d80e4f4b51ad25b2c56c.omft.near",
+   "symbol": "SPX",
+   "blockchain": "eth",
+   "contract_address": "0xe0f63a424a4439cbe457d80e4f4b51ad25b2c56c",
+   "decimals": 8,
+   "coingecko_id": "spx6900",
+   "prix_usd_1click": 0.362992,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 2.19
+   },
+   "catalogue_v2": {
+    "card_id": "spx6900-spx",
+    "section": "catalogue",
+    "rarete": "légendaire",
+    "etat": "en déclin",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "légendaire",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:sol-c634d063ceff771aff0c972ec396fd915a6bbd0e.omft.near",
+   "symbol": "SPX",
+   "blockchain": "sol",
+   "contract_address": "J3NKxxXZcnNiMjKw9hYb2K4LUxgwB6t1FtPtQVsv3KFr",
+   "decimals": 8,
+   "coingecko_id": "spx6900",
+   "prix_usd_1click": 0.362992,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 2.3
+   },
+   "catalogue_v2": {
+    "card_id": "spx6900-spx",
+    "section": "catalogue",
+    "rarete": "légendaire",
+    "etat": "en déclin",
+    "rapprochement": "id CoinGecko (autre chaîne)"
+   },
+   "rarete_retenue": "légendaire",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:eth-0xa35923162c49cf95e6bf26623385eb431ad920d3.omft.near",
+   "symbol": "TURBO",
+   "blockchain": "eth",
+   "contract_address": "0xa35923162c49cf95e6bf26623385eb431ad920d3",
+   "decimals": 18,
+   "coingecko_id": "turbo",
+   "prix_usd_1click": 0.00068247,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 2.49
+   },
+   "catalogue_v2": {
+    "card_id": "turbo-turbo",
+    "section": "catalogue",
+    "rarete": "légendaire",
+    "etat": "en déclin (-95 % ou pire)",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "légendaire",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:a35923162c49cf95e6bf26623385eb431ad920d3.factory.bridge.near",
+   "symbol": "TURBO",
+   "blockchain": "near",
+   "contract_address": "a35923162c49cf95e6bf26623385eb431ad920d3.factory.bridge.near",
+   "decimals": 18,
+   "coingecko_id": "turbo",
+   "prix_usd_1click": 0.00068247,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 2.52
+   },
+   "catalogue_v2": {
+    "card_id": "turbo-turbo",
+    "section": "catalogue",
+    "rarete": "légendaire",
+    "etat": "en déclin (-95 % ou pire)",
+    "rapprochement": "id CoinGecko (autre chaîne)"
+   },
+   "rarete_retenue": "légendaire",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:sol-df27d7abcc1c656d4ac3b1399bbfbba1994e6d8c.omft.near",
+   "symbol": "TURBO",
+   "blockchain": "sol",
+   "contract_address": "2Dyzu65QA9zdX1UeE7Gx71k7fiwyUK6sZdrvJ7auq5wm",
+   "decimals": 8,
+   "coingecko_id": "turbo",
+   "prix_usd_1click": 0.00068247,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 2.56
+   },
+   "catalogue_v2": {
+    "card_id": "turbo-turbo",
+    "section": "catalogue",
+    "rarete": "légendaire",
+    "etat": "en déclin (-95 % ou pire)",
+    "rapprochement": "id CoinGecko (autre chaîne)"
+   },
+   "rarete_retenue": "légendaire",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:hood-0x020bfc650a365f8bb26819deaabf3e21291018b4.omft.near",
+   "symbol": "CASHCAT",
+   "blockchain": "hood",
+   "contract_address": "0x020bfc650a365f8bb26819deaabf3e21291018b4",
+   "decimals": 18,
+   "coingecko_id": "cash-cat",
+   "prix_usd_1click": 0.056563,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 1.59
+   },
+   "catalogue_v2": {
+    "card_id": "cash-cat-cashcat",
+    "section": "catalogue",
+    "rarete": "épique",
+    "etat": "en déclin",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "épique",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:eth-0xaaee1a9723aadb7afa2810263653a34ba2c21c7a.omft.near",
+   "symbol": "MOG",
+   "blockchain": "eth",
+   "contract_address": "0xaaee1a9723aadb7afa2810263653a34ba2c21c7a",
+   "decimals": 18,
+   "coingecko_id": "mog-coin",
+   "prix_usd_1click": 8.9774e-08,
+   "devis_004": {
+    "ok": false,
+    "erreur": "HTTP 400 : No liquidity available"
+   },
+   "catalogue_v2": {
+    "card_id": "mog-coin-mog",
+    "section": "catalogue",
+    "rarete": "épique",
+    "etat": "en déclin (-95 % ou pire)",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "épique",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": false
+  },
+  {
+   "asset_id": "nep141:abg-966.meme-cooking.near",
+   "symbol": "ABG",
+   "blockchain": "near",
+   "contract_address": "abg-966.meme-cooking.near",
+   "decimals": 18,
+   "coingecko_id": "abg",
+   "prix_usd_1click": 0,
+   "devis_004": {
+    "ok": false,
+    "perte_pct": 100.0
+   },
+   "catalogue_v2": {
+    "card_id": "abg-abg",
+    "section": "catalogue",
+    "rarete": "commune",
+    "etat": "mort (absent de CoinGecko)",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "commune",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": false
+  },
+  {
+   "asset_id": "nep141:blackdragon.tkn.near",
+   "symbol": "BLACKDRAGON",
+   "blockchain": "near",
+   "contract_address": "blackdragon.tkn.near",
+   "decimals": 24,
+   "coingecko_id": "black-dragon",
+   "prix_usd_1click": 6.507e-09,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 1.3
+   },
+   "catalogue_v2": {
+    "card_id": "black-dragon-blackdragon",
+    "section": "catalogue",
+    "rarete": "commune",
+    "etat": "mort",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "commune",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:purge-558.meme-cooking.near",
+   "symbol": "PURGE",
+   "blockchain": "near",
+   "contract_address": "purge-558.meme-cooking.near",
+   "decimals": 18,
+   "coingecko_id": "forgive-me-father",
+   "prix_usd_1click": 0.00078099,
+   "devis_004": {
+    "ok": false,
+    "erreur": "HTTP 400 : No liquidity available"
+   },
+   "catalogue_v2": {
+    "card_id": "forgive-me-father-purge",
+    "section": "catalogue",
+    "rarete": "commune",
+    "etat": "mort",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "commune",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": false
+  },
+  {
+   "asset_id": "nep141:gnear-229.meme-cooking.near",
+   "symbol": "GNEAR",
+   "blockchain": "near",
+   "contract_address": "gnear-229.meme-cooking.near",
+   "decimals": 18,
+   "coingecko_id": "gnear",
+   "prix_usd_1click": 0,
+   "devis_004": {
+    "ok": false,
+    "perte_pct": 100.0
+   },
+   "catalogue_v2": {
+    "card_id": "gnear-gnear",
+    "section": "catalogue",
+    "rarete": "commune",
+    "etat": "mort (absent de CoinGecko)",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "commune",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": false
+  },
+  {
+   "asset_id": "nep141:jambo-1679.meme-cooking.near",
+   "symbol": "JAMBO",
+   "blockchain": "near",
+   "contract_address": "jambo-1679.meme-cooking.near",
+   "decimals": 18,
+   "coingecko_id": "jambo-2",
+   "prix_usd_1click": 0.00019289557668882875,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 1.44
+   },
+   "catalogue_v2": {
+    "card_id": "jambo-meme-cooking-jambo",
+    "section": "catalogue",
+    "rarete": "commune",
+    "etat": "mort",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "commune",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:sol-bb27241c87aa401cc963c360c175dd7ca7035873.omft.near",
+   "symbol": "LOUD",
+   "blockchain": "sol",
+   "contract_address": "EJZJpNa4tDZ3kYdcRZgaAtaKm3fLJ5akmyPkCaKmfWvd",
+   "decimals": 6,
+   "coingecko_id": "loud",
+   "prix_usd_1click": 0.00017751,
+   "devis_004": {
+    "ok": false,
+    "erreur": "HTTP 400 : No liquidity available"
+   },
+   "catalogue_v2": {
+    "card_id": "loud-loud",
+    "section": "catalogue",
+    "rarete": "commune",
+    "etat": "mort",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "commune",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": false
+  },
+  {
+   "asset_id": "nep141:kat.token0.near",
+   "symbol": "NearKat",
+   "blockchain": "near",
+   "contract_address": "kat.token0.near",
+   "decimals": 18,
+   "coingecko_id": "nearkat",
+   "prix_usd_1click": 8.591e-05,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 1.95
+   },
+   "catalogue_v2": {
+    "card_id": "nearkat-nearkat",
+    "section": "catalogue",
+    "rarete": "commune",
+    "etat": "mort",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "commune",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  },
+  {
+   "asset_id": "nep141:sol-0x4629c2e57ccb57f0a21e04f5b5449ef251932cec.omdep.near",
+   "symbol": "NEARKAT",
+   "blockchain": "sol",
+   "contract_address": "6UtY9iTZMQQ5QZVrbzFnNaJntV7oySm9k97mvwnuZcxr",
+   "decimals": 6,
+   "coingecko_id": "nearkat-2",
+   "prix_usd_1click": 0.00073911,
+   "devis_004": {
+    "ok": false,
+    "erreur": "HTTP 400 : Quoting for this pair is not available"
+   },
+   "catalogue_v2": {
+    "card_id": "nearkat-nearkat",
+    "section": "catalogue",
+    "rarete": "commune",
+    "etat": "mort",
+    "rapprochement": "id CoinGecko (autre chaîne)"
+   },
+   "rarete_retenue": "commune",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": false
+  },
+  {
+   "asset_id": "nep141:sol-0xa1f9a1925e2dd108b1abc3248a567e69fa7ae4e8.omdep.near",
+   "symbol": "wNEARKAT",
+   "blockchain": "sol",
+   "contract_address": "415bGhU9GtBPPnbtz9csVfcEvFSkVMWJKxQQYAggCUBQ",
+   "decimals": 6,
+   "coingecko_id": "nearkat-2",
+   "prix_usd_1click": 0.00073911,
+   "devis_004": {
+    "ok": false,
+    "erreur": "HTTP 400 : No liquidity available"
+   },
+   "catalogue_v2": {
+    "card_id": "nearkat-nearkat",
+    "section": "catalogue",
+    "rarete": "commune",
+    "etat": "mort",
+    "rapprochement": "id CoinGecko (autre chaîne)"
+   },
+   "rarete_retenue": "commune",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": false
+  },
+  {
+   "asset_id": "nep141:stjack.tkn.primitives.near",
+   "symbol": "STJACK",
+   "blockchain": "near",
+   "contract_address": "stjack.tkn.primitives.near",
+   "decimals": 18,
+   "coingecko_id": null,
+   "prix_usd_1click": 0,
+   "devis_004": {
+    "ok": false,
+    "erreur": "HTTP 400 : No liquidity available"
+   },
+   "catalogue_v2": null,
+   "rarete_retenue": "commune",
+   "source_rarete": "proposée : pic inconnu",
+   "brulable_possible": false
+  },
+  {
+   "asset_id": "nep141:noear-324.meme-cooking.near",
+   "symbol": "NOEAR",
+   "blockchain": "near",
+   "contract_address": "noear-324.meme-cooking.near",
+   "decimals": 18,
+   "coingecko_id": "noear",
+   "prix_usd_1click": 0,
+   "devis_004": {
+    "ok": false,
+    "perte_pct": 100.0
+   },
+   "catalogue_v2": {
+    "card_id": "noear-noear",
+    "section": "catalogue",
+    "rarete": "commune",
+    "etat": "mort (absent de CoinGecko)",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "commune",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": false
+  },
+  {
+   "asset_id": "nep141:token.0xshitzu.near",
+   "symbol": "SHITZU",
+   "blockchain": "near",
+   "contract_address": "token.0xshitzu.near",
+   "decimals": 18,
+   "coingecko_id": "shitzu",
+   "prix_usd_1click": 0.00148116,
+   "devis_004": {
+    "ok": true,
+    "perte_pct": 1.51
+   },
+   "catalogue_v2": {
+    "card_id": "shitzu-shitzu",
+    "section": "catalogue",
+    "rarete": "commune",
+    "etat": "mort",
+    "rapprochement": "adresse"
+   },
+   "rarete_retenue": "commune",
+   "source_rarete": "catalogue v2",
+   "brulable_possible": true
+  }
+ ]
+}

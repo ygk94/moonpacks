@@ -86,6 +86,34 @@ il suffit de `series_demo.py --sans-appoint`.
 cours 1Click. Le contrat ne la lit pas pour les exemplaires tirés : la part de valeur du pack, en yoctoNEAR, la remplace
 (`docs/mecaniques-spec.md`, section 9).
 
+## Tous les memecoins d'Intents : combien de brûlables au maximum ? (12/11)
+
+`contract/scripts/intents_memes.py` liste les memecoins de 1Click `/v0/tokens`, quel que soit le catalogue. Résultat
+dans `docs/data/intents-memes-candidats.json`, devis dans `docs/data/intents-devis-memes-2026-11-12.json`. Chaque
+actif a un devis `dry` à 0,04 $ (aucun fonds engagé) et sa présence dans `catalogue-v2.json`, par adresse ou, pour une
+autre chaîne de la même pièce, par id CoinGecko. Un memecoin est un id de la catégorie meme de CoinGecko, ou un des
+jetons signalés dans `intents-couverture.md` (ABG, GNEAR, NOEAR, LOUD, STJACK). PONS et COCA ne sont pas des
+memecoins. Les cartes scellées sont exclues, puisqu'une mythique n'est jamais brûlable. Les séries ne changent pas.
+
+25 actifs, soit 20 pièces. Une pièce présente sur plusieurs chaînes ne fait qu'une carte. Une seule pièce est absente
+du catalogue v2 : STJACK, commune proposée (pic inconnu, prix nul).
+
+| Rareté retenue | Pièces | Brûlables (devis à 0,04 $ réussi) | Dont au catalogue (hors « à décider ») | Brûlables |
+|---|---:|---:|---:|---|
+| légendaire | 8 | 6 | 5 | WIF, PENGU, SPX, BOME, TURBO ; TRUMP (« à décider ») |
+| épique | 2 | 1 | 1 | CASHCAT |
+| rare | 0 | 0 | 0 | aucune |
+| commune | 10 | 4 | 4 | NearKat, Black Dragon, Jambo, SHITZU |
+| **Total** | **20** | **11** | **10** | |
+
+Sans devis : Brett, Mog, Melania (« à décider »), PURGE, LOUD, STJACK (« No liquidity available »), ainsi que NEARKAT
+et wNEARKAT sur Solana (la version NEAR suffit). ABG, GNEAR et NOEAR ont un prix nul.
+
+**Plafond aujourd'hui : 11 brûlables, ou 10 sans les « à décider », et aucune rare.** Intents n'a aucun memecoin
+coté à 10-100 M$ de pic. Par rapport aux séries de démo, une seule commune de plus est possible : SHITZU, présente au
+catalogue v2 mais absente du catalogue de démo. Pour des rares, il faudrait des actifs hors Intents (autre route
+d'achat) ou un surclassement manuel.
+
 ## Prix
 
 Cours : **3,62 $/NEAR** (CoinGecko `/simple/price`, 11/11/2026 23:05 UTC). 1Click donnait 3,60 $ à 23:02 UTC. Le
