@@ -482,13 +482,20 @@ class SeriesReplay:
             mech = {}
             if self.mech.get("pity"):
                 mech["pity_before"] = self.pity.get(ev["owner_id"], 0)
-            if self.mech.get("rush") and self.saw_bought:
+            if self.mech.get("rush"):
+                # Le drapeau rush est figé à l'achat : sans le `pack_bought` du booster, il n'est pas
+                # vérifiable. Erreur explicite (le drapeau journalisé n'est pas cru sur parole).
                 pid = int(ev["pack_id"])
                 if pid in self.rush_of:
                     mech["rush"] = self.rush_of[pid]
+                else:
+                    missing.append(
+                        f"pack_bought du booster {pid} absent : drapeau rush ({em.get('rush')}) non vérifiable"
+                    )
             if self.mech.get("burn"):
-                missing = self._advance(em.get("burn_seq"), em.get("resurrect_seq"))
-                if not missing:
+                gaps = self._advance(em.get("burn_seq"), em.get("resurrect_seq"))
+                missing += gaps
+                if not gaps:
                     mech.update(
                         burn=core.Burn(
                             list(self.burned), list(self.backed), self.mech["burn"]["floor_bps"],

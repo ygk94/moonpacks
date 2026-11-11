@@ -224,6 +224,16 @@ class SandboxMechanics(unittest.TestCase):
             e["rush"]["active"] = not e["rush"]["active"]
         self.assertTrue(self._tamper(lambda n, e: n == "pack_bought" and e["rush"]["active"], ch))
 
+    def test_missing_pack_bought_is_an_error(self):
+        """Revue, point 5 : série à rush, `pack_bought` absent pour un booster (ou pour tous) :
+        erreur explicite, le drapeau rush journalisé n'est pas accepté tel quel."""
+        rushed = next(e["pack_id"] for n, e in self.items if n == "pack_revealed" and e["mechanics"]["rush"])
+        for drop in (lambda e: e["pack_id"] == rushed, lambda e: True):
+            items = [x for x in self.items if not (x[0] == "pack_bought" and drop(x[1]))]
+            reports, _ = self.replay(items)
+            errs = [x for r in reports for x in r.errors]
+            self.assertTrue(any("pack_bought" in x and "absent" in x for x in errs), errs)
+
     def test_missing_burn_event_is_detected(self):
         items = [x for x in self.items if not (x[0] == "card_redeemed" and x[1].get("burn_seq") == 3)]
         reports, _ = self.replay(items)
