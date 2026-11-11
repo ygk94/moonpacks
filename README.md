@@ -12,12 +12,31 @@ Second projet de l'équipe pour le NEAR HACKATHON, tracks **NFTs** et **memecoin
 - Wallet visé : MetaMask. Démo : NEAR Intents.
 - Catalogue visé : 500 à 1000 cartes (802 aujourd'hui).
 
+## Mécaniques (détail : `docs/mecaniques.md`)
+
+1. **Compteur de pitié** : chaque pack ouvert sans gold pack augmente la chance du suivant ; au bout de N packs, le gold
+   pack est garanti. Compteur on-chain par compte, formule publiée ; variante : le compteur vit dans un NFT revendable.
+2. **Rareté pilotée par les burns** : plus la communauté brûle les cartes d'un memecoin, plus les cartes restantes de ce
+   coin deviennent rares dans les packs suivants.
+3. **Gold rush collectif** : quand la communauté atteint un palier (par exemple 1 000 packs dans la semaine), les taux
+   s'améliorent pour tout le monde pendant une durée fixe.
+4. **Résurrection des coins morts** : si le cours d'un memecoin « mort » remonte au-dessus d'un seuil, ses cartes de
+   collection deviennent burnables (oracle de prix et stock de jetons à cadrer).
+
+## Prix du pack
+
+Avec 65 % du prix reversé en jetons et un contrat optimisé (~0,05 $ de coûts par pack), le **seuil de rentabilité est
+vers 0,15 $**. À 0,20 $, c'est possible mais à peine rentable (~2 centimes par pack). Pour une marge saine de 20 à 30 %,
+viser **0,35 à 0,50 $**. Piste : pack d'entrée à 0,20 $, pack standard à 0,50–1 $. Hypothèse : NEAR à 2,5 $, chiffres à
+recalculer avec le gaz réel mesuré sur testnet.
+
 ## État au 11/11/2026
 
 C'est de la recherche, pas encore de code. Tout est dans `docs/` :
 
 | Fichier | Contenu |
 |---|---|
+| `mecaniques.md` | Les 4 mécaniques retenues et le calcul du prix du pack |
 | `historique-echanges.md` | Nos échanges sur le projet : demandes, décisions, questions ouvertes |
 | `intents-et-garde.md` | Garde des jetons via NEAR Intents, relayeur, burn |
 | `wallets-et-alea.md` | MetaMask sur NEAR, tirage aléatoire, marketplace |
