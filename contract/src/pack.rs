@@ -27,18 +27,18 @@ impl Contract {
         let start = env::storage_usage();
         let buyer = env::predecessor_account_id();
         let min_gas = self.min_entry_gas();
-        require!(env::prepaid_gas() >= min_gas, format!("Gaz insuffisant : {} requis", min_gas));
+        require!(env::prepaid_gas() >= min_gas, format!("E_GAS: Gaz insuffisant : {} requis", min_gas));
         let s = self.series_ref(series_id);
-        require!(s.status == SeriesStatus::Open, "Série non ouverte à la vente");
+        require!(s.status == SeriesStatus::Open, "E_SERIES_NOT_ON_SALE: Série non ouverte à la vente");
         let price = s.table.price.0;
         let storage = env::storage_byte_cost().as_yoctonear() * s.storage_per_pack as u128;
         let required = price + storage;
         let deposit = env::attached_deposit().as_yoctonear();
         require!(
             deposit >= required,
-            format!("Dépôt insuffisant : {} yoctoNEAR requis (prix {} + stockage {})", required, price, storage)
+            format!("E_DEPOSIT: Dépôt insuffisant : {} yoctoNEAR requis (prix {} + stockage {})", required, price, storage)
         );
-        let table_hash = s.table_hash.unwrap_or_else(|| env::panic_str("Table non hachée"));
+        let table_hash = s.table_hash.unwrap_or_else(|| env::panic_str("E_INTERNAL: Table non hachée"));
 
         let pack_id = self.next_pack_id;
         self.next_pack_id += 1;
@@ -100,7 +100,7 @@ impl Contract {
         if rank % OWNER_CHUNK == 0 {
             self.owner_packs.insert(key, vec![pack_id]);
         } else {
-            self.owner_packs.get_mut(&key).unwrap_or_else(|| env::panic_str("Bloc de liste manquant")).push(pack_id);
+            self.owner_packs.get_mut(&key).unwrap_or_else(|| env::panic_str("E_INTERNAL: Bloc de liste manquant")).push(pack_id);
         }
         self.pack_count_by_owner.insert(buyer.clone(), rank + 1);
         self.revenue += price;
@@ -160,7 +160,7 @@ impl Contract {
 
         #[cfg(feature = "test-hooks")]
         if env::storage_has_key(b"__fail_reveal") {
-            env::panic_str("test-hooks: échec simulé du dernier reçu");
+            env::panic_str("E_TEST_HOOK: test-hooks: échec simulé du dernier reçu");
         }
 
         self.finalize_pack(pack_id, pack, start);
@@ -181,14 +181,14 @@ impl Contract {
     /// `pack_stuck`) : plus aucun tirage possible, le pack devient remboursable (`refund_stuck_pack`).
     pub fn retry_reveal(&mut self, pack_id: u64) {
         let min_gas = self.min_entry_gas();
-        require!(env::prepaid_gas() >= min_gas, format!("Gaz insuffisant : {} requis", min_gas));
+        require!(env::prepaid_gas() >= min_gas, format!("E_GAS: Gaz insuffisant : {} requis", min_gas));
         let delay = self.config.retry_delay_blocks;
-        let pack = self.packs.get_mut(&pack_id).unwrap_or_else(|| env::panic_str("Pack inconnu"));
-        require!(pack.status == PackStatus::Pending, "Tirage déjà écrit : relance interdite");
-        require!(pack.cards.is_empty(), "Tirage déjà écrit : relance interdite");
+        let pack = self.packs.get_mut(&pack_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_PACK: Pack inconnu"));
+        require!(pack.status == PackStatus::Pending, "E_ALREADY_REVEALED: Tirage déjà écrit : relance interdite");
+        require!(pack.cards.is_empty(), "E_ALREADY_REVEALED: Tirage déjà écrit : relance interdite");
         require!(
             env::block_height() >= pack.last_progress_height + delay,
-            "Délai de relance non écoulé"
+            "E_RETRY_TOO_EARLY: Délai de relance non écoulé"
         );
         if pack.attempt + 1 >= MAX_ATTEMPTS {
             pack.status = PackStatus::Stuck;
@@ -228,10 +228,10 @@ impl Contract {
     /// Renvoie le montant rendu (yoctoNEAR).
     pub fn refund_stuck_pack(&mut self, pack_id: u64) -> U128 {
         let cost = env::storage_byte_cost().as_yoctonear();
-        let pack = self.packs.get(&pack_id).unwrap_or_else(|| env::panic_str("Pack inconnu"));
-        require!(pack.status != PackStatus::Refunded, "Pack déjà remboursé");
-        require!(pack.status == PackStatus::Stuck, "Seul un pack bloqué (stuck) est remboursable");
-        require!(pack.cards.is_empty(), "Tirage déjà écrit : remboursement interdit");
+        let pack = self.packs.get(&pack_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_PACK: Pack inconnu"));
+        require!(pack.status != PackStatus::Refunded, "E_ALREADY_REFUNDED: Pack déjà remboursé");
+        require!(pack.status == PackStatus::Stuck, "E_NOT_STUCK: Seul un pack bloqué (stuck) est remboursable");
+        require!(pack.cards.is_empty(), "E_ALREADY_REVEALED: Tirage déjà écrit : remboursement interdit");
         let (owner, series_id, storage_used) = (pack.owner_id.clone(), pack.series_id, pack.storage_used);
         let s = self.series_ref(series_id);
         let price = s.table.price.0;
@@ -290,7 +290,7 @@ impl Contract {
     fn finalize_pack(&mut self, pack_id: u64, mut pack: Pack, start: u64) {
         let series_id = pack.series_id;
         let owner = pack.owner_id.clone();
-        let mut series = self.series.get(series_id).cloned().unwrap_or_else(|| env::panic_str("Série inconnue"));
+        let mut series = self.series.get(series_id).cloned().unwrap_or_else(|| env::panic_str("E_UNKNOWN_SERIES: Série inconnue"));
         let mech = series.table.mechanics.clone();
         let (price, series_storage_per_pack) = (series.table.price.0, series.storage_per_pack);
 

@@ -9,12 +9,12 @@ use near_sdk::serde_json::json;
 #[cfg(test)]
 pub(crate) fn table_hash(table: &SeriesTable) -> [u8; 32] {
     let bytes = near_sdk::serde_json::to_vec(table)
-        .unwrap_or_else(|_| env::panic_str("Sérialisation de la table impossible"));
+        .unwrap_or_else(|_| env::panic_str("E_INTERNAL: Sérialisation de la table impossible"));
     env::sha256_array(&bytes)
 }
 
 fn check_len(s: &str, max: usize, what: &str) {
-    require!(!s.is_empty() && s.len() <= max, format!("{what} : longueur invalide"));
+    require!(!s.is_empty() && s.len() <= max, format!("E_LENGTH: {what} : longueur invalide"));
 }
 
 fn check_opt_url(s: &Option<String>, what: &str) {
@@ -26,7 +26,7 @@ fn check_opt_url(s: &Option<String>, what: &str) {
 pub(crate) fn check_backing(b: &Option<Backing>) {
     if let Some(b) = b {
         check_len(&b.asset_id, MAX_ASSET_ID_LEN, "asset_id");
-        require!(b.amount.0 > 0, "amount doit être > 0");
+        require!(b.amount.0 > 0, "E_BACKING_AMOUNT: amount doit être > 0");
     }
 }
 
@@ -37,31 +37,31 @@ fn is_hex32(s: &str) -> bool {
 /// En-tête de la table : tout sauf les cartes visibles.
 fn validate_header(table: &SeriesTable) {
     check_len(&table.name, MAX_TITLE_LEN, "name");
-    require!(table.price.0 > 0, "Le prix doit être > 0");
+    require!(table.price.0 > 0, "E_PRICE: Le prix doit être > 0");
     require!(
         table.cards_per_pack >= 1 && table.cards_per_pack <= MAX_CARDS_PER_PACK,
-        "cards_per_pack hors bornes"
+        "E_CARDS_PER_PACK: cards_per_pack hors bornes"
     );
-    require!(table.mythics.len() <= MAX_MYTHICS_PER_SERIES, "Trop de mythiques");
-    require!(table.rarity_weights.total() > 0, "Poids de rareté nuls");
+    require!(table.mythics.len() <= MAX_MYTHICS_PER_SERIES, "E_TOO_MANY_MYTHICS: Trop de mythiques");
+    require!(table.rarity_weights.total() > 0, "E_WEIGHTS_ZERO: Poids de rareté nuls");
     let mut commits = std::collections::BTreeSet::new();
     let mut contents = std::collections::BTreeSet::new();
     for m in &table.mythics {
-        require!(is_hex32(&m.commitment), "commitment : 64 caractères hex minuscules");
-        require!(is_hex32(&m.content_hash), "content_hash : 64 caractères hex minuscules");
-        require!(m.cap >= 1 && m.cap <= MAX_MYTHIC_CAP, "Plafond de mythique hors bornes");
-        require!(commits.insert(m.commitment.as_str()), "Engagement en double");
-        require!(contents.insert(m.content_hash.as_str()), "content_hash en double");
+        require!(is_hex32(&m.commitment), "E_COMMITMENT_FORMAT: commitment : 64 caractères hex minuscules");
+        require!(is_hex32(&m.content_hash), "E_COMMITMENT_FORMAT: content_hash : 64 caractères hex minuscules");
+        require!(m.cap >= 1 && m.cap <= MAX_MYTHIC_CAP, "E_MYTHIC_CAP: Plafond de mythique hors bornes");
+        require!(commits.insert(m.commitment.as_str()), "E_DUPLICATE_COMMITMENT: Engagement en double");
+        require!(contents.insert(m.content_hash.as_str()), "E_DUPLICATE_COMMITMENT: content_hash en double");
     }
     if table.rarity_weights.mythic > 0 {
         require!(
             table.mythics.iter().any(|m| m.weight > 0),
-            "Poids mythique sans engagement de poids non nul"
+            "E_MYTHIC_WEIGHT: Poids mythique sans engagement de poids non nul"
         );
     }
-    require!(table.royalties.len() <= MAX_ROYALTIES, "Trop de redevances");
+    require!(table.royalties.len() <= MAX_ROYALTIES, "E_ROYALTIES: Trop de redevances");
     let bps: u32 = table.royalties.iter().map(|r| r.bps as u32).sum();
-    require!(bps <= MAX_ROYALTY_BPS, "Redevances > 50 %");
+    require!(bps <= MAX_ROYALTY_BPS, "E_ROYALTIES: Redevances > 50 %");
     crate::mechanics::validate_mechanics(table);
 }
 
@@ -74,9 +74,9 @@ fn validate_cards(header: &SeriesTable, cards: &[CardDef]) {
         check_opt_url(&c.media, "media");
         check_opt_url(&c.reference, "reference");
         check_backing(&c.backing);
-        require!(c.rarity != Rarity::Mythic, "Les mythiques passent par des engagements");
-        require!(crate::mechanics::rarity_used(header, c.rarity), "Carte dans une rareté de poids nul");
-        require!(ids.insert(c.card_id.as_str()), "card_id en double");
+        require!(c.rarity != Rarity::Mythic, "E_VISIBLE_MYTHIC: Les mythiques passent par des engagements");
+        require!(crate::mechanics::rarity_used(header, c.rarity), "E_RARITY_WEIGHT: Carte dans une rareté de poids nul");
+        require!(ids.insert(c.card_id.as_str()), "E_DUPLICATE_CARD_ID: card_id en double");
     }
 }
 
@@ -89,7 +89,7 @@ fn validate_coverage(header: &SeriesTable, cards: &[DrawCard]) {
             if weights.get(r) > 0 {
                 require!(
                     cards.iter().any(|c| c.rarity == r && c.weight > 0),
-                    format!("Rareté {} sans carte", r.as_str())
+                    format!("E_RARITY_WITHOUT_CARD: Rareté {} sans carte", r.as_str())
                 );
             }
         }
@@ -97,7 +97,7 @@ fn validate_coverage(header: &SeriesTable, cards: &[DrawCard]) {
     require!(
         header.rarity_weights.common > 0
             && cards.iter().any(|c| c.rarity == Rarity::Common && c.cap.is_none() && c.weight > 0),
-        "Il faut au moins une commune sans plafond et de poids non nul"
+        "E_NO_UNLIMITED_COMMON: Il faut au moins une commune sans plafond et de poids non nul"
     );
     crate::mechanics::validate_resurrectable(header, cards);
 }
@@ -105,7 +105,7 @@ fn validate_coverage(header: &SeriesTable, cards: &[DrawCard]) {
 /// Validation complète d'une table (à la création non partielle, et toujours à l'ouverture).
 pub(crate) fn validate_table(table: &SeriesTable) {
     validate_header(table);
-    require!(table.cards.len() <= MAX_CARDS_PER_SERIES, "Trop de cartes");
+    require!(table.cards.len() <= MAX_CARDS_PER_SERIES, "E_TOO_MANY_CARDS: Trop de cartes");
     validate_cards(table, &table.cards);
     let compact: Vec<DrawCard> = table.cards.iter().map(DrawCard::from).collect();
     validate_coverage(table, &compact);
@@ -116,7 +116,7 @@ pub(crate) fn validate_table(table: &SeriesTable) {
 fn validate_call(table: &SeriesTable, partial: bool) {
     require!(
         table.cards.len() <= MAX_CARDS_PER_CALL,
-        format!("Trop de cartes pour un appel ({} au plus) : utiliser append_series_cards", MAX_CARDS_PER_CALL)
+        format!("E_TOO_MANY_CARDS: Trop de cartes pour un appel ({} au plus) : utiliser append_series_cards", MAX_CARDS_PER_CALL)
     );
     if partial {
         validate_header(table);
@@ -168,12 +168,12 @@ impl Contract {
         self.assert_owner();
         let before = env::storage_usage();
         let s = self.series_ref(series_id);
-        require!(s.status != SeriesStatus::Deleted, "Brouillon supprimé");
-        require!(s.status == SeriesStatus::Draft, "Table figée : série déjà ouverte");
-        require!(s.batched, "Série complète : append_series_cards suit create_series_batched");
+        require!(s.status != SeriesStatus::Deleted, "E_DRAFT_DELETED: Brouillon supprimé");
+        require!(s.status == SeriesStatus::Draft, "E_TABLE_FROZEN: Table figée : série déjà ouverte");
+        require!(s.batched, "E_NOT_BATCHED: Série complète : append_series_cards suit create_series_batched");
         require!(
             !cards.is_empty() && cards.len() <= MAX_CARDS_PER_CALL,
-            format!("Lot de 1 à {} cartes", MAX_CARDS_PER_CALL)
+            format!("E_BATCH_SIZE: Lot de 1 à {} cartes", MAX_CARDS_PER_CALL)
         );
         validate_cards(&s.table, &cards);
         let from = s.draw_cards.len();
@@ -196,13 +196,13 @@ impl Contract {
     pub fn open_series(&mut self, series_id: u32) -> String {
         self.assert_owner();
         let s = self.series_ref(series_id);
-        require!(s.status != SeriesStatus::Deleted, "Brouillon supprimé");
-        require!(s.status == SeriesStatus::Draft, "Série déjà ouverte");
+        require!(s.status != SeriesStatus::Deleted, "E_DRAFT_DELETED: Brouillon supprimé");
+        require!(s.status == SeriesStatus::Draft, "E_TABLE_FROZEN: Série déjà ouverte");
         // Règles de couverture (déjà vérifiées à la création d'une table complète, pas d'une table par lots).
         validate_coverage(&s.table, &s.draw_cards);
         let storage = self.worst_case_pack_storage(series_id);
         let s = self.series.get_mut(series_id).unwrap();
-        let mut stream = s.hash_stream.take().unwrap_or_else(|| env::panic_str("Hash de chargement absent"));
+        let mut stream = s.hash_stream.take().unwrap_or_else(|| env::panic_str("E_INTERNAL: Hash de chargement absent"));
         stream.update(&header_json_parts(&s.table).1);
         let h = stream.finalize();
         s.table_hash = Some(h);
@@ -229,8 +229,8 @@ impl Contract {
     pub fn delete_draft(&mut self, series_id: u32) -> U128 {
         self.assert_owner();
         let s = self.series_ref(series_id);
-        require!(s.status != SeriesStatus::Deleted, "Brouillon déjà supprimé");
-        require!(s.status == SeriesStatus::Draft, "Seul un brouillon peut être supprimé");
+        require!(s.status != SeriesStatus::Deleted, "E_DRAFT_DELETED: Brouillon déjà supprimé");
+        require!(s.status == SeriesStatus::Draft, "E_NOT_DRAFT: Seul un brouillon peut être supprimé");
         let before = env::storage_usage();
         self.clear_cards(series_id);
         let s = self.series.get_mut(series_id).unwrap();
@@ -276,10 +276,10 @@ impl Contract {
     /// Fin définitive des ventes.
     pub fn close_series(&mut self, series_id: u32) {
         self.assert_owner();
-        let s = self.series.get_mut(series_id).unwrap_or_else(|| env::panic_str("Série inconnue"));
+        let s = self.series.get_mut(series_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_SERIES: Série inconnue"));
         require!(
             matches!(s.status, SeriesStatus::Open | SeriesStatus::Paused),
-            "Série non ouverte"
+            "E_SERIES_NOT_OPEN: Série non ouverte"
         );
         s.status = SeriesStatus::Closed;
         events::emit("series_closed", json!({ "series_id": series_id }));
@@ -289,8 +289,8 @@ impl Contract {
 impl Contract {
     fn set_status(&mut self, series_id: u32, from: SeriesStatus, to: SeriesStatus, ev: &str) {
         self.assert_owner();
-        let s = self.series.get_mut(series_id).unwrap_or_else(|| env::panic_str("Série inconnue"));
-        require!(s.status == from, "Transition de statut invalide");
+        let s = self.series.get_mut(series_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_SERIES: Série inconnue"));
+        require!(s.status == from, "E_STATUS_TRANSITION: Transition de statut invalide");
         s.status = to;
         events::emit(ev, json!({ "series_id": series_id }));
     }
@@ -298,10 +298,10 @@ impl Contract {
     fn replace(&mut self, series_id: u32, table: SeriesTable, partial: bool) {
         self.assert_owner();
         validate_call(&table, partial);
-        require!(self.series_ref(series_id).status != SeriesStatus::Deleted, "Brouillon supprimé");
+        require!(self.series_ref(series_id).status != SeriesStatus::Deleted, "E_DRAFT_DELETED: Brouillon supprimé");
         require!(
             self.series_ref(series_id).status == SeriesStatus::Draft,
-            "Table figée : série déjà ouverte"
+            "E_TABLE_FROZEN: Table figée : série déjà ouverte"
         );
         self.clear_cards(series_id);
         let mut header = table;
@@ -378,7 +378,7 @@ impl Contract {
         let deposit = env::attached_deposit().as_yoctonear();
         require!(
             deposit >= cost,
-            format!("Dépôt insuffisant pour le stockage : {cost} yoctoNEAR exigés ({added} o), {deposit} joints")
+            format!("E_STORAGE_DEPOSIT: Dépôt insuffisant pour le stockage : {cost} yoctoNEAR exigés ({added} o), {deposit} joints")
         );
         self.series.get_mut(series_id).unwrap().storage_deposit += cost;
         Self::refund(&env::predecessor_account_id(), deposit - cost);
@@ -387,10 +387,10 @@ impl Contract {
 
     /// Ajoute des cartes (déjà validées une à une) à la fin de la table d'un brouillon.
     fn push_cards(&mut self, series_id: u32, cards: Vec<CardDef>) {
-        let s = self.series.get_mut(series_id).unwrap_or_else(|| env::panic_str("Série inconnue"));
-        require!(s.status == SeriesStatus::Draft, "Table figée : série déjà ouverte");
-        require!(s.draw_cards.len() + cards.len() <= MAX_CARDS_PER_SERIES, "Trop de cartes");
-        let stream = s.hash_stream.as_mut().unwrap_or_else(|| env::panic_str("Hash de chargement absent"));
+        let s = self.series.get_mut(series_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_SERIES: Série inconnue"));
+        require!(s.status == SeriesStatus::Draft, "E_TABLE_FROZEN: Table figée : série déjà ouverte");
+        require!(s.draw_cards.len() + cards.len() <= MAX_CARDS_PER_SERIES, "E_TOO_MANY_CARDS: Trop de cartes");
+        let stream = s.hash_stream.as_mut().unwrap_or_else(|| env::panic_str("E_INTERNAL: Hash de chargement absent"));
         let mut burns = self.series_burns.get_mut(&series_id);
         for c in cards {
             let idx = s.draw_cards.len() as u32;
@@ -399,14 +399,14 @@ impl Contract {
                 // croissant (octets UTF-8) : rien à relire à l'ouverture.
                 require!(
                     s.last_card_id.as_ref().is_none_or(|last| c.card_id > *last),
-                    "card_id en double ou hors ordre (par lots, card_id strictement croissants)"
+                    "E_DUPLICATE_CARD_ID: card_id en double ou hors ordre (par lots, card_id strictement croissants)"
                 );
                 s.last_card_id = Some(c.card_id.clone());
             }
             if idx > 0 {
                 stream.update(b",");
             }
-            stream.update(&near_sdk::serde_json::to_vec(&c).unwrap_or_else(|_| env::panic_str("JSON impossible")));
+            stream.update(&near_sdk::serde_json::to_vec(&c).unwrap_or_else(|_| env::panic_str("E_INTERNAL: JSON impossible")));
             s.draw_cards.push(DrawCard::from(&c));
             s.minted.push(0);
             if let Some(b) = burns.as_mut() {
@@ -418,7 +418,7 @@ impl Contract {
             } else {
                 self.series_cards
                     .get_mut(&key)
-                    .unwrap_or_else(|| env::panic_str("Bloc de cartes manquant"))
+                    .unwrap_or_else(|| env::panic_str("E_INTERNAL: Bloc de cartes manquant"))
                     .push(c);
             }
         }
@@ -426,7 +426,7 @@ impl Contract {
 
     /// Retire toutes les cartes d'un brouillon.
     fn clear_cards(&mut self, series_id: u32) {
-        let s = self.series.get_mut(series_id).unwrap_or_else(|| env::panic_str("Série inconnue"));
+        let s = self.series.get_mut(series_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_SERIES: Série inconnue"));
         let chunks = (s.draw_cards.len() as u32).div_ceil(CARDS_PER_CHUNK);
         s.draw_cards.clear();
         s.minted.clear();

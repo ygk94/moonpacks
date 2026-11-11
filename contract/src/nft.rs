@@ -65,7 +65,7 @@ impl Contract {
     }
 
     pub(crate) fn expect_live(&self, token_id: &str) -> (u64, usize, &Pack) {
-        self.live(token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"))
+        self.live(token_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_CARD: Carte inconnue"))
     }
 
     pub(crate) fn owner_of(&self, token_id: &str) -> Option<AccountId> {
@@ -155,13 +155,13 @@ impl Contract {
     }
 
     pub(crate) fn slot_mut_by_id(&mut self, token_id: &str) -> &mut CardSlot {
-        let tid = parse_token_id(token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
+        let tid = parse_token_id(token_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_CARD: Carte inconnue"));
         self.slot_mut(tid)
     }
 
     fn slot_mut(&mut self, tid: u64) -> &mut CardSlot {
         let (pid, slot) = pack_slot(tid);
-        &mut self.packs.get_mut(&pid).unwrap_or_else(|| env::panic_str("Pack inconnu")).cards[slot]
+        &mut self.packs.get_mut(&pid).unwrap_or_else(|| env::panic_str("E_UNKNOWN_PACK: Pack inconnu")).cards[slot]
     }
 
     // ------------------------------------------------------------ listes par blocs
@@ -172,7 +172,7 @@ impl Contract {
         if len % OWNER_CHUNK == 0 {
             self.owner_tokens.insert(key, vec![tid]);
         } else {
-            self.owner_tokens.get_mut(&key).unwrap_or_else(|| env::panic_str("Bloc de liste manquant")).push(tid);
+            self.owner_tokens.get_mut(&key).unwrap_or_else(|| env::panic_str("E_INTERNAL: Bloc de liste manquant")).push(tid);
         }
         self.owner_token_count.insert(owner.clone(), len + 1);
         len
@@ -181,11 +181,11 @@ impl Contract {
     /// Retire l'entrée `pos` (échange avec la dernière). Renvoie la carte déplacée en `pos`.
     fn owner_list_remove(&mut self, owner: &AccountId, pos: u32) -> Option<u64> {
         let len = self.owner_token_count.get(owner).copied().unwrap_or(0);
-        require!(pos < len, "Liste du propriétaire incohérente");
+        require!(pos < len, "E_INTERNAL: Liste du propriétaire incohérente");
         let last_pos = len - 1;
         let last_key = (owner.clone(), last_pos / OWNER_CHUNK);
-        let chunk = self.owner_tokens.get_mut(&last_key).unwrap_or_else(|| env::panic_str("Bloc de liste manquant"));
-        let last = chunk.pop().unwrap_or_else(|| env::panic_str("Bloc de liste vide"));
+        let chunk = self.owner_tokens.get_mut(&last_key).unwrap_or_else(|| env::panic_str("E_INTERNAL: Bloc de liste manquant"));
+        let last = chunk.pop().unwrap_or_else(|| env::panic_str("E_INTERNAL: Bloc de liste vide"));
         if chunk.is_empty() {
             self.owner_tokens.remove(&last_key);
         }
@@ -198,7 +198,7 @@ impl Contract {
             return None;
         }
         let key = (owner.clone(), pos / OWNER_CHUNK);
-        self.owner_tokens.get_mut(&key).unwrap_or_else(|| env::panic_str("Bloc de liste manquant"))
+        self.owner_tokens.get_mut(&key).unwrap_or_else(|| env::panic_str("E_INTERNAL: Bloc de liste manquant"))
             [(pos % OWNER_CHUNK) as usize] = last;
         Some(last)
     }
@@ -209,7 +209,7 @@ impl Contract {
         if len % GLOBAL_CHUNK == 0 {
             self.all_tokens.insert(key, vec![tid]);
         } else {
-            self.all_tokens.get_mut(&key).unwrap_or_else(|| env::panic_str("Bloc de liste manquant")).push(tid);
+            self.all_tokens.get_mut(&key).unwrap_or_else(|| env::panic_str("E_INTERNAL: Bloc de liste manquant")).push(tid);
         }
         self.total_supply = len + 1;
         len
@@ -217,10 +217,10 @@ impl Contract {
 
     fn global_remove(&mut self, pos: u32) -> Option<u64> {
         let len = self.total_supply;
-        require!(pos < len, "Liste globale incohérente");
+        require!(pos < len, "E_INTERNAL: Liste globale incohérente");
         let last_pos = len - 1;
-        let chunk = self.all_tokens.get_mut(&(last_pos / GLOBAL_CHUNK)).unwrap_or_else(|| env::panic_str("Bloc de liste manquant"));
-        let last = chunk.pop().unwrap_or_else(|| env::panic_str("Bloc de liste vide"));
+        let chunk = self.all_tokens.get_mut(&(last_pos / GLOBAL_CHUNK)).unwrap_or_else(|| env::panic_str("E_INTERNAL: Bloc de liste manquant"));
+        let last = chunk.pop().unwrap_or_else(|| env::panic_str("E_INTERNAL: Bloc de liste vide"));
         if chunk.is_empty() {
             self.all_tokens.remove(&(last_pos / GLOBAL_CHUNK));
         }
@@ -228,7 +228,7 @@ impl Contract {
         if pos == last_pos {
             return None;
         }
-        self.all_tokens.get_mut(&(pos / GLOBAL_CHUNK)).unwrap_or_else(|| env::panic_str("Bloc de liste manquant"))
+        self.all_tokens.get_mut(&(pos / GLOBAL_CHUNK)).unwrap_or_else(|| env::panic_str("E_INTERNAL: Bloc de liste manquant"))
             [(pos % GLOBAL_CHUNK) as usize] = last;
         Some(last)
     }
@@ -261,7 +261,7 @@ impl Contract {
         let global_pos = self.global_push(tid);
         self.packs
             .get_mut(&pack_id)
-            .unwrap_or_else(|| env::panic_str("Pack inconnu"))
+            .unwrap_or_else(|| env::panic_str("E_UNKNOWN_PACK: Pack inconnu"))
             .cards
             .push(CardSlot { owner: None, state: CardState::Normal, owner_pos, global_pos });
         tid.to_string()
@@ -269,7 +269,7 @@ impl Contract {
 
     /// Change le propriétaire sans contrôle (listes et emplacement mis à jour).
     pub(crate) fn internal_transfer_unguarded(&mut self, token_id: &str, from: &AccountId, to: &AccountId) {
-        let tid = parse_token_id(token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
+        let tid = parse_token_id(token_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_CARD: Carte inconnue"));
         let pos = self.slot_mut(tid).owner_pos;
         if let Some(moved) = self.owner_list_remove(from, pos) {
             self.slot_mut(moved).owner_pos = pos;
@@ -300,19 +300,19 @@ impl Contract {
         approval_id: Option<u64>,
         memo: Option<String>,
     ) -> (AccountId, HashMap<AccountId, u64>) {
-        let owner_id = self.owner_of(token_id).unwrap_or_else(|| env::panic_str("Token not found"));
+        let owner_id = self.owner_of(token_id).unwrap_or_else(|| env::panic_str("E_TOKEN_NOT_FOUND: Token not found"));
         let approvals = self.take_approvals(token_id);
         let authorized = if sender_id != &owner_id {
-            let actual = approvals.get(sender_id).unwrap_or_else(|| env::panic_str("Sender not approved"));
+            let actual = approvals.get(sender_id).unwrap_or_else(|| env::panic_str("E_NOT_APPROVED: Sender not approved"));
             require!(
                 approval_id.is_none() || approval_id == Some(*actual),
-                format!("The actual approval_id {:?} is different from the given approval_id {:?}", actual, approval_id)
+                format!("E_APPROVAL_ID: The actual approval_id {:?} is different from the given approval_id {:?}", actual, approval_id)
             );
             Some(sender_id)
         } else {
             None
         };
-        require!(&owner_id != receiver_id, "Current and next owner must differ");
+        require!(&owner_id != receiver_id, "E_SAME_OWNER: Current and next owner must differ");
         self.internal_transfer_unguarded(token_id, &owner_id, receiver_id);
         NftTransfer {
             old_owner_id: &owner_id,
@@ -328,7 +328,7 @@ impl Contract {
     /// Brûle une carte : retirée des listes, emplacement marqué `Burned`, approbations rendues.
     /// Renvoie le montant déjà rendu pour les approbations (yoctoNEAR).
     pub(crate) fn internal_burn(&mut self, token_id: &TokenId, owner: &AccountId) -> u128 {
-        let tid = parse_token_id(token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
+        let tid = parse_token_id(token_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_CARD: Carte inconnue"));
         let (owner_pos, global_pos) = {
             let s = self.slot_mut(tid);
             (s.owner_pos, s.global_pos)
@@ -362,7 +362,7 @@ impl Contract {
 
     pub(crate) fn before_transfer(&mut self, token_id: &TokenId) {
         if let Some((_, slot, pack)) = self.live(token_id) {
-            require!(pack.cards[slot].state == CardState::Normal, "Carte en cours de burn : transfert refusé");
+            require!(pack.cards[slot].state == CardState::Normal, "E_CARD_REDEEMING: Carte en cours de burn : transfert refusé");
         }
         self.remove_listing(token_id, "transferred");
     }
@@ -390,7 +390,7 @@ impl Contract {
         let e = payout.entry(owner.clone()).or_insert(U128(0));
         e.0 += balance - paid;
         if let Some(max) = max_len_payout {
-            require!(payout.len() as u32 <= max, "Payout trop long pour max_len_payout");
+            require!(payout.len() as u32 <= max, "E_PAYOUT_TOO_LONG: Payout trop long pour max_len_payout");
         }
         Payout { payout }
     }
@@ -406,7 +406,7 @@ impl NonFungibleTokenCore for Contract {
         approval_id: Option<u64>,
         memo: Option<String>,
     ) {
-        near_sdk::assert_one_yocto();
+        crate::assert_one_yocto();
         self.before_transfer(&token_id);
         let sender = env::predecessor_account_id();
         let (old_owner, approvals) = self.internal_transfer(&sender, &receiver_id, &token_id, approval_id, memo);
@@ -422,8 +422,8 @@ impl NonFungibleTokenCore for Contract {
         memo: Option<String>,
         msg: String,
     ) -> PromiseOrValue<bool> {
-        near_sdk::assert_one_yocto();
-        require!(env::prepaid_gas() >= MIN_GAS_FOR_NFT_TRANSFER_CALL, "Gaz insuffisant pour nft_transfer_call");
+        crate::assert_one_yocto();
+        require!(env::prepaid_gas() >= MIN_GAS_FOR_NFT_TRANSFER_CALL, "E_GAS: Gaz insuffisant pour nft_transfer_call");
         self.before_transfer(&token_id);
         let sender = env::predecessor_account_id();
         let (old_owner, old_approvals) =
@@ -507,9 +507,9 @@ impl NonFungibleTokenResolver for Contract {
 impl NonFungibleTokenApproval for Contract {
     #[payable]
     fn nft_approve(&mut self, token_id: TokenId, account_id: AccountId, msg: Option<String>) -> Option<Promise> {
-        require!(env::attached_deposit().as_yoctonear() >= 1, "Requires attached deposit of at least 1 yoctoNEAR");
-        let owner_id = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
-        require!(env::predecessor_account_id() == owner_id, "Predecessor must be token owner.");
+        require!(env::attached_deposit().as_yoctonear() >= 1, "E_ONE_YOCTO: Requires attached deposit of at least 1 yoctoNEAR");
+        let owner_id = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("E_TOKEN_NOT_FOUND: Token not found"));
+        require!(env::predecessor_account_id() == owner_id, "E_NOT_TOKEN_OWNER: Predecessor must be token owner.");
         let tid = parse_token_id(&token_id).unwrap();
         let mut rec = self.approvals.get(&tid).cloned().unwrap_or(TokenApprovals { next_id: 1, ..Default::default() });
         let approval_id = rec.next_id.max(1);
@@ -519,7 +519,7 @@ impl NonFungibleTokenApproval for Contract {
         let storage_used = if old.is_none() { approval_bytes(&account_id) } else { 0 };
         let cost = env::storage_byte_cost().as_yoctonear() * storage_used as u128;
         let deposit = env::attached_deposit().as_yoctonear();
-        require!(cost <= deposit, format!("Must attach {} yoctoNEAR to cover storage", cost));
+        require!(cost <= deposit, format!("E_STORAGE_DEPOSIT: Must attach {} yoctoNEAR to cover storage", cost));
         if deposit - cost > 1 {
             Self::refund(&env::predecessor_account_id(), deposit - cost);
         }
@@ -532,10 +532,10 @@ impl NonFungibleTokenApproval for Contract {
 
     #[payable]
     fn nft_revoke(&mut self, token_id: TokenId, account_id: AccountId) {
-        near_sdk::assert_one_yocto();
-        let owner_id = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
+        crate::assert_one_yocto();
+        let owner_id = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("E_TOKEN_NOT_FOUND: Token not found"));
         let pred = env::predecessor_account_id();
-        require!(pred == owner_id, "Predecessor must be token owner.");
+        require!(pred == owner_id, "E_NOT_TOKEN_OWNER: Predecessor must be token owner.");
         let tid = parse_token_id(&token_id).unwrap();
         if let Some(rec) = self.approvals.get_mut(&tid) {
             if rec.accounts.remove(&account_id).is_some() {
@@ -546,16 +546,16 @@ impl NonFungibleTokenApproval for Contract {
 
     #[payable]
     fn nft_revoke_all(&mut self, token_id: TokenId) {
-        near_sdk::assert_one_yocto();
-        let owner_id = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
+        crate::assert_one_yocto();
+        let owner_id = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("E_TOKEN_NOT_FOUND: Token not found"));
         let pred = env::predecessor_account_id();
-        require!(pred == owner_id, "Predecessor must be token owner.");
+        require!(pred == owner_id, "E_NOT_TOKEN_OWNER: Predecessor must be token owner.");
         let removed = self.take_approvals(&token_id);
         refund_approvals(&pred, Some(&removed));
     }
 
     fn nft_is_approved(&self, token_id: TokenId, approved_account_id: AccountId, approval_id: Option<u64>) -> bool {
-        self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
+        self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("E_TOKEN_NOT_FOUND: Token not found"));
         let tid = parse_token_id(&token_id).unwrap();
         match self.approvals.get(&tid).and_then(|a| a.accounts.get(&approved_account_id)) {
             Some(actual) => approval_id.is_none_or(|given| given == *actual),
@@ -572,9 +572,9 @@ impl NonFungibleTokenEnumeration for Contract {
 
     fn nft_tokens(&self, from_index: Option<U128>, limit: Option<u64>) -> Vec<Token> {
         let start: u128 = from_index.map(|x| x.0).unwrap_or(0);
-        require!(self.total_supply as u128 >= start, "Out of bounds, please use a smaller from_index.");
+        require!(self.total_supply as u128 >= start, "E_OUT_OF_BOUNDS: Out of bounds, please use a smaller from_index.");
         let limit = limit.unwrap_or(u64::MAX);
-        require!(limit != 0, "Cannot provide limit of 0.");
+        require!(limit != 0, "E_ZERO_LIMIT: Cannot provide limit of 0.");
         let from = start as u32;
         let to = (from as u64).saturating_add(limit).min(self.total_supply as u64) as u32;
         Self::list_range(|k| self.all_tokens.get(&k).cloned(), GLOBAL_CHUNK, from, to)
@@ -593,9 +593,9 @@ impl NonFungibleTokenEnumeration for Contract {
             return vec![];
         }
         let start: u128 = from_index.map(|x| x.0).unwrap_or(0);
-        require!(len as u128 > start, "Out of bounds, please use a smaller from_index.");
+        require!(len as u128 > start, "E_OUT_OF_BOUNDS: Out of bounds, please use a smaller from_index.");
         let limit = limit.unwrap_or(u64::MAX);
-        require!(limit != 0, "Cannot provide limit of 0.");
+        require!(limit != 0, "E_ZERO_LIMIT: Cannot provide limit of 0.");
         let from = start as u32;
         let to = (from as u64).saturating_add(limit).min(len as u64) as u32;
         Self::list_range(|k| self.owner_tokens.get(&(account_id.clone(), k)).cloned(), OWNER_CHUNK, from, to)
@@ -616,7 +616,7 @@ impl NonFungibleTokenMetadataProvider for Contract {
 impl Contract {
     /// NEP-199 : répartition d'un montant `balance` pour cette carte.
     pub fn nft_payout(&self, token_id: TokenId, balance: U128, max_len_payout: Option<u32>) -> Payout {
-        let owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
+        let owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_CARD: Carte inconnue"));
         self.compute_payout(&token_id, &owner, balance.0, max_len_payout)
     }
 
@@ -631,8 +631,8 @@ impl Contract {
         balance: U128,
         max_len_payout: Option<u32>,
     ) -> Payout {
-        near_sdk::assert_one_yocto();
-        let owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
+        crate::assert_one_yocto();
+        let owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_CARD: Carte inconnue"));
         let payout = self.compute_payout(&token_id, &owner, balance.0, max_len_payout);
         self.before_transfer(&token_id);
         let sender = env::predecessor_account_id();

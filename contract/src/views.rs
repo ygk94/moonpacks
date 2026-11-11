@@ -418,10 +418,10 @@ impl Contract {
             let chunk = self
                 .series_cards
                 .get(&(series_id, i / CARDS_PER_CHUNK))
-                .unwrap_or_else(|| env::panic_str("Bloc de cartes manquant"));
+                .unwrap_or_else(|| env::panic_str("E_INTERNAL: Bloc de cartes manquant"));
             let lo = (i % CARDS_PER_CHUNK) as usize;
             let hi = (lo + (to - i) as usize).min(chunk.len());
-            require!(hi > lo, "Blocs de cartes incohérents");
+            require!(hi > lo, "E_INTERNAL: Blocs de cartes incohérents");
             out.extend_from_slice(&chunk[lo..hi]);
             i += (hi - lo) as u32;
         }

@@ -240,7 +240,7 @@ impl Contract {
         let reveal_steps = reveal_steps.unwrap_or(3);
         require!(
             (MIN_REVEAL_STEPS..=MAX_REVEAL_STEPS).contains(&reveal_steps),
-            "reveal_steps hors bornes"
+            "E_INIT_PARAM: reveal_steps hors bornes"
         );
         Self {
             owner_id,
@@ -311,10 +311,10 @@ impl Contract {
     /// Applique le changement d'oracle proposé, une fois le délai écoulé (owner).
     pub fn accept_price_oracle(&mut self) {
         self.assert_owner();
-        let p = self.price_oracle_pending.clone().unwrap_or_else(|| env::panic_str("Aucun changement d'oracle proposé"));
+        let p = self.price_oracle_pending.clone().unwrap_or_else(|| env::panic_str("E_NO_ORACLE_PROPOSAL: Aucun changement d'oracle proposé"));
         require!(
             env::block_height() >= p.effective_from,
-            format!("Délai du changement d'oracle non écoulé : bloc {} au plus tôt", p.effective_from)
+            format!("E_ORACLE_DELAY: Délai du changement d'oracle non écoulé : bloc {} au plus tôt", p.effective_from)
         );
         let previous = std::mem::replace(&mut self.price_oracle_id, p.price_oracle_id.clone());
         self.price_oracle_pending = None;
@@ -353,7 +353,7 @@ impl Contract {
 
 impl Contract {
     pub(crate) fn assert_owner(&self) {
-        require!(env::predecessor_account_id() == self.owner_id, "Réservé à l'owner");
+        require!(env::predecessor_account_id() == self.owner_id, "E_NOT_OWNER: Réservé à l'owner");
     }
 
     pub(crate) fn gas_for_step(&self, step: u8) -> Gas {
@@ -367,7 +367,7 @@ impl Contract {
     }
 
     pub(crate) fn series_ref(&self, series_id: u32) -> &Series {
-        self.series.get(series_id).unwrap_or_else(|| env::panic_str("Série inconnue"))
+        self.series.get(series_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_SERIES: Série inconnue"))
     }
 
     /// Carte visible d'index `index` (lit un seul bloc).
@@ -376,7 +376,7 @@ impl Contract {
             .get(&(series_id, index / CARDS_PER_CHUNK))
             .and_then(|chunk| chunk.get((index % CARDS_PER_CHUNK) as usize))
             .cloned()
-            .unwrap_or_else(|| env::panic_str("Carte de table inconnue"))
+            .unwrap_or_else(|| env::panic_str("E_INTERNAL: Carte de table inconnue"))
     }
 
     /// Toutes les cartes visibles d'une série, dans l'ordre de la table.
@@ -388,7 +388,7 @@ impl Contract {
                 out.extend(chunk.iter().cloned());
             }
         }
-        require!(out.len() == n as usize, "Blocs de cartes incohérents");
+        require!(out.len() == n as usize, "E_INTERNAL: Blocs de cartes incohérents");
         out
     }
 
@@ -484,6 +484,11 @@ impl Contract {
             near_sdk::Promise::new(to.clone()).transfer(NearToken::from_yoctonear(amount)).detach();
         }
     }
+}
+
+/// Exactement 1 yoctoNEAR joint (comme `near_sdk::assert_one_yocto`, avec un code d'erreur).
+pub(crate) fn assert_one_yocto() {
+    require!(env::attached_deposit().as_yoctonear() == 1, "E_ONE_YOCTO: Requires attached deposit of exactly 1 yoctoNEAR");
 }
 
 /// `token_id = pack_id × 10 + emplacement` (10 cartes par booster au plus).

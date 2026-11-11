@@ -58,13 +58,13 @@ pub(crate) fn needs_burnable(t: &SeriesTable) -> bool {
 fn check_tiers(tiers: &[ValueTier], what: &str, min_bps: u32, max_bps: u32) {
     require!(
         !tiers.is_empty() && tiers.len() <= MAX_VALUE_TIERS,
-        format!("value.{what} : 1 à {MAX_VALUE_TIERS} paliers")
+        format!("E_MECH_VALUE: value.{what} : 1 à {MAX_VALUE_TIERS} paliers")
     );
     for (bps, w) in tiers {
-        require!(*w > 0, format!("value.{what} : poids nuls interdits"));
+        require!(*w > 0, format!("E_MECH_VALUE: value.{what} : poids nuls interdits"));
         require!(
             *bps >= min_bps && *bps <= max_bps,
-            format!("value.{what} : valeur hors de [{min_bps}, {max_bps}] points de base")
+            format!("E_MECH_VALUE: value.{what} : valeur hors de [{min_bps}, {max_bps}] points de base")
         );
     }
 }
@@ -74,31 +74,31 @@ fn validate_value(t: &SeriesTable, v: &ValueParams) {
     check_tiers(&v.gold, "gold", 1, MAX_VALUE_BPS);
     check_tiers(&v.rush, "rush", 1, MAX_VALUE_BPS);
     let m = &v.multipliers;
-    require!(m.mythic == 0, "value.multipliers.mythic = 0 (une mythique garde l'adossement de son contenu)");
+    require!(m.mythic == 0, "E_MECH_VALUE: value.multipliers.mythic = 0 (une mythique garde l'adossement de son contenu)");
     for r in [Rarity::Legendary, Rarity::Epic, Rarity::Rare, Rarity::Common] {
         let x = m.get(r);
-        require!(x >= 1 && x <= MAX_VALUE_MULT, format!("value.multipliers.{} : 1 à {MAX_VALUE_MULT}", r.as_str()));
+        require!(x >= 1 && x <= MAX_VALUE_MULT, format!("E_MECH_VALUE: value.multipliers.{} : 1 à {MAX_VALUE_MULT}", r.as_str()));
     }
     // Aucun dépassement au tirage : ⌊prix × V / 10⁴⌋ × multiplicateur tient sur u128.
     let max_bps = v.normal.iter().chain(&v.gold).chain(&v.rush).map(|x| x.0).max().unwrap_or(0) as u128;
     let max_mult = [m.legendary, m.epic, m.rare, m.common].into_iter().max().unwrap_or(0) as u128;
     require!(
         t.price.0.checked_mul(max_bps).and_then(|x| (x / 10_000).checked_mul(max_mult)).is_some(),
-        "value : prix trop élevé pour ces valeurs et multiplicateurs (dépassement de u128)"
+        "E_MECH_VALUE: value : prix trop élevé pour ces valeurs et multiplicateurs (dépassement de u128)"
     );
 }
 
 fn validate_gold(t: &SeriesTable, g: &GoldParams) {
     require!(
         !g.slots.is_empty() && g.slots.len() <= MAX_CARDS_PER_PACK as usize,
-        "gold.slots : 1 à 10 emplacements"
+        "E_MECH_GOLD: gold.slots : 1 à 10 emplacements"
     );
     for (i, s) in g.slots.iter().enumerate() {
         let w = crate::draw::gold_slot_weights(&t.rarity_weights, s);
         check_weights(t, &w, &format!("gold.slots[{i}]"));
         for r in Rarity::ALL {
             if r.index() > s.floor.index() {
-                require!(w.get(r) == 0, format!("gold.slots[{i}] : poids sous le plancher {}", s.floor.as_str()));
+                require!(w.get(r) == 0, format!("E_MECH_GOLD: gold.slots[{i}] : poids sous le plancher {}", s.floor.as_str()));
             }
         }
     }
@@ -110,11 +110,11 @@ pub(crate) fn rarity_used(t: &SeriesTable, r: Rarity) -> bool {
 }
 
 fn check_weights(t: &SeriesTable, w: &RarityWeights, what: &str) {
-    require!(w.total() > 0, format!("{what} : poids nuls"));
+    require!(w.total() > 0, format!("E_WEIGHTS_ZERO: {what} : poids nuls"));
     if w.mythic > 0 {
         require!(
             t.mythics.iter().any(|m| m.weight > 0),
-            format!("{what} : poids mythique sans engagement de poids non nul")
+            format!("E_MYTHIC_WEIGHT: {what} : poids mythique sans engagement de poids non nul")
         );
     }
 }
@@ -129,46 +129,46 @@ pub(crate) fn validate_mechanics(t: &SeriesTable) {
         validate_value(t, v);
     }
     if let Some(p) = &m.pity {
-        require!(m.gold.is_some(), "pity exige gold");
+        require!(m.gold.is_some(), "E_MECH_PITY: pity exige gold");
         require!(
             p.n_max.is_none_or(|n| (1..=MAX_PITY_N).contains(&n)),
-            "pity.n_max hors bornes (absent, ou 1 à 10 000)"
+            "E_MECH_PITY: pity.n_max hors bornes (absent, ou 1 à 10 000)"
         );
         require!(
             p.p0_ppb as u64 <= PPB && p.k_ppb as u64 <= PPB && p.p_max_ppb as u64 <= PPB,
-            "pity : probabilités en ppb (≤ 10⁹)"
+            "E_MECH_PITY: pity : probabilités en ppb (≤ 10⁹)"
         );
-        require!(p.p0_ppb <= p.p_max_ppb, "pity : p0_ppb ≤ p_max_ppb");
-        require!(p.p_max_ppb > 0 || p.n_max.is_some(), "pity : gold pack inatteignable (p_max_ppb = 0 sans n_max)");
+        require!(p.p0_ppb <= p.p_max_ppb, "E_MECH_PITY: pity : p0_ppb ≤ p_max_ppb");
+        require!(p.p_max_ppb > 0 || p.n_max.is_some(), "E_MECH_PITY: pity : gold pack inatteignable (p_max_ppb = 0 sans n_max)");
     }
     if let Some(r) = &m.resurrection {
-        require!(r.eligible.len() <= MAX_RESURRECTABLE, "resurrection.eligible : 200 cartes au plus");
+        require!(r.eligible.len() <= MAX_RESURRECTABLE, "E_MECH_RESURRECTION: resurrection.eligible : 200 cartes au plus");
         require!(
             r.eligible.windows(2).all(|p| p[0] < p[1]),
-            "resurrection.eligible : index strictement croissants"
+            "E_MECH_RESURRECTION: resurrection.eligible : index strictement croissants"
         );
     }
     if let Some(b) = &m.burn {
-        require!(b.floor_bps <= 10_000, "burn.floor_bps ≤ 10 000");
-        require!(b.prior_k <= MAX_BURN_PRIOR_K, "burn.prior_k ≤ 1 000 000");
+        require!(b.floor_bps <= 10_000, "E_MECH_BURN: burn.floor_bps ≤ 10 000");
+        require!(b.prior_k <= MAX_BURN_PRIOR_K, "E_MECH_BURN: burn.prior_k ≤ 1 000 000");
     }
     if let Some(r) = &m.rush {
         check_weights(t, &r.weights, "rush.weights");
-        require!(r.ratio_bps >= 10_000, "rush.ratio_bps ≥ 10 000 (×1)");
-        require!(r.min_packs >= 1, "rush.min_packs ≥ 1");
-        require!(r.max_per_account >= 1, "rush.max_per_account ≥ 1");
-        require!(r.bucket_blocks >= 1 && r.duration_blocks >= 1, "rush : seaux et durée ≥ 1 bloc");
+        require!(r.ratio_bps >= 10_000, "E_MECH_RUSH: rush.ratio_bps ≥ 10 000 (×1)");
+        require!(r.min_packs >= 1, "E_MECH_RUSH: rush.min_packs ≥ 1");
+        require!(r.max_per_account >= 1, "E_MECH_RUSH: rush.max_per_account ≥ 1");
+        require!(r.bucket_blocks >= 1 && r.duration_blocks >= 1, "E_MECH_RUSH: rush : seaux et durée ≥ 1 bloc");
         require!(
             r.window_blocks % r.bucket_blocks == 0 && r.baseline_blocks % r.bucket_blocks == 0,
-            "rush : window_blocks et baseline_blocks multiples de bucket_blocks"
+            "E_MECH_RUSH: rush : window_blocks et baseline_blocks multiples de bucket_blocks"
         );
         let (mw, ml) = (r.window_blocks / r.bucket_blocks, r.baseline_blocks / r.bucket_blocks);
-        require!(mw >= 1 && ml <= MAX_RUSH_BUCKETS, "rush : 1 à 96 seaux");
-        require!(mw < ml, "rush : fenêtre courte plus courte que la fenêtre longue");
+        require!(mw >= 1 && ml <= MAX_RUSH_BUCKETS, "E_MECH_RUSH: rush : 1 à 96 seaux");
+        require!(mw < ml, "E_MECH_RUSH: rush : fenêtre courte plus courte que la fenêtre longue");
         // Le rythme court ne peut pas dépasser m_l / m_w fois le rythme long (il y est inclus).
         require!(
             (r.ratio_bps as u128) * (mw as u128) < 10_000u128 * ml as u128,
-            "rush.ratio_bps inatteignable pour ces fenêtres"
+            "E_MECH_RUSH: rush.ratio_bps inatteignable pour ces fenêtres"
         );
     }
 }
@@ -186,16 +186,16 @@ pub(crate) fn validate_resurrectable(t: &SeriesTable, cards: &[DrawCard]) {
     if needs_burnable(t) {
         require!(
             cards.iter().any(|c| c.backed && c.cap.is_none() && c.weight > 0),
-            "Brûlable garantie : il faut une carte adossée par la table, sans plafond et de poids non nul"
+            "E_MECH_BURNABLE: Brûlable garantie : il faut une carte adossée par la table, sans plafond et de poids non nul"
         );
     }
     for &i in resurrectable(t) {
-        let c = cards.get(i as usize).unwrap_or_else(|| env::panic_str("resurrection.eligible : index de carte inconnu"));
+        let c = cards.get(i as usize).unwrap_or_else(|| env::panic_str("E_MECH_RESURRECTION: resurrection.eligible : index de carte inconnu"));
         require!(
             matches!(c.rarity, Rarity::Epic | Rarity::Legendary),
-            "resurrection.eligible : cartes épiques et légendaires seulement"
+            "E_MECH_RESURRECTION: resurrection.eligible : cartes épiques et légendaires seulement"
         );
-        require!(!c.backed, "resurrection.eligible : carte déjà adossée par la table");
+        require!(!c.backed, "E_MECH_RESURRECTION: resurrection.eligible : carte déjà adossée par la table");
     }
 }
 
@@ -216,25 +216,25 @@ impl Contract {
     #[payable]
     pub fn set_resurrected(&mut self, series_id: u32, card_index: u32, backing: Backing) {
         let start = env::storage_usage();
-        let oracle = self.price_oracle_id.clone().unwrap_or_else(|| env::panic_str("Aucun oracle de prix configuré"));
-        require!(env::predecessor_account_id() == oracle, "Réservé à l'oracle de prix");
+        let oracle = self.price_oracle_id.clone().unwrap_or_else(|| env::panic_str("E_NO_ORACLE: Aucun oracle de prix configuré"));
+        require!(env::predecessor_account_id() == oracle, "E_NOT_ORACLE: Réservé à l'oracle de prix");
         check_backing(&Some(backing.clone()));
         let s = self.series_ref(series_id);
         require!(
             matches!(s.status, SeriesStatus::Open | SeriesStatus::Paused | SeriesStatus::Closed),
-            "Série non ouverte"
+            "E_SERIES_NOT_OPEN: Série non ouverte"
         );
-        require!((card_index as usize) < s.draw_cards.len(), "Index de carte inconnu");
+        require!((card_index as usize) < s.draw_cards.len(), "E_UNKNOWN_CARD_INDEX: Index de carte inconnu");
         require!(
             resurrectable(&s.table).binary_search(&card_index).is_ok(),
-            "Carte non ressuscitable : absente de mechanics.resurrection.eligible (table hachée)"
+            "E_NOT_RESURRECTABLE: Carte non ressuscitable : absente de mechanics.resurrection.eligible (table hachée)"
         );
         let card = self.card_def(series_id, card_index);
         require!(
             matches!(card.rarity, Rarity::Epic | Rarity::Legendary),
-            "Résurrection réservée aux cartes épiques et légendaires"
+            "E_RESURRECT_RARITY: Résurrection réservée aux cartes épiques et légendaires"
         );
-        require!(card.backing.is_none(), "Carte déjà adossée par la table");
+        require!(card.backing.is_none(), "E_ALREADY_BACKED: Carte déjà adossée par la table");
         let previous = self.resurrected.insert((series_id, card_index), backing.clone());
         let s = self.series.get_mut(series_id).unwrap();
         if previous.is_none() {
@@ -255,7 +255,7 @@ impl Contract {
         self.series.flush();
         let cost = env::storage_byte_cost().as_yoctonear() * env::storage_usage().saturating_sub(start) as u128;
         let deposit = env::attached_deposit().as_yoctonear();
-        require!(deposit >= cost, format!("Dépôt insuffisant pour le stockage : {} yoctoNEAR", cost));
+        require!(deposit >= cost, format!("E_STORAGE_DEPOSIT: Dépôt insuffisant pour le stockage : {} yoctoNEAR", cost));
         Self::refund(&env::predecessor_account_id(), deposit - cost);
     }
 

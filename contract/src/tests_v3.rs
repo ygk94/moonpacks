@@ -463,3 +463,146 @@ fn withdraw_requires_one_yocto() {
     set(owner(), 0, 20);
     c.withdraw_revenue(Some(U128(1)));
 }
+
+// ----------------------------------------------------------------- 5. codes d'erreur stables
+
+/// Sources du contrat (hors tests) : chaque `require!`, `panic_str` et `panic!` doit commencer
+/// par un code `E_…: ` listé dans `ERRORS.md`, et chaque code de `ERRORS.md` doit exister.
+const SOURCES: &[(&str, &str)] = &[
+    ("draw.rs", include_str!("draw.rs")),
+    ("events.rs", include_str!("events.rs")),
+    ("hash_stream.rs", include_str!("hash_stream.rs")),
+    ("lib.rs", include_str!("lib.rs")),
+    ("market.rs", include_str!("market.rs")),
+    ("mechanics.rs", include_str!("mechanics.rs")),
+    ("mythic.rs", include_str!("mythic.rs")),
+    ("nft.rs", include_str!("nft.rs")),
+    ("pack.rs", include_str!("pack.rs")),
+    ("redeem.rs", include_str!("redeem.rs")),
+    ("series.rs", include_str!("series.rs")),
+    ("treasury.rs", include_str!("treasury.rs")),
+    ("types.rs", include_str!("types.rs")),
+    ("views.rs", include_str!("views.rs")),
+];
+
+/// Saute un littéral de chaîne commençant en `i` (`b[i] == b'"'`) ; renvoie l'index qui suit.
+fn skip_string(b: &[u8], mut i: usize) -> usize {
+    i += 1;
+    while b[i] != b'"' {
+        if b[i] == b'\\' {
+            i += 1;
+        }
+        i += 1;
+    }
+    i + 1
+}
+
+/// Messages des appels `require!` / `panic_str` / `panic!` d'une source : (ligne, début du message).
+fn error_sites(src: &str) -> Vec<(usize, String)> {
+    // Les tests internes d'un module ne comptent pas.
+    let src = match src.find("#[cfg(test)]\nmod tests {") {
+        Some(k) => &src[..k],
+        None => src,
+    };
+    let b = src.as_bytes();
+    let mut out = Vec::new();
+    for pat in ["require!(", "panic_str(", "panic!("] {
+        let mut from = 0;
+        while let Some(k) = src[from..].find(pat) {
+            let open = from + k + pat.len();
+            from = open;
+            // Ni commentaire de doc ni mot plus long (`should_panic!(`…) : début de mot exigé.
+            let before = src[..open - pat.len()].chars().last().unwrap_or(' ');
+            if before.is_alphanumeric() || before == '_' {
+                continue;
+            }
+            let line_start = src[..open].rfind('\n').map(|x| x + 1).unwrap_or(0);
+            if src[line_start..open].trim_start().starts_with("//") {
+                continue;
+            }
+            let (mut i, mut depth, mut comma) = (open, 1, None);
+            while depth > 0 {
+                match b[i] {
+                    b'"' => {
+                        i = skip_string(b, i);
+                        continue;
+                    }
+                    b'\'' if b.get(i + 2) == Some(&b'\'') => {
+                        i += 3;
+                        continue;
+                    }
+                    b'(' | b'[' | b'{' => depth += 1,
+                    b')' | b']' | b'}' => depth -= 1,
+                    b',' if depth == 1 && comma.is_none() => comma = Some(i),
+                    _ => {}
+                }
+                i += 1;
+            }
+            let msg_start = if pat == "require!(" {
+                match comma {
+                    Some(c) => c + 1,
+                    None => {
+                        out.push((src[..open].lines().count(), String::new()));
+                        continue;
+                    }
+                }
+            } else {
+                open
+            };
+            let mut msg = src[msg_start..i - 1].trim();
+            msg = msg.trim_start_matches('&');
+            msg = msg.strip_prefix("format!(").unwrap_or(msg).trim_start();
+            let text = msg.strip_prefix('"').unwrap_or("");
+            out.push((src[..open].lines().count(), text.to_string()));
+        }
+    }
+    out
+}
+
+fn code_of(text: &str) -> Option<&str> {
+    let end = text.find(": ")?;
+    let code = &text[..end];
+    (code.starts_with("E_") && code.len() > 2 && code[2..].bytes().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == b'_'))
+        .then_some(code)
+}
+
+#[test]
+fn every_error_has_a_stable_code_listed_in_errors_md() {
+    let doc = include_str!("../ERRORS.md");
+    let mut missing = Vec::new();
+    let mut undocumented = Vec::new();
+    let mut used = std::collections::BTreeSet::new();
+    let mut count = 0;
+    for (file, src) in SOURCES {
+        for (line, text) in error_sites(src) {
+            count += 1;
+            match code_of(&text) {
+                None => missing.push(format!("{file}:{line} « {} »", &text[..text.len().min(60)])),
+                Some(code) => {
+                    used.insert(code.to_string());
+                    if !doc.contains(&format!("`{code}`")) {
+                        undocumented.push(format!("{file}:{line} {code}"));
+                    }
+                }
+            }
+        }
+    }
+    assert!(count > 150, "le relevé des messages a échoué ({count} trouvés)");
+    assert!(missing.is_empty(), "messages sans code E_… :\n{}", missing.join("\n"));
+    assert!(undocumented.is_empty(), "codes absents de ERRORS.md :\n{}", undocumented.join("\n"));
+    // Et dans l'autre sens : ERRORS.md ne liste que des codes qui existent.
+    for word in doc.split('`') {
+        let code = word.split(':').next().unwrap_or("");
+        if code_of(&format!("{code}: x")).is_some() {
+            assert!(used.contains(code), "ERRORS.md liste {code}, absent du contrat");
+        }
+    }
+}
+
+#[test]
+fn error_scanner_detects_a_missing_code() {
+    let src = "fn f() {\n    require!(x == (1, 2).0, \"E_OK: bien\");\n    require!(y, format!(\"Pas de code {}\", 3));\n    env::panic_str(\"E_AUTRE: ok\");\n    require!(z);\n}\n";
+    let sites = error_sites(src);
+    let codes: Vec<Option<&str>> = sites.iter().map(|(_, t)| code_of(t)).collect();
+    assert_eq!(codes, vec![Some("E_OK"), None, None, Some("E_AUTRE")]);
+}

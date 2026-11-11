@@ -34,16 +34,16 @@ impl Contract {
     /// Brûle une carte adossée contre ses jetons. 1 yoctoNEAR exactement ; gaz ≥ 70 Tgas.
     #[payable]
     pub fn redeem(&mut self, token_id: TokenId) -> Promise {
-        near_sdk::assert_one_yocto();
-        require!(env::prepaid_gas() >= MIN_REDEEM_GAS, "Gaz insuffisant pour le burn");
+        crate::assert_one_yocto();
+        require!(env::prepaid_gas() >= MIN_REDEEM_GAS, "E_GAS: Gaz insuffisant pour le burn");
         let owner = env::predecessor_account_id();
-        let token_owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("Carte inconnue"));
-        require!(token_owner == owner, "Seul le propriétaire peut brûler");
-        require!(self.listings.get(&token_id).is_none(), "Carte en vente : retirez l'annonce d'abord");
-        let redeemer = self.redeemer_id.clone().unwrap_or_else(|| env::panic_str("Aucun redeemer configuré"));
-        let backing = self.token_backing(&token_id).unwrap_or_else(|| env::panic_str("Carte non brûlable"));
+        let token_owner = self.owner_of(&token_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_CARD: Carte inconnue"));
+        require!(token_owner == owner, "E_BURN_NOT_OWNER: Seul le propriétaire peut brûler");
+        require!(self.listings.get(&token_id).is_none(), "E_LISTED_CANNOT_BURN: Carte en vente : retirez l'annonce d'abord");
+        let redeemer = self.redeemer_id.clone().unwrap_or_else(|| env::panic_str("E_NO_REDEEMER: Aucun redeemer configuré"));
+        let backing = self.token_backing(&token_id).unwrap_or_else(|| env::panic_str("E_NOT_BURNABLE: Carte non brûlable"));
         let slot = self.slot_mut_by_id(&token_id);
-        require!(slot.state == CardState::Normal, "Burn déjà en cours");
+        require!(slot.state == CardState::Normal, "E_BURN_IN_PROGRESS: Burn déjà en cours");
         slot.state = CardState::Redeeming;
 
         events::emit(

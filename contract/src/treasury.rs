@@ -57,14 +57,14 @@ impl Contract {
     /// `revenue_withdrawn`. Renvoie le montant retiré.
     #[payable]
     pub fn withdraw_revenue(&mut self, amount: Option<U128>) -> U128 {
-        require!(env::attached_deposit().as_yoctonear() == 1, "Requires attached deposit of exactly 1 yoctoNEAR");
+        crate::assert_one_yocto();
         self.assert_owner();
         let t = self.treasury();
         let amount = amount.map(|a| a.0).unwrap_or(t.withdrawable);
-        require!(amount > 0, "Rien à retirer");
+        require!(amount > 0, "E_NOTHING_TO_WITHDRAW: Rien à retirer");
         require!(
             amount <= t.withdrawable,
-            format!("Retrait refusé : {} yoctoNEAR demandés, {} retirables (engagements {})", amount, t.withdrawable, t.committed)
+            format!("E_WITHDRAW_LIMIT: Retrait refusé : {} yoctoNEAR demandés, {} retirables (engagements {})", amount, t.withdrawable, t.committed)
         );
         self.withdrawn += amount;
         events::emit(
