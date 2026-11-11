@@ -95,7 +95,9 @@ Pas de routeur ni de bibliothèque d'état : un routeur par hash suffit (`#/shop
   temps de bloc. L'achat demande une confirmation et renvoie vers les taux.
 - **Bandeau permanent** « Demo · NEAR testnet » avec un lien vers les mentions légales, visible aussi pendant
   l'ouverture et dans les fenêtres.
-- **Interface en anglais.** Les messages de panique du contrat, en français, sont traduits dans `src/near/errors.ts`.
+- **Interface en anglais.** Les paniques du contrat sont traduites dans `src/near/errors.ts` par leur code stable
+  `E_…` (contrat v3, liste dans `contract/ERRORS.md`, textes anglais repris de ce fichier), avec repli sur l'ancien
+  texte français pour `app2`. `errors.test.ts` échoue si un code d'`ERRORS.md` n'est pas traduit, ou l'inverse.
 
 ## Points ouverts (à voir avec Hugo)
 

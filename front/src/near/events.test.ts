@@ -1,7 +1,4 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { humanError } from "./errors";
 import { eventsOf, failureOf, findEvent, parseLogs, returnValue, txHashOf } from "./events";
 
 const ev = (event: string, data: object) =>
@@ -73,58 +70,5 @@ describe("events", () => {
       ],
     };
     expect(failureOf(outcome)).toBe("Dépôt insuffisant : 1 yoctoNEAR requis");
-  });
-});
-
-describe("contract errors in English", () => {
-  it("translates known panics", () => {
-    expect(humanError(new Error("Dépôt insuffisant : 116 yoctoNEAR requis"))).toMatch(/^Insufficient deposit/);
-    expect(humanError("Carte en vente : retirez l'annonce d'abord")).toMatch(/listed for sale/);
-    expect(humanError(new Error("Le prix de l'annonce a changé"))).toMatch(/price changed/);
-    expect(humanError(new Error("User rejected the request"))).toBe("Transaction cancelled in the wallet.");
-  });
-  it("never leaves French text from the contract", () => {
-    const panics = [
-      "Gaz insuffisant : 160 Tgas requis",
-      "Série non ouverte à la vente",
-      "Délai de relance non écoulé",
-      "Tirage déjà écrit : relance interdite",
-      "Seul le propriétaire peut brûler",
-      "Burn déjà en cours",
-      "Carte non brûlable",
-      "Déjà en vente",
-      "Pas en vente",
-      "Le vendeur ne peut pas acheter sa carte",
-      "Annonce périmée",
-      "Dépôt inférieur au prix",
-      "Carte en cours de burn",
-    ];
-    for (const p of panics) expect(humanError(new Error(p)), p).not.toMatch(/[éèàç]|Carte|Dépôt|Série/);
-  });
-});
-
-describe("contract errors: every user-facing panic of the contract", () => {
-  // Messages des méthodes appelées par le front (achat, relance, burn, marché), lus dans le code du contrat :
-  // un nouveau message en français fera échouer ce test tant qu'il n'est pas traduit dans errors.ts.
-  const src = resolve(__dirname, "../../../contract/src");
-  const INTERNAL = /^(Bloc de liste|Table non hachée|test-hooks|Liste .* incohérente|pack \{\}|Aucun redeemer)/;
-  const panics = ["pack.rs", "market.rs", "redeem.rs"].flatMap((f) =>
-    [...readFileSync(`${src}/${f}`, "utf8").matchAll(/(?:require!\(|panic_str\(|format!\()[^";]*?"([^"]+)"/g)]
-      .map((m) => m[1].replace(/\{[^}]*\}/g, "42"))
-      .filter((m) => !INTERNAL.test(m)),
-  );
-
-  it("finds the messages in the contract source", () => {
-    expect(panics.length).toBeGreaterThan(20);
-    expect(panics).toContain("Délai de relance non écoulé");
-  });
-
-  it("translates each of them", () => {
-    for (const p of panics) expect(humanError(new Error(`Smart contract panicked: ${p}`)), p).not.toMatch(/[éèàçê]|panicked/);
-  });
-
-  it("keeps the burn-specific gas message", () => {
-    expect(humanError(new Error("Gaz insuffisant pour le burn"))).toMatch(/for the burn/);
-    expect(humanError(new Error("Gaz insuffisant : 160 Tgas requis"))).toMatch(/^Not enough gas attached to the transaction/);
   });
 });
