@@ -1,0 +1,182 @@
+{
+ "_doc": "Devis 1Click dry: true à 0.04 $ (aucun fonds engagé), wNEAR -> actif, INTENTS -> INTENTS. Cours wNEAR 1Click : 3.61 $.",
+ "date": "2026-11-11T23:19:25Z",
+ "devis": {
+  "nep141:blackdragon.tkn.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "6117268019877559775553072750000",
+   "usd_out": 0.0394808478,
+   "perte_pct": 1.3
+  },
+  "nep141:token.0xshitzu.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "26743135197162391256",
+   "usd_out": 0.039397184478,
+   "perte_pct": 1.51
+  },
+  "nep141:abg-966.meme-cooking.near": {
+   "usd": 0.04,
+   "ok": false,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "392510698383647140771",
+   "usd_out": 0.0,
+   "perte_pct": 100.0
+  },
+  "nep141:noear-324.meme-cooking.near": {
+   "usd": 0.04,
+   "ok": false,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "5498528599370674923727",
+   "usd_out": 0.0,
+   "perte_pct": 100.0
+  },
+  "nep141:jambo-1679.meme-cooking.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "206671594386911513987",
+   "usd_out": 0.039424307449,
+   "perte_pct": 1.44
+  },
+  "nep141:kat.token0.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "463039131640431798713",
+   "usd_out": 0.03921941445,
+   "perte_pct": 1.95
+  },
+  "nep141:gnear-229.meme-cooking.near": {
+   "usd": 0.04,
+   "ok": false,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "3999030271747751736477",
+   "usd_out": 0.0,
+   "perte_pct": 100.0
+  },
+  "nep141:eth-0xa35923162c49cf95e6bf26623385eb431ad920d3.omft.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "57952705321573008848",
+   "usd_out": 0.039003329736,
+   "perte_pct": 2.49
+  },
+  "nep141:sol-b9c68f94ec8fd160137af8cdfe5e61cd68e2afba.omft.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "253916",
+   "usd_out": 0.038962394536,
+   "perte_pct": 2.59
+  },
+  "nep141:sol-57d087fd8c460f612f8701f5499ad8b2eec5ab68.omft.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "65636845",
+   "usd_out": 0.039082802987,
+   "perte_pct": 2.29
+  },
+  "nep141:sol-c58e6539c2f2e097c251f8edf11f9c03e581f8d4.omft.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "35254",
+   "usd_out": 0.03913194,
+   "perte_pct": 2.17
+  },
+  "nep141:eth-0xe0f63a424a4439cbe457d80e4f4b51ad25b2c56c.omft.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "11014262",
+   "usd_out": 0.039122328196,
+   "perte_pct": 2.19
+  },
+  "nep141:sol-0xaad74c68eecfc9f8c5bdcea614f6167048c795ef.omdep.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "6350549",
+   "usd_out": 0.039207146427,
+   "perte_pct": 1.98
+  },
+  "nep141:hood-0x020bfc650a365f8bb26819deaabf3e21291018b4.omft.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "719840466320263590",
+   "usd_out": 0.03936375606,
+   "perte_pct": 1.59
+  },
+  "nep141:a35923162c49cf95e6bf26623385eb431ad920d3.factory.bridge.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "57935071594948491380",
+   "usd_out": 0.038991461885,
+   "perte_pct": 2.52
+  },
+  "nep141:sol-df27d7abcc1c656d4ac3b1399bbfbba1994e6d8c.omft.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "5791445569",
+   "usd_out": 0.038977586968,
+   "perte_pct": 2.56
+  },
+  "nep141:purge-558.meme-cooking.near": {
+   "usd": 0.04,
+   "ok": false,
+   "erreur": "HTTP 400 : No liquidity available"
+  },
+  "nep141:sol-c634d063ceff771aff0c972ec396fd915a6bbd0e.omft.near": {
+   "usd": 0.04,
+   "ok": true,
+   "amount_in": "11080332409972298088448",
+   "amount_out": "11001959",
+   "usd_out": 0.039078628309,
+   "perte_pct": 2.3
+  },
+  "nep141:eth-0xaaee1a9723aadb7afa2810263653a34ba2c21c7a.omft.near": {
+   "usd": 0.04,
+   "ok": false,
+   "erreur": "HTTP 400 : No liquidity available"
+  },
+  "nep141:base-0x532f27101965dd16442e59d40670faf5ebb142e4.omft.near": {
+   "usd": 0.04,
+   "ok": false,
+   "erreur": "HTTP 400 : No liquidity available"
+  },
+  "nep141:sol-d600e625449a4d9380eaf5e3265e54c90d34e260.omft.near": {
+   "usd": 0.04,
+   "ok": false,
+   "erreur": "HTTP 400 : No liquidity available"
+  },
+  "nep141:sol-bb27241c87aa401cc963c360c175dd7ca7035873.omft.near": {
+   "usd": 0.04,
+   "ok": false,
+   "erreur": "HTTP 400 : No liquidity available"
+  },
+  "nep141:sol-0x4629c2e57ccb57f0a21e04f5b5449ef251932cec.omdep.near": {
+   "usd": 0.04,
+   "ok": false,
+   "erreur": "HTTP 400 : Quoting for this pair is not available"
+  },
+  "nep141:sol-0xa1f9a1925e2dd108b1abc3248a567e69fa7ae4e8.omdep.near": {
+   "usd": 0.04,
+   "ok": false,
+   "erreur": "HTTP 400 : No liquidity available"
+  },
+  "nep141:stjack.tkn.primitives.near": {
+   "usd": 0.04,
+   "ok": false,
+   "erreur": "HTTP 400 : No liquidity available"
+  }
+ }
+}

@@ -134,7 +134,15 @@ def events_of(logs):
 
 
 def analyze_tx(tx, sender):
-    r = rpc("EXPERIMENTAL_tx_status", {"tx_hash": tx, "sender_account_id": sender, "wait_until": "FINAL"})
+    """Reçus, hauteurs, gaz et événements d'une transaction. Une erreur RPC (transaction inconnue,
+    RPC injoignable) donne un enregistrement `rpc_error` au lieu d'interrompre tout le lot."""
+    try:
+        r = rpc("EXPERIMENTAL_tx_status", {"tx_hash": tx, "sender_account_id": sender, "wait_until": "FINAL"})
+    except RuntimeError as e:
+        r = {"error": str(e)}
+    if "result" not in r:
+        return {"tx": tx, "sender": sender, "tx_height": None, "tx_ts": None, "gas_price": None,
+                "status": "rpc_error", "error": r.get("error"), "rows": [], "events": []}
     res = r["result"]
     to = res["transaction_outcome"]
     th, tts, gp = height(to["block_hash"])
@@ -152,7 +160,8 @@ def analyze_tx(tx, sender):
         e = events_of(o["logs"])
         evs.extend((h, x) for x in e)
         status = o["status"]
-        rows.append({"kind": methods.get(ro["id"], "refund" if o["executor_id"] != sender and not o["logs"]
+        # Remboursement (gaz, dépôt) : reçu système exécuté chez l'expéditeur, sans journal.
+        rows.append({"kind": methods.get(ro["id"], "refund" if o["executor_id"] == sender and not o["logs"]
                                          and o["gas_burnt"] < 300_000_000_000 else "?"),
                      "height": h, "ts": ts, "gas": o["gas_burnt"], "tokens": int(o["tokens_burnt"]),
                      "executor": o["executor_id"], "failed": "Failure" in status,
@@ -207,21 +216,26 @@ def cmd_analyze(a):
 def summarize(packs):
     ok = [p for p in packs if p["reveal_height"]]
     print(f"{len(packs)} transactions, {len(ok)} révélées")
+    errs = [p["tx"] for p in packs if p["status"] == "rpc_error"]
+    if errs:
+        print(f"{len(errs)} transaction(s) illisible(s) par le RPC : {errs}")
     if not ok:
         return
-    d = [p["blocks_buy_to_reveal"] for p in ok]
+    d = [p["blocks_buy_to_reveal"] for p in ok if p["blocks_buy_to_reveal"] is not None]
     print("blocs buy_pack -> pack_revealed :", {k: d.count(k) for k in sorted(set(d))})
-    print("blocs tx -> buy_pack :", sorted({p["buy_height"] - p["tx_height"] for p in ok}))
+    print("blocs tx -> buy_pack :", sorted({p["buy_height"] - p["tx_height"] for p in ok if p["buy_height"] is not None}))
     g = sorted(p["gas_total"] for p in ok)
     print(f"gaz total : min {g[0]/1e12:.2f} méd {g[len(g)//2]/1e12:.2f} max {g[-1]/1e12:.2f} Tgas")
     for k in ("gas_buy", "gas_final"):
-        v = sorted(p[k] for p in ok)
-        print(f"{k} : min {v[0]/1e12:.2f} max {v[-1]/1e12:.2f} Tgas")
+        v = sorted(p[k] for p in ok if p[k] is not None)
+        if v:
+            print(f"{k} : min {v[0]/1e12:.2f} max {v[-1]/1e12:.2f} Tgas")
     nb = sorted(p["near_burnt"] for p in ok)
     print(f"NEAR brûlés : min {nb[0]:.5f} max {nb[-1]:.5f}")
     by_block = {}
     for p in ok:
-        by_block.setdefault(p["buy_height"], []).append(p)
+        if p["buy_height"] is not None:
+            by_block.setdefault(p["buy_height"], []).append(p)
     same = {h: len(v) for h, v in by_block.items() if len(v) > 1}
     print("buy_pack dans le même bloc :", same)
 

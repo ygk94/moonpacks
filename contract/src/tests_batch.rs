@@ -298,10 +298,25 @@ fn build_series_script_matches_contract_table_hash() {
     std::fs::create_dir_all(&dir).unwrap();
     let out = dir.join("out");
     let secrets = dir.join("secrets").join("s.json");
+    // Faux noms de mythiques : le test ne dépend pas du fichier secret (ignoré par git, absent d'un
+    // clone propre) et n'en lit jamais les vrais noms.
+    let catalogue: Value = serde_json::from_slice(&std::fs::read(format!("{root}/../docs/data/catalogue-v2.json")).unwrap()).unwrap();
+    let fake: serde_json::Map<String, Value> = catalogue
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|c| c["rarete"] == "mythique" && c["section"] == "catalogue")
+        .enumerate()
+        .map(|(i, c)| (c["id"].as_str().unwrap().to_string(), serde_json::json!({ "id": format!("fictif-{}", i + 1), "nom": format!("Fictif {}", i + 1) })))
+        .collect();
+    let fake_path = dir.join("mythiques-fictives.json");
+    std::fs::write(&fake_path, serde_json::to_vec(&fake).unwrap()).unwrap();
     let res = std::process::Command::new("python3")
         .arg("-I")
         .arg(format!("{root}/scripts/build_series.py"))
         .arg(format!("{root}/scripts/serie-exemple.json"))
+        .arg("--mythiques")
+        .arg(&fake_path)
         .arg("--out")
         .arg(&out)
         .arg("--secrets")

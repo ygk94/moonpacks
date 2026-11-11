@@ -39,7 +39,7 @@ de la valeur ne sont pas recalculées ; V, son palier et le total le sont toujou
 | Commande | Vérification |
 |---|---|
 | `table` | Avec `--rpc` : la table est **lue par pages**. `get_series_header` donne l'en-tête sans les cartes, le hash enregistré à l'ouverture et `card_count` ; les pages de `get_series_cards` (200 cartes au plus, `--page-size`) sont lues au même bloc que l'en-tête. Le script reconstruit la table, vérifie que chaque page est exactement la forme `serde_json` de `Vec<CardDef>` et que le nombre de cartes est `card_count`, **recalcule le hash localement** et le compare au hash enregistré (`get_series_header.table_hash` et `get_series_table_hash.stored`). Le contrat ne recalcule rien, et aucune vue lue ne relit la table entière : le coût de chaque appel est borné (4 à 25 Tgas à taille maximale, voir le README du contrat). Avec `--file` : `sha256` du fichier (un fichier reformaté est accepté, on hache sa forme canonique). Affiche les poids par rareté. |
-| `pack` | Pour un `pack_revealed` : `table_hash` de l'événement égal à `sha256(table)`, `initial_acc = sha256("memaster:pack" ‖ pack_id_le ‖ owner ‖ table_hash)`, chaque `acc = sha256(acc ‖ seed ‖ pack_id_le ‖ owner)` dans l'ordre des graines (relances comprises), `acc` final, puis chaque emplacement : `rarity_roll`, rareté visée, retombée, `card_roll`, type et index de la carte. |
+| `pack` | Pour un `pack_revealed` : `table_hash` de l'événement égal à `sha256(table)`, `initial_acc = sha256("memaster:pack" ‖ pack_id_le ‖ owner ‖ table_hash)`, chaque `acc = sha256(acc ‖ seed ‖ pack_id_le ‖ owner)` dans l'ordre des graines (relances comprises), `acc` final, puis chaque emplacement : `rarity_roll`, rareté visée, retombée, `card_roll`, type et index de la carte. Contrat v3 : bloc `storage` (`refund = max(0, prepaid_bytes − used_bytes) × 10¹⁹`, `verify.verify_storage`) ; sans ce bloc (contrats d'avant), une note seulement. |
 | `mythic` | `sha256(card_id ‖ sel) = commitment` et `sha256(json(content) ‖ sel) = content_hash`, comparés aux engagements **de la table hachée**, pas à ceux que l'événement déclare. Vérifie aussi que le sel fait 32 octets. |
 | `stats` | Test du χ² sur les raretés visées (`rolled_rarity`, indépendantes des plafonds) contre les poids publics, puis sur les cartes de chaque rareté sans plafond. Avec `--replay`, rejoue en plus toute la série depuis l'ouverture et vérifie chaque tirage. |
 | `code` | `code_hash` du compte déployé égal au `sha256` (base58) d'un wasm local. |
@@ -143,7 +143,7 @@ Codes de sortie : `0` vérifié, `1` non conforme (ou écart statistique signifi
 
 ```bash
 cd verifier
-python3 -m unittest discover -s tests -t . -v      # 60 tests (1 sauté sans scripts/out/), ~2 s, hors ligne
+python3 -m unittest discover -s tests -t . -v      # 70 tests (2 sautés sans scripts/out/ ni champ secret), ~1 s, hors ligne
 ```
 
 `tests/test_pages.py` (6 tests) simule le RPC à partir d'une table : en-tête, pages de 200, 37 et 1 cartes, page
@@ -159,6 +159,9 @@ et de la valeur des événements réels, valeur, palier, répartition, emplaceme
 vérification partielle d'un gold pack ; `build_series.py` : fichier secret des mythiques (dictionnaire ou liste), repli
 sur le champ `secret`, message clair sans l'un ni l'autre, fichier incomplet, `--tables-valeur` (multiplicateurs
 décimaux, bornes du contrat, table rush > 80 % refusée), tables provisoires de 20 à 200 % et de moyenne 75 %.
+
+`tests/test_storage.py` (4 tests, v3) : bloc `storage` de `pack_revealed` correct, montant rendu falsifié détecté,
+stockage au-delà du prépayé (relances, rien rendu), événement d'avant la v3 sans bloc.
 
 `tests/test_mechanics.py` (20 tests) : concordance avec `mech_vectors.json`, renormalisation des burns (part des
 brûlables exacte), rejeu des événements réels de `sandbox_mech_vectors.json` (pitié, rush, burns jusqu'à la dernière
@@ -198,6 +201,11 @@ NEAR_SANDBOX_BIN_PATH=/chemin/near-sandbox \
 `MEMASTER_WASM` désigne le wasm à déployer. Par défaut, c'est `../../contract/target/near/memaster.wasm`, à
 construire avec `cargo near build non-reproducible-wasm` dans `contract/`. Sans `NEAR_SANDBOX_BIN_PATH`,
 near-workspaces télécharge le binaire near-sandbox. `SKIP_PY_RPC=1` saute l'appel au CLI Python.
+
+Résultat au 12/11/2026 (contrat v3) : `draw_vectors.json` et `mech_vectors.json` régénérés sont identiques à l'octet
+(le tirage ne change pas) ; `sandbox_mech_vectors.json` et `sandbox_vectors.json` ont été régénérés avec le wasm v3
+(événements avec le bloc `storage`, nouveaux champs de `card_redeemed`) et le CLI Python les vérifie contre le RPC du
+sandbox. Le vérificateur ne lit que les événements : `pack_refunded` et `revenue_withdrawn` ne touchent pas le tirage.
 
 Résultat au 11/11/2026 : les 200 cas purs et les 96 boosters réels concordent tous, sans exception. Après le gold
 pack à planchers et la table de valeur, `draw_vectors.json` régénéré est encore identique à l'octet ; `mech_vectors.json`

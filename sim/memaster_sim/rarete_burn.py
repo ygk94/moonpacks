@@ -21,7 +21,10 @@ from . import modele as M
 
 PARAMS_DEFAUT = {"taux_burn": 0.5, "delai_packs": 5000, "plancher": 0.0, "horizon": 100_000, "lot": 500,
                  "kappa": "fixe",
-                 "renormaliser": "rarete"}
+                 "renormaliser": "rarete", "prior_k": 0}
+# Règle du contrat (`draw::raw_burn_weight`, `in_rarity_weight`) : a priori K = 20, part des brûlables
+# constante dans la rareté. Les résultats publiés (série 3) utilisent PARAMS_DEFAUT (K = 0, « rarete »).
+PARAMS_CONTRAT = {"renormaliser": "brulables", "prior_k": 20, "plancher": 0.25}
 
 
 def _structure(cfg: dict) -> dict:
@@ -69,6 +72,13 @@ def _part_brulable(s: dict, ratio: np.ndarray, renormaliser: str) -> np.ndarray:
     raise ValueError(f"renormaliser inconnu : {renormaliser}")
 
 
+def ratios_burn(e: np.ndarray, b: np.ndarray, prior_k: float = 0.0, plancher: float = 0.0) -> np.ndarray:
+    """Rapport du poids d'une brûlable à son poids de base : `(e − b + K) / (e + K)` (1 si rien n'est
+    émis), borné par `plancher` (le contrat borne le poids par `⌊w × floor_bps / 10⁴⌋`, même rapport)."""
+    r = np.where(e > 0, (e - b + prior_k) / np.where(e > 0, e + prior_k, 1), 1.0)
+    return np.maximum(r, plancher)
+
+
 def simuler(cfg: dict, params: dict | None = None, seed: int = 5) -> dict:
     p = {**PARAMS_DEFAUT, **(params or {})}
     renormaliser = p["renormaliser"]
@@ -83,9 +93,7 @@ def simuler(cfg: dict, params: dict | None = None, seed: int = 5) -> dict:
     lot = p["lot"]
 
     def ratios(n):
-        e, b = emis[n], brules[n]
-        r = np.where(e > 0, (e - b) / np.where(e > 0, e, 1), 1.0)
-        return np.maximum(r, p["plancher"])
+        return ratios_burn(emis[n], brules[n], p["prior_k"], p["plancher"])
 
     def couverture(kap, parts):
         vals = _valeurs(struct, kap)

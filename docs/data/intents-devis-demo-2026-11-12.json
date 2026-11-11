@@ -1,0 +1,503 @@
+{
+ "_doc": "Devis 1Click dry: true (aucun fonds engagé), wNEAR -> actif, INTENTS -> INTENTS, slippage 1 %. Cours wNEAR 1Click : 3.61 $ (2026-11-11T23:05:30.654Z).",
+ "date": "2026-11-11T23:06:26Z",
+ "near_usd": 3.61,
+ "devis": {
+  "nep141:abg-966.meme-cooking.near": [
+   {
+    "usd": 0.04,
+    "ok": false,
+    "amount_in": "11080332409972298088448",
+    "amount_out": "392510698383647140771",
+    "usd_out": 0.0,
+    "perte_pct": 100.0
+   },
+   {
+    "usd": 0.4,
+    "ok": false,
+    "amount_in": "110803324099723006050304",
+    "amount_out": "3925025089515243110742",
+    "usd_out": 0.0,
+    "perte_pct": 100.0
+   },
+   {
+    "usd": 1.0,
+    "ok": false,
+    "amount_in": "277008310249307506737152",
+    "amount_out": "9812221516434119885551",
+    "usd_out": 0.0,
+    "perte_pct": 100.0
+   },
+   {
+    "usd": 4.0,
+    "ok": false,
+    "amount_in": "1108033240997230026948608",
+    "amount_out": "39242063342165241582174",
+    "usd_out": 0.0,
+    "perte_pct": 100.0
+   }
+  ],
+  "nep141:base-0x532f27101965dd16442e59d40670faf5ebb142e4.omft.near": [
+   {
+    "usd": 0.04,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"62682296-0ddb-4f0c-8a59-30581dbd9497\",\"timestamp\":\"2026-11-11T23:06:33.700Z\",\"path\":\"/v0/quote\"}"
+   },
+   {
+    "usd": 0.4,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"294b06a8-64ee-4882-a034-d60a9d96e105\",\"timestamp\":\"2026-11-11T23:06:37.206Z\",\"path\":\"/v0/quote\"}"
+   },
+   {
+    "usd": 1.0,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"13041f16-92ec-4138-b778-74e72f6fc821\",\"timestamp\":\"2026-11-11T23:06:40.683Z\",\"path\":\"/v0/quote\"}"
+   },
+   {
+    "usd": 4.0,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"6ef33116-5212-482c-96c8-8feb58aac2c6\",\"timestamp\":\"2026-11-11T23:06:44.212Z\",\"path\":\"/v0/quote\"}"
+   }
+  ],
+  "nep141:blackdragon.tkn.near": [
+   {
+    "usd": 0.04,
+    "ok": true,
+    "amount_in": "11080332409972298088448",
+    "amount_out": "6117268019877559775553072750000",
+    "usd_out": 0.039805063005,
+    "perte_pct": 0.49
+   },
+   {
+    "usd": 0.4,
+    "ok": true,
+    "amount_in": "110803324099723006050304",
+    "amount_out": "61171591223561201616403170000000",
+    "usd_out": 0.398043544092,
+    "perte_pct": 0.49
+   },
+   {
+    "usd": 1.0,
+    "ok": true,
+    "amount_in": "277008310249307506737152",
+    "amount_out": "152924440877565106766091075000000",
+    "usd_out": 0.99507933679,
+    "perte_pct": 0.49
+   },
+   {
+    "usd": 4.0,
+    "ok": true,
+    "amount_in": "1108033240997230026948608",
+    "amount_out": "611607036034498617753740100000000",
+    "usd_out": 3.979726983476,
+    "perte_pct": 0.51
+   }
+  ],
+  "nep141:eth-0xa35923162c49cf95e6bf26623385eb431ad920d3.omft.near": [
+   {
+    "usd": 0.04,
+    "ok": true,
+    "amount_in": "11080332409972298088448",
+    "amount_out": "57866228683421052631",
+    "usd_out": 0.03951742623,
+    "perte_pct": 1.21
+   },
+   {
+    "usd": 0.4,
+    "ok": true,
+    "amount_in": "110803324099723006050304",
+    "amount_out": "578649148689453947367",
+    "usd_out": 0.395165290132,
+    "perte_pct": 1.21
+   },
+   {
+    "usd": 1.0,
+    "ok": true,
+    "amount_in": "277008310249307506737152",
+    "amount_out": "1446746224304960526315",
+    "usd_out": 0.98799746404,
+    "perte_pct": 1.2
+   },
+   {
+    "usd": 4.0,
+    "ok": true,
+    "amount_in": "1108033240997230026948608",
+    "amount_out": "5788596509643315789472",
+    "usd_out": 3.953090442401,
+    "perte_pct": 1.17
+   }
+  ],
+  "nep141:eth-0xaaee1a9723aadb7afa2810263653a34ba2c21c7a.omft.near": [
+   {
+    "usd": 0.04,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"e3dbc901-608d-4109-970a-a2417314d772\",\"timestamp\":\"2026-11-11T23:06:53.946Z\",\"path\":\"/v0/quote\"}"
+   },
+   {
+    "usd": 0.4,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"aa0d8a1e-fe31-4de0-a04e-ac106ae2cad6\",\"timestamp\":\"2026-11-11T23:06:57.415Z\",\"path\":\"/v0/quote\"}"
+   },
+   {
+    "usd": 1.0,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"dea9eff2-ca5a-40bd-bcde-a545eb89705b\",\"timestamp\":\"2026-11-11T23:07:02.082Z\",\"path\":\"/v0/quote\"}"
+   },
+   {
+    "usd": 4.0,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"91420f33-99e5-4355-9fa6-84a1f7faa003\",\"timestamp\":\"2026-11-11T23:07:05.569Z\",\"path\":\"/v0/quote\"}"
+   }
+  ],
+  "nep141:eth-0xe0f63a424a4439cbe457d80e4f4b51ad25b2c56c.omft.near": [
+   {
+    "usd": 0.04,
+    "ok": true,
+    "amount_in": "11080332409972298088448",
+    "amount_out": "10984872",
+    "usd_out": 0.039803354146,
+    "perte_pct": 0.49
+   },
+   {
+    "usd": 0.4,
+    "ok": true,
+    "amount_in": "110803324099723006050304",
+    "amount_out": "109821890",
+    "usd_out": 0.397936323758,
+    "perte_pct": 0.52
+   },
+   {
+    "usd": 1.0,
+    "ok": true,
+    "amount_in": "277008310249307506737152",
+    "amount_out": "274555408",
+    "usd_out": 0.994843284226,
+    "perte_pct": 0.52
+   },
+   {
+    "usd": 4.0,
+    "ok": true,
+    "amount_in": "1108033240997230026948608",
+    "amount_out": "1097916467",
+    "usd_out": 3.97826738068,
+    "perte_pct": 0.54
+   }
+  ],
+  "nep141:gnear-229.meme-cooking.near": [
+   {
+    "usd": 0.04,
+    "ok": false,
+    "amount_in": "11080332409972298088448",
+    "amount_out": "3999030271747751736477",
+    "usd_out": 0.0,
+    "perte_pct": 100.0
+   },
+   {
+    "usd": 0.4,
+    "ok": false,
+    "amount_in": "110803324099723006050304",
+    "amount_out": "39985832213837215570584",
+    "usd_out": 0.0,
+    "perte_pct": 100.0
+   },
+   {
+    "usd": 1.0,
+    "ok": false,
+    "amount_in": "277008310249307506737152",
+    "amount_out": "99945958987904333786732",
+    "usd_out": 0.0,
+    "perte_pct": 100.0
+   },
+   {
+    "usd": 4.0,
+    "ok": false,
+    "amount_in": "1108033240997230026948608",
+    "amount_out": "399411820892333773595921",
+    "usd_out": 0.0,
+    "perte_pct": 100.0
+   }
+  ],
+  "nep141:hood-0x020bfc650a365f8bb26819deaabf3e21291018b4.omft.near": [
+   {
+    "usd": 0.04,
+    "ok": true,
+    "amount_in": "11080332409972298088448",
+    "amount_out": "706842503363784796",
+    "usd_out": 0.039901259315,
+    "perte_pct": 0.25
+   },
+   {
+    "usd": 0.4,
+    "ok": true,
+    "amount_in": "110803324099723006050304",
+    "amount_out": "7070616599968763382",
+    "usd_out": 0.399136307068,
+    "perte_pct": 0.22
+   },
+   {
+    "usd": 1.0,
+    "ok": true,
+    "amount_in": "277008310249307506737152",
+    "amount_out": "17686403548411027836",
+    "usd_out": 0.998397480308,
+    "perte_pct": 0.16
+   },
+   {
+    "usd": 4.0,
+    "ok": true,
+    "amount_in": "1108033240997230026948608",
+    "amount_out": "70765302655397457173",
+    "usd_out": 3.994701334897,
+    "perte_pct": 0.13
+   }
+  ],
+  "nep141:jambo-1679.meme-cooking.near": [
+   {
+    "usd": 0.04,
+    "ok": true,
+    "amount_in": "11080332409972298088448",
+    "amount_out": "206671594386911513987",
+    "usd_out": 0.039866036384,
+    "perte_pct": 0.33
+   },
+   {
+    "usd": 0.4,
+    "ok": true,
+    "amount_in": "110803324099723006050304",
+    "amount_out": "2066684657127045938730",
+    "usd_out": 0.39865432877,
+    "perte_pct": 0.34
+   },
+   {
+    "usd": 1.0,
+    "ok": true,
+    "amount_in": "277008310249307506737152",
+    "amount_out": "5166581286654755736291",
+    "usd_out": 0.996610676799,
+    "perte_pct": 0.34
+   },
+   {
+    "usd": 4.0,
+    "ok": true,
+    "amount_in": "1108033240997230026948608",
+    "amount_out": "20663718417978457378460",
+    "usd_out": 3.985939880772,
+    "perte_pct": 0.35
+   }
+  ],
+  "nep141:kat.token0.near": [
+   {
+    "usd": 0.04,
+    "ok": true,
+    "amount_in": "11080332409972298088448",
+    "amount_out": "463036091145531125874",
+    "usd_out": 0.03977943059,
+    "perte_pct": 0.55
+   },
+   {
+    "usd": 0.4,
+    "ok": true,
+    "amount_in": "110803324099723006050304",
+    "amount_out": "4630171471148429077969",
+    "usd_out": 0.397778031086,
+    "perte_pct": 0.56
+   },
+   {
+    "usd": 1.0,
+    "ok": true,
+    "amount_in": "277008310249307506737152",
+    "amount_out": "11574639429369893749102",
+    "usd_out": 0.994377273377,
+    "perte_pct": 0.56
+   },
+   {
+    "usd": 4.0,
+    "ok": true,
+    "amount_in": "1108033240997230026948608",
+    "amount_out": "46283083047319540911128",
+    "usd_out": 3.976179664595,
+    "perte_pct": 0.6
+   }
+  ],
+  "nep141:noear-324.meme-cooking.near": [
+   {
+    "usd": 0.04,
+    "ok": false,
+    "amount_in": "11080332409972298088448",
+    "amount_out": "5498528599370674923727",
+    "usd_out": 0.0,
+    "perte_pct": 100.0
+   },
+   {
+    "usd": 0.4,
+    "ok": false,
+    "amount_in": "110803324099723006050304",
+    "amount_out": "54974647147405274872603",
+    "usd_out": 0.0,
+    "perte_pct": 100.0
+   },
+   {
+    "usd": 1.0,
+    "ok": false,
+    "amount_in": "277008310249307506737152",
+    "amount_out": "137392312206669392811008",
+    "usd_out": 0.0,
+    "perte_pct": 100.0
+   },
+   {
+    "usd": 4.0,
+    "ok": false,
+    "amount_in": "1108033240997230026948608",
+    "amount_out": "548684846778039289365247",
+    "usd_out": 0.0,
+    "perte_pct": 100.0
+   }
+  ],
+  "nep141:purge-558.meme-cooking.near": [
+   {
+    "usd": 0.04,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"cb59a98a-76b9-4223-b2d4-14297a80ed43\",\"timestamp\":\"2026-11-11T23:07:28.390Z\",\"path\":\"/v0/quote\"}"
+   },
+   {
+    "usd": 0.4,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"7762dc41-1e6c-4ee6-a97a-a0d199c34ed6\",\"timestamp\":\"2026-11-11T23:07:31.897Z\",\"path\":\"/v0/quote\"}"
+   },
+   {
+    "usd": 1.0,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"1a83751d-3220-4403-86ac-a9635b1c04a9\",\"timestamp\":\"2026-11-11T23:07:35.390Z\",\"path\":\"/v0/quote\"}"
+   },
+   {
+    "usd": 4.0,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"d1b71f81-cd4e-42f8-83c0-966ed9f561fe\",\"timestamp\":\"2026-11-11T23:07:38.880Z\",\"path\":\"/v0/quote\"}"
+   }
+  ],
+  "nep141:sol-0xaad74c68eecfc9f8c5bdcea614f6167048c795ef.omdep.near": [
+   {
+    "usd": 0.04,
+    "ok": true,
+    "amount_in": "11080332409972298088448",
+    "amount_out": "6367658",
+    "usd_out": 0.039876503076,
+    "perte_pct": 0.31
+   },
+   {
+    "usd": 0.4,
+    "ok": true,
+    "amount_in": "110803324099723006050304",
+    "amount_out": "63681172",
+    "usd_out": 0.398793787474,
+    "perte_pct": 0.3
+   },
+   {
+    "usd": 1.0,
+    "ok": true,
+    "amount_in": "277008310249307506737152",
+    "amount_out": "159203493",
+    "usd_out": 0.996987994389,
+    "perte_pct": 0.3
+   },
+   {
+    "usd": 4.0,
+    "ok": true,
+    "amount_in": "1108033240997230026948608",
+    "amount_out": "636636667",
+    "usd_out": 3.986841631587,
+    "perte_pct": 0.33
+   }
+  ],
+  "nep141:sol-57d087fd8c460f612f8701f5499ad8b2eec5ab68.omft.near": [
+   {
+    "usd": 0.04,
+    "ok": true,
+    "amount_in": "11080332409972298088448",
+    "amount_out": "65854414",
+    "usd_out": 0.03973852904,
+    "perte_pct": 0.65
+   },
+   {
+    "usd": 0.4,
+    "ok": true,
+    "amount_in": "110803324099723006050304",
+    "amount_out": "658745178",
+    "usd_out": 0.397506602761,
+    "perte_pct": 0.62
+   },
+   {
+    "usd": 1.0,
+    "ok": true,
+    "amount_in": "277008310249307506737152",
+    "amount_out": "1646868762",
+    "usd_out": 0.993770017054,
+    "perte_pct": 0.62
+   },
+   {
+    "usd": 4.0,
+    "ok": true,
+    "amount_in": "1108033240997230026948608",
+    "amount_out": "6587476710",
+    "usd_out": 3.975081071115,
+    "perte_pct": 0.62
+   }
+  ],
+  "nep141:sol-b9c68f94ec8fd160137af8cdfe5e61cd68e2afba.omft.near": [
+   {
+    "usd": 0.04,
+    "ok": true,
+    "amount_in": "11080332409972298088448",
+    "amount_out": "253997",
+    "usd_out": 0.039512027317,
+    "perte_pct": 1.22
+   },
+   {
+    "usd": 0.4,
+    "ok": true,
+    "amount_in": "110803324099723006050304",
+    "amount_out": "2540118",
+    "usd_out": 0.395143296198,
+    "perte_pct": 1.21
+   },
+   {
+    "usd": 1.0,
+    "ok": true,
+    "amount_in": "277008310249307506737152",
+    "amount_out": "6350337",
+    "usd_out": 0.987864774057,
+    "perte_pct": 1.21
+   },
+   {
+    "usd": 4.0,
+    "ok": true,
+    "amount_in": "1108033240997230026948608",
+    "amount_out": "25401377",
+    "usd_out": 3.951463607497,
+    "perte_pct": 1.21
+   }
+  ],
+  "nep141:sol-bb27241c87aa401cc963c360c175dd7ca7035873.omft.near": [
+   {
+    "usd": 0.04,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"fec2ae55-7486-4ab5-9c85-7a02b997943c\",\"timestamp\":\"2026-11-11T23:07:52.853Z\",\"path\":\"/v0/quote\"}"
+   },
+   {
+    "usd": 0.4,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"a3b67349-1001-401c-a1a4-313cfa876fbe\",\"timestamp\":\"2026-11-11T23:07:56.680Z\",\"path\":\"/v0/quote\"}"
+   },
+   {
+    "usd": 1.0,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"93d1bbc3-d4ae-4d3a-8480-e9df2263011e\",\"timestamp\":\"2026-11-11T23:08:00.157Z\",\"path\":\"/v0/quote\"}"
+   },
+   {
+    "usd": 4.0,
+    "ok": false,
+    "erreur": "{\"message\":\"No liquidity available\",\"correlationId\":\"61be44d7-3e4c-4b99-95b6-53da4dc46794\",\"timestamp\":\"2026-11-11T23:08:03.639Z\",\"path\":\"/v0/quote\"}"
+   }
+  ]
+ }
+}

@@ -80,7 +80,7 @@ pub const CARDS_KEY: &[u8] = b"\"cards\":[";
 /// `table_json = avant || cartes séparées par "," || après`.
 pub fn header_json_parts(header: &crate::types::SeriesTable) -> (Vec<u8>, Vec<u8>) {
     assert!(header.cards.is_empty(), "en-tête sans cartes attendu");
-    let bytes = near_sdk::serde_json::to_vec(header).unwrap_or_else(|_| near_sdk::env::panic_str("JSON impossible"));
+    let bytes = near_sdk::serde_json::to_vec(header).unwrap_or_else(|_| near_sdk::env::panic_str("E_INTERNAL: JSON impossible"));
     split_at_cards(&bytes)
 }
 
@@ -93,13 +93,13 @@ pub fn header_json_parts(header: &crate::types::SeriesTable) -> (Vec<u8>, Vec<u8
 /// paniquer la création au lieu de produire un hash faux.
 pub fn split_at_cards(bytes: &[u8]) -> (Vec<u8>, Vec<u8>) {
     let mut hits = bytes.windows(CARDS_KEY.len()).enumerate().filter(|(_, w)| *w == CARDS_KEY).map(|(i, _)| i);
-    let pos = hits.next().unwrap_or_else(|| near_sdk::env::panic_str("Champ cards introuvable"));
+    let pos = hits.next().unwrap_or_else(|| near_sdk::env::panic_str("E_INTERNAL: Champ cards introuvable"));
     if hits.next().is_some() {
-        near_sdk::env::panic_str("Motif \"cards\":[ présent plusieurs fois dans l'en-tête");
+        near_sdk::env::panic_str("E_TABLE_FORMAT: Motif \"cards\":[ présent plusieurs fois dans l'en-tête");
     }
     let cut = pos + CARDS_KEY.len();
     if bytes.get(cut) != Some(&b']') {
-        near_sdk::env::panic_str("En-tête : tableau cards non vide");
+        near_sdk::env::panic_str("E_INTERNAL: En-tête : tableau cards non vide");
     }
     (bytes[..cut].to_vec(), bytes[cut..].to_vec())
 }

@@ -202,15 +202,18 @@ def table_from_pages(header_view: dict, pages: list[bytes]) -> tuple[dict, list[
 
 
 def verify_table_pages(
-    header_view: dict, pages: list[bytes], expected_hex: dict[str, str | None]
+    header_view: dict, pages: list[bytes], expected_hex: dict[str, str | None], draft: bool = False
 ) -> tuple[Report, dict]:
     """Vérification d'une table lue par pages : en-tête léger (`get_series_header`) et pages brutes
     de `get_series_cards`. Le hash est recalculé ici, sur la table reconstruite, puis comparé au
     hash enregistré à l'ouverture (`header_view["table_hash"]`) et aux autres sources."""
     table, problems = table_from_pages(header_view, pages)
-    rep, table = verify_table(
-        table_json_bytes(table), {"get_series_header.table_hash (enregistré à l'ouverture)": header_view.get("table_hash"), **expected_hex}
-    )
+    # Brouillon (`draft`) : aucun hash n'est encore enregistré, on compare au seul hash attendu
+    # (contrôle avant `open_series` : le brouillon chargé est-il exactement la table locale ?).
+    stored = {} if draft else {"get_series_header.table_hash (enregistré à l'ouverture)": header_view.get("table_hash")}
+    rep, table = verify_table(table_json_bytes(table), {**stored, **expected_hex})
+    if draft and header_view.get("status") != "draft":
+        rep.errors.append(f"--draft : la série est « {header_view.get('status')} », pas un brouillon")
     rep.title = "Table de série (lue par pages)"
     rep.ok_lines = [x for x in rep.ok_lines if not x.startswith("les octets reçus")]
     for p in problems:
@@ -434,7 +437,37 @@ def verify_pack(
             rep.check(ok, f"emplacement {slot} : carte de la bonne rareté", f"emplacement {slot} : carte incohérente avec la rareté finale (ou la règle de l'emplacement)")
         rep.note("sans état des plafonds (--snapshot, --history ou --rpc) : card_roll et le choix de la carte ne sont pas recalculés")
     verify_value(rep, ev, table, acc, mode, backed)
+    verify_storage(rep, ev)
     return rep
+
+
+# Coût du stockage sur NEAR : 10¹⁹ yoctoNEAR par octet.
+STORAGE_BYTE_COST = 10**19
+
+
+def verify_storage(rep: Report, ev: dict) -> None:
+    """Bloc `storage` de `pack_revealed` (contrat v3) : stockage prépayé, stockage mesuré par le contrat
+    et montant rendu à l'acheteur. Vérifie `refund = max(0, prepaid_bytes − used_bytes) × 10¹⁹`. La mesure
+    elle-même (`used_bytes`) vient de `env::storage_usage()` et ne se recalcule pas depuis l'événement :
+    on peut la comparer à la variation de `storage_usage` du compte du contrat sur les reçus du pack.
+    Le montant rendu n'influence pas le tirage (virement émis après les cartes)."""
+    st = ev.get("storage")
+    if st is None:
+        rep.note("pas de bloc storage (contrat d'avant la v3 : stockage prépayé non rendu)")
+        return
+    try:
+        prepaid, used, refund = int(st["prepaid_bytes"]), int(st["used_bytes"]), int(st["refund"])
+    except (KeyError, TypeError, ValueError):
+        rep.errors.append(f"bloc storage illisible : {st}")
+        return
+    expected = max(0, prepaid - used) * STORAGE_BYTE_COST
+    rep.check(
+        refund == expected,
+        f"stockage : {used} o utilisés sur {prepaid} prépayés, {refund} yoctoNEAR rendus",
+        f"stockage : rendu {refund} ≠ (prépayé {prepaid} − utilisé {used}) × 10¹⁹ = {expected}",
+    )
+    if used > prepaid:
+        rep.note(f"stockage utilisé {used} o au-delà du prépayé {prepaid} o (relances) : le contrat paie la différence")
 
 
 def _rolled(table: dict, rarity_roll: int) -> str:

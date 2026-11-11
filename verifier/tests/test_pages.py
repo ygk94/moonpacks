@@ -17,6 +17,8 @@ from unittest import mock
 
 from memaster_verifier import canon, cli, core
 
+from tests import fake_secrets
+
 HERE = Path(__file__).resolve().parent
 CONTRACT = HERE.parent.parent / "contract"
 VEC = HERE / "vectors"
@@ -25,8 +27,8 @@ VEC = HERE / "vectors"
 class FakeRpc:
     """Vues `get_series_header`, `get_series_cards` et `get_series_table_hash` d'une série ouverte."""
 
-    def __init__(self, table: dict, table_hash: str, series_id: int = 0):
-        self.table, self.hash, self.sid = table, table_hash, series_id
+    def __init__(self, table: dict, table_hash: str | None, series_id: int = 0, status: str = "open"):
+        self.table, self.hash, self.sid, self.status = table, table_hash, series_id, status
         self.calls = []
 
     def view_raw_at(self, contract, method, args=None, block_id=None):
@@ -35,7 +37,7 @@ class FakeRpc:
         if method == "get_series_header":
             header = dict(self.table, cards=[])
             body = {
-                "series_id": self.sid, "status": "open", "table_hash": self.hash,
+                "series_id": self.sid, "status": self.status, "table_hash": self.hash,
                 "card_count": len(self.table["cards"]), "max_page": 200, "storage_deposit": "0", "header": header,
             }
             return json.dumps(body, ensure_ascii=False).encode("utf-8"), 1234
@@ -70,6 +72,7 @@ class SeriesV2Pages(unittest.TestCase):
         d = Path(cls.tmp.name)
         res = subprocess.run(
             [sys.executable, "-I", str(CONTRACT / "scripts" / "build_series.py"), str(CONTRACT / "scripts" / "serie-exemple.json"),
+             "--mythiques", str(fake_secrets.write_fake_mythics(d)),
              "--out", str(d / "out"), "--secrets", str(d / "secrets" / "s.json")],
             capture_output=True, text=True,
         )
@@ -99,6 +102,24 @@ class SeriesV2Pages(unittest.TestCase):
                 self.assertEqual(fake.calls.count("get_series_cards"), n)
                 self.assertNotIn("get_series_table", fake.calls)
                 self.assertNotIn("get_rates", fake.calls)
+
+    def test_draft_is_checked_before_open_series(self):
+        """Avant `open_series` (deploy_testnet.sh) : le brouillon chargé doit redonner le hash local ;
+        un lot manquant (reprise après une coupure) est refusé, au lieu d'ouvrir une table tronquée."""
+        args = ["table", "--rpc", "fake", "--contract", "c", "--series", "0"]
+        code, out = run_cli(FakeRpc(self.table, None, status="draft"), *args, "--draft", "--expected-hash", self.hash_before)
+        self.assertEqual(code, 0, out)
+        self.assertIn("VÉRIFIÉ", out)
+        short = dict(self.table, cards=self.table["cards"][:-77])
+        code, out = run_cli(FakeRpc(short, None, status="draft"), *args, "--draft", "--expected-hash", self.hash_before)
+        self.assertEqual(code, 1, out)
+        # Sans --draft, un brouillon n'a pas de hash publié : refus (comportement d'avant).
+        code, out = run_cli(FakeRpc(self.table, None, status="draft"), *args, "--expected-hash", self.hash_before)
+        self.assertEqual(code, 1, out)
+        # --draft sur une série déjà ouverte : refus.
+        code, out = run_cli(FakeRpc(self.table, self.hash_before), *args, "--draft", "--expected-hash", self.hash_before)
+        self.assertEqual(code, 1, out)
+        self.assertIn("pas un brouillon", out)
 
     def test_page_size_is_capped_at_200(self):
         fake = FakeRpc(self.table, self.hash_before)

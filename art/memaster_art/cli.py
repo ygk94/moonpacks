@@ -19,6 +19,14 @@ def _ecrire(chemin: str, donnees: bytes) -> None:
         f.write(donnees)
 
 
+def sceller(c):
+    """Mythique scellée : aucune donnée du recto (ni nom, ni ticker, ni N°, ni clé) n'est gardée."""
+    from dataclasses import replace
+
+    return replace(c, rarete="mythique", ticker="?", nom="?", chaine="", identifiant="?", numero=None,
+                   cle="", adresse="", scellee=True)
+
+
 def generer(cartes, out: str, base_url: str = "", planche: bool = False, langue: str = "fr") -> dict:
     """`langue=\"en\"` : textes visibles des SVG en anglais (les métadonnées JSON ne changent pas)."""
     traduire = en_anglais if langue == "en" else (lambda s: s)
@@ -31,11 +39,16 @@ def generer(cartes, out: str, base_url: str = "", planche: bool = False, langue:
         _ecrire(os.path.join(out, "dos-mythique.svg"), dos)
         _ecrire(os.path.join(out, "dos-mythique.json"), en_octets(metadonnees_dos(dos, base_url)))
         entrees.append(("dos-mythique.svg", "dos scellé · mythique"))
+    k = 0
     for c in cartes:
-        if c.scellee:
-            # Mythique scellée : le public ne voit que le dos commun, pas de recto ni de référence.
+        if c.scellee or c.rarete == "mythique":
+            # Toute mythique est scellée : le public ne voit que le dos commun, ni recto, ni
+            # référence, ni nom de fichier tiré du coin (une mythique du catalogue markdown,
+            # passée par --mythiques, garde sinon son N° et son ticker dans `nom_fichier`).
+            k += 1
+            nom = c.cle if (c.scellee and c.cle) else f"mythique-m{k}"
             meta = metadonnees_dos(dos, base_url, carte=c)
-            _ecrire(os.path.join(out, c.nom_fichier + ".json"), en_octets(meta))
+            _ecrire(os.path.join(out, nom + ".json"), en_octets(meta))
             stats["cartes"] += 1
             stats["mythiques"] += 1
             stats["scellees"] += 1
@@ -83,11 +96,9 @@ def main(argv=None) -> int:
     if a.mythiques and v2:
         ap.error("--mythiques ne vaut que pour un catalogue markdown : le JSON v2 porte déjà ses mythiques")
     if a.mythiques:
-        from dataclasses import replace
-
         cibles = {t.strip().upper() for t in a.mythiques.split(",") if t.strip()}
         cartes = [
-            replace(c, rarete="mythique") if (str(c.numero) in cibles or c.ticker.upper() in cibles) else c
+            sceller(c) if (str(c.numero) in cibles or c.ticker.upper() in cibles) else c
             for c in cartes
         ]
     if a.limit is not None:

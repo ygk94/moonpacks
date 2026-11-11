@@ -310,6 +310,8 @@ impl Contract {
             // Prix et stockage de la série (figés à l'ouverture) : plus stockés par pack.
             "price_paid": s.table.price,
             "storage_prepaid": U128(env::storage_byte_cost().as_yoctonear() * s.storage_per_pack as u128),
+            // Stockage mesuré du pack (octets) ; au tirage, `storage_prepaid` moins ce montant est rendu.
+            "storage_used": p.storage_used,
             "bought_at_height": p.bought_at_height,
             "status": p.status,
             "attempt": p.attempt,
@@ -416,10 +418,10 @@ impl Contract {
             let chunk = self
                 .series_cards
                 .get(&(series_id, i / CARDS_PER_CHUNK))
-                .unwrap_or_else(|| env::panic_str("Bloc de cartes manquant"));
+                .unwrap_or_else(|| env::panic_str("E_INTERNAL: Bloc de cartes manquant"));
             let lo = (i % CARDS_PER_CHUNK) as usize;
             let hi = (lo + (to - i) as usize).min(chunk.len());
-            require!(hi > lo, "Blocs de cartes incohérents");
+            require!(hi > lo, "E_INTERNAL: Blocs de cartes incohérents");
             out.extend_from_slice(&chunk[lo..hi]);
             i += (hi - lo) as u32;
         }

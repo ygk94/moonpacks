@@ -26,6 +26,7 @@ mod nft;
 mod pack;
 mod redeem;
 mod series;
+mod treasury;
 pub mod types;
 mod views;
 
@@ -35,6 +36,12 @@ mod tests;
 mod tests_batch;
 #[cfg(test)]
 mod tests_mech;
+#[cfg(test)]
+mod tests_fuzz;
+#[cfg(test)]
+mod tests_limits;
+#[cfg(test)]
+mod tests_v3;
 
 use types::*;
 
@@ -69,6 +76,10 @@ pub const MAX_TITLE_LEN: usize = 64;
 pub const MAX_URL_LEN: usize = 256;
 pub const MAX_ASSET_ID_LEN: usize = 128;
 pub const MAX_ATTEMPTS: u32 = 10;
+/// Délai minimal de `retry_reveal` (blocs sans progrès). En dessous, n'importe qui peut relancer un
+/// tirage encore en cours (reçus retardés par la congestion) et, en 10 appels, faire passer le pack
+/// d'un autre en `Stuck`, sans remboursement.
+pub const MIN_RETRY_DELAY_BLOCKS: u64 = 20;
 pub const MIN_REVEAL_STEPS: u8 = 2;
 pub const MAX_REVEAL_STEPS: u8 = 6;
 
@@ -106,8 +117,16 @@ pub const MYTHIC_TITLE: &str = "?";
 pub const MYTHIC_DESCRIPTION: &str = "?";
 /// Image « ? » (SVG en URI `data:`, 500 × 700 comme les cartes), identique pour toutes les mythiques.
 pub const MYTHIC_MEDIA: &str = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20500%20700'%3E%3Crect%20width='500'%20height='700'%20rx='24'%20fill='%230b0507'/%3E%3Ctext%20x='250'%20y='470'%20font-size='360'%20font-family='serif'%20font-weight='700'%20fill='%23ffcf4a'%20text-anchor='middle'%3E%3F%3C/text%3E%3C/svg%3E";
+/// Prix maximal d'une annonce (10⁹ NEAR, au-delà de l'offre totale) : le calcul des redevances
+/// (`prix × bps`, 5 000 bps au plus) reste loin de `u128::MAX`.
+pub const MAX_LISTING_PRICE: u128 = 1_000_000_000 * 1_000_000_000_000_000_000_000_000;
 /// Dépôt d'une annonce de marché.
 pub const LISTING_DEPOSIT: NearToken = NearToken::from_millinear(5);
+/// Réserve minimale gardée sur le contrat par `withdraw_revenue`, au-delà des engagements : elle
+/// couvre le stockage que le contrat paie lui-même (graines des relances, listes d'un acheteur du
+/// marché ou d'un destinataire de transfert, environ 120 o au premier) et garantit que les
+/// remboursements du tirage final ne manquent jamais de solde (`LackBalanceForState`).
+pub const TREASURY_MIN_RESERVE: NearToken = NearToken::from_near(1);
 
 /// Cartes par bloc de la liste d'un propriétaire.
 pub const OWNER_CHUNK: u32 = 32;
@@ -193,8 +212,18 @@ pub struct Contract {
     rush_accounts: LookupMap<(AccountId, u32), (u64, u32)>,
     listings: IterableMap<TokenId, Listing>,
     next_pack_id: u64,
-    /// Total encaissé en prix de boosters (yoctoNEAR). Aucun retrait pour l'instant.
+    /// Total encaissé en prix de boosters (yoctoNEAR), net des packs `Stuck` remboursés.
     revenue: u128,
+    /// Engagements envers les acheteurs des packs non tirés (`Pending`, `Stuck`) : prix et stockage
+    /// prépayé entier (`storage_per_pack`), jusqu'au tirage ou au remboursement. Non retirable.
+    pack_escrow: u128,
+    /// Dépôts des annonces en cours (rendus au vendeur au retrait ou à la vente).
+    listing_deposits: u128,
+    /// Valeur tirée (yoctoNEAR) des cartes brûlables vivantes d'une série à table de valeur : ce qui
+    /// adosse les cartes non brûlées. Diminue à chaque burn réussi de la part de la carte.
+    value_reserved: u128,
+    /// Total retiré par l'owner (`withdraw_revenue`).
+    withdrawn: u128,
 }
 
 #[near]
@@ -222,7 +251,12 @@ impl Contract {
         let reveal_steps = reveal_steps.unwrap_or(3);
         require!(
             (MIN_REVEAL_STEPS..=MAX_REVEAL_STEPS).contains(&reveal_steps),
-            "reveal_steps hors bornes"
+            "E_INIT_PARAM: reveal_steps hors bornes"
+        );
+        let retry_delay_blocks = retry_delay_blocks.unwrap_or(100);
+        require!(
+            retry_delay_blocks >= MIN_RETRY_DELAY_BLOCKS,
+            format!("E_INIT_PARAM: retry_delay_blocks ≥ {MIN_RETRY_DELAY_BLOCKS} (sinon un tiers peut bloquer un pack en Stuck)")
         );
         Self {
             owner_id,
@@ -231,7 +265,7 @@ impl Contract {
             price_oracle_pending: None,
             config: Config {
                 reveal_steps,
-                retry_delay_blocks: retry_delay_blocks.unwrap_or(100),
+                retry_delay_blocks,
                 oracle_delay_blocks: oracle_delay_blocks.unwrap_or(DEFAULT_ORACLE_DELAY_BLOCKS),
             },
             metadata,
@@ -252,6 +286,10 @@ impl Contract {
             listings: IterableMap::new(StorageKey::Listings),
             next_pack_id: 0,
             revenue: 0,
+            pack_escrow: 0,
+            listing_deposits: 0,
+            value_reserved: 0,
+            withdrawn: 0,
         }
     }
 
@@ -289,10 +327,10 @@ impl Contract {
     /// Applique le changement d'oracle proposé, une fois le délai écoulé (owner).
     pub fn accept_price_oracle(&mut self) {
         self.assert_owner();
-        let p = self.price_oracle_pending.clone().unwrap_or_else(|| env::panic_str("Aucun changement d'oracle proposé"));
+        let p = self.price_oracle_pending.clone().unwrap_or_else(|| env::panic_str("E_NO_ORACLE_PROPOSAL: Aucun changement d'oracle proposé"));
         require!(
             env::block_height() >= p.effective_from,
-            format!("Délai du changement d'oracle non écoulé : bloc {} au plus tôt", p.effective_from)
+            format!("E_ORACLE_DELAY: Délai du changement d'oracle non écoulé : bloc {} au plus tôt", p.effective_from)
         );
         let previous = std::mem::replace(&mut self.price_oracle_id, p.price_oracle_id.clone());
         self.price_oracle_pending = None;
@@ -331,7 +369,7 @@ impl Contract {
 
 impl Contract {
     pub(crate) fn assert_owner(&self) {
-        require!(env::predecessor_account_id() == self.owner_id, "Réservé à l'owner");
+        require!(env::predecessor_account_id() == self.owner_id, "E_NOT_OWNER: Réservé à l'owner");
     }
 
     pub(crate) fn gas_for_step(&self, step: u8) -> Gas {
@@ -345,7 +383,7 @@ impl Contract {
     }
 
     pub(crate) fn series_ref(&self, series_id: u32) -> &Series {
-        self.series.get(series_id).unwrap_or_else(|| env::panic_str("Série inconnue"))
+        self.series.get(series_id).unwrap_or_else(|| env::panic_str("E_UNKNOWN_SERIES: Série inconnue"))
     }
 
     /// Carte visible d'index `index` (lit un seul bloc).
@@ -354,7 +392,7 @@ impl Contract {
             .get(&(series_id, index / CARDS_PER_CHUNK))
             .and_then(|chunk| chunk.get((index % CARDS_PER_CHUNK) as usize))
             .cloned()
-            .unwrap_or_else(|| env::panic_str("Carte de table inconnue"))
+            .unwrap_or_else(|| env::panic_str("E_INTERNAL: Carte de table inconnue"))
     }
 
     /// Toutes les cartes visibles d'une série, dans l'ordre de la table.
@@ -366,7 +404,7 @@ impl Contract {
                 out.extend(chunk.iter().cloned());
             }
         }
-        require!(out.len() == n as usize, "Blocs de cartes incohérents");
+        require!(out.len() == n as usize, "E_INTERNAL: Blocs de cartes incohérents");
         out
     }
 
@@ -427,11 +465,46 @@ impl Contract {
         }
     }
 
+    /// Écrit tout l'état en attente : `env::storage_usage()` reflète alors exactement ce reçu.
+    pub(crate) fn flush_all(&mut self) {
+        self.series.flush();
+        self.series_cards.flush();
+        self.series_burns.flush();
+        self.resurrected.flush();
+        self.packs.flush();
+        self.owner_packs.flush();
+        self.pack_count_by_owner.flush();
+        self.owner_tokens.flush();
+        self.owner_token_count.flush();
+        self.all_tokens.flush();
+        self.approvals.flush();
+        self.pity.flush();
+        self.rush_accounts.flush();
+        self.listings.flush();
+    }
+
+    /// Octets ajoutés depuis `start` (après `flush_all`).
+    pub(crate) fn storage_added_since(&mut self, start: u64) -> u64 {
+        self.flush_all();
+        env::storage_usage().saturating_sub(start)
+    }
+
+    /// Octets libérés depuis `start` (après `flush_all`).
+    pub(crate) fn storage_freed_since(&mut self, start: u64) -> u64 {
+        self.flush_all();
+        start.saturating_sub(env::storage_usage())
+    }
+
     pub(crate) fn refund(to: &AccountId, amount: u128) {
         if amount > 0 {
             near_sdk::Promise::new(to.clone()).transfer(NearToken::from_yoctonear(amount)).detach();
         }
     }
+}
+
+/// Exactement 1 yoctoNEAR joint (comme `near_sdk::assert_one_yocto`, avec un code d'erreur).
+pub(crate) fn assert_one_yocto() {
+    require!(env::attached_deposit().as_yoctonear() == 1, "E_ONE_YOCTO: Requires attached deposit of exactly 1 yoctoNEAR");
 }
 
 /// `token_id = pack_id × 10 + emplacement` (10 cartes par booster au plus).
