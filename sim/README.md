@@ -35,6 +35,10 @@ python3 -m venv .venv
 .venv/bin/python -m memaster_sim.serie3 run
 .venv/bin/python -m memaster_sim.serie3 run --rapide --sections pitie rush
 
+# série 4 (valeur V tirée par pack, gold pack redéfini) : configs de pack, puis tout (environ 20 s)
+.venv/bin/python -m memaster_sim.serie4 configs
+.venv/bin/python -m memaster_sim.serie4 run
+
 # tests
 .venv/bin/python -m pytest -q tests
 ```
@@ -53,6 +57,10 @@ python3 -m venv .venv
 | `configs/serie3-PPPc-CCcouv.yaml` | Série 3 : pack à PPP centimes, couverture CC % (générées, ne pas éditer ; `tout` les ignore) |
 | `configs/serie3-mecaniques.yaml` | Série 3 : cours du NEAR, coûts mesurés, paramètres de la pitié, du rush, de la rareté par les burns, de la résurrection |
 | `memaster_sim/serie3.py` | Configs et exécution de la série 3, résultats dans `resultats/serie3/` (une page par section, plus `serie3.md`) |
+| `configs/serie4-PPPc.yaml` | Série 4 : pack à PPP centimes, base série 3 plus 20 communes brûlables (générées, ne pas éditer ; `tout` les ignore) |
+| `configs/serie4-valeur.yaml` | Série 4 : formes et cibles des tables V, multiplicateurs, gold pack, pitié, rush, coûts |
+| `memaster_sim/valeur.py` | Tables de valeur V (calibrage, quantiles, format publié), répartition entre brûlables, gold pack, réserve |
+| `memaster_sim/serie4.py` | Exécution de la série 4, résultats et `tables-valeur.json` dans `resultats/serie4/` |
 | `memaster_sim/couts.py` | Coûts réels d'un pack (gaz, stockage, achat groupé), marge, prix de seuil, packs pour les coûts fixes |
 | `memaster_sim/gold.py` | Table « or », mélange de tables avec un κ commun, réserve avec des gold packs (indépendants ou groupés) |
 | `memaster_sim/pitie.py` | Compteur de pitié : loi du cycle, g stationnaire, population de joueurs |

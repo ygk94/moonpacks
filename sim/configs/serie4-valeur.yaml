@@ -1,0 +1,64 @@
+# Série 4 : valeur aléatoire en jetons par pack, gold pack redéfini. Lu par `python -m memaster_sim.serie4 run`.
+# Les configs de pack (serie4-PPPc.yaml) sont générées par `python -m memaster_sim.serie4 configs` ; ce fichier-ci
+# s'édite à la main. Valeurs V en multiples du prix du pack (1 = 10 000 bps).
+
+near_usd: 2.5                 # cours du NEAR (paramètre)
+prix_usd: [0.20, 0.50]
+
+couts:
+  gaz_tgas: 48                # 48 Tgas × 0,0001 NEAR/Tgas = 0,0048 NEAR ≈ 0,012 $ par pack
+  near_par_tgas: 0.0001
+  gaz_paye_par: equipe        # cas prudent (relais) ; sur NEAR, c'est normalement l'acheteur
+  octets_par_pack: 1000       # ~1 Ko mesuré (964 o avec toutes les mécaniques), payé par l'acheteur
+  near_par_octet: 0.00001
+  stockage_paye_par: acheteur
+  frais_achat: [0.005, 0.0075, 0.01]   # achat groupé des jetons, part de la valeur achetée
+  delta: 0.05                 # part du prix versée à la réserve (prise sur la marge)
+  epsilon: 0.15               # borne anti-arbitrage : gain « brûle tout » ≤ (1 − ε) × prix
+  seuil_brulable_near: 0.02   # 0,05 $ : en dessous, une carte brûlable ne vaut pas le geste
+
+catalogue:
+  brulables_communes: 20      # parmi les 91 communes vivantes ; il en faut pour que le 5e emplacement retombe « vers le bas »
+
+# répartition de V entre les brûlables d'un pack (entiers, pour le contrat)
+multiplicateurs: {commune: 1, rare: 2, epique: 3, legendaire: 6, mythique: 20}
+
+pitie: {N: 20, p0: 0.02, k: 0.002}
+population: {joueurs: 100000, mediane: 4, sigma: 1.4, maximum: 5000}
+
+rush:
+  part: 0.05                  # part des packs non gold vendus en rush (série 3 : 3,9 à 5,2 % selon le trafic)
+  facteurs: {rare: 1.17, epique: 1.34, legendaire: 1.51, mythique: 1.51}   # table de raretés du rush (série 3)
+  couverture_max: 0.80
+
+gold_pack:
+  minimums: [rare, rare, epique, epique]
+  dernier: {legendaire: 0.8, mythique: 0.2}
+
+# formes des tables : paliers [début, fin, pas] en bps, lognormale discrétisée de paramètre σ (sur ln V)
+tables:
+  normal: {paliers: [[2000, 10000, 500], [11000, 20000, 1000]], sigma: 0.6, cible: 0.75}
+  gold:   {paliers: [[10000, 20000, 1000], [22500, 25000, 2500], [30000, 50000, 5000]], sigma: 0.4, cible: 2.0}
+  rush:   {paliers: [[2000, 10000, 500], [11000, 20000, 1000]], sigma: 0.6, cible: 0.80}
+  total_poids: 1000000        # poids en ppm
+
+# (a) la cible est la moyenne ; (b) la cible est la médiane (la moyenne monte)
+variantes:
+  a: {sur: moyenne}
+  b: {sur: mediane}
+recommandee: a
+
+mythique:
+  hors_v_x_prix: 55.2         # lecture « jackpot fixe en plus de V » (valeur de la série 3), pour chiffrer son poids
+  grille_jackpot_x_prix: [5, 10, 55.2]
+  grille_part_mythique_gold: [0.20, 0.05, 0.02]
+  stock_par_mythique: 10      # cap de contract/scripts/serie-exemple.json (illustratif)
+  stock_par_legendaire: 50
+
+reserve:
+  horizons: [10000, 100000]
+  trajectoires: {10000: 5000, 100000: 2000}
+  risques: [0.05, 0.01]
+
+composition:
+  packs: 1000000

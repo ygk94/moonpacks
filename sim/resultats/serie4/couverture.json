@@ -1,0 +1,127 @@
+{
+ "a": {
+  "normal_seul": 0.75,
+  "avec_pitie": 0.8079536365972682,
+  "avec_pitie_et_rush": 0.8103377293287098,
+  "cycle_pitie_g_inf": 0.8330864336128877,
+  "avec_pitie_g_inf_et_rush": 0.8354202607523088,
+  "effet_gold": 0.05795363659726812,
+  "effet_rush": 0.0023840927314417565,
+  "part_budget_gold": 0.1144286065040518,
+  "normal_pour_75_global": 0.6833987742425504
+ },
+ "b": {
+  "normal_seul": 0.86593835,
+  "avec_pitie": 0.9261223785754076,
+  "avec_pitie_et_rush": 0.9261223785754076,
+  "cycle_pitie_g_inf": 0.9522224313517206,
+  "avec_pitie_g_inf_et_rush": 0.9522224313517206,
+  "effet_gold": 0.06018402857540759,
+  "effet_rush": 0.0,
+  "part_budget_gold": 0.10833497867212148,
+  "normal_pour_75_global": 0.6715331838304739
+ },
+ "grille_jackpot": [
+  {
+   "valeur_x_prix": 5,
+   "part_gold": 0.2,
+   "cout": 0.046851884842516914
+  },
+  {
+   "valeur_x_prix": 5,
+   "part_gold": 0.05,
+   "cout": 0.01207970427504326
+  },
+  {
+   "valeur_x_prix": 5,
+   "part_gold": 0.02,
+   "cout": 0.005125268161548525
+  },
+  {
+   "valeur_x_prix": 10,
+   "part_gold": 0.2,
+   "cout": 0.09370376968503383
+  },
+  {
+   "valeur_x_prix": 10,
+   "part_gold": 0.05,
+   "cout": 0.02415940855008652
+  },
+  {
+   "valeur_x_prix": 10,
+   "part_gold": 0.02,
+   "cout": 0.01025053632309705
+  },
+  {
+   "valeur_x_prix": 55.2,
+   "part_gold": 0.2,
+   "cout": 0.5172448086613868
+  },
+  {
+   "valeur_x_prix": 55.2,
+   "part_gold": 0.05,
+   "cout": 0.13335993519647757
+  },
+  {
+   "valeur_x_prix": 55.2,
+   "part_gold": 0.02,
+   "cout": 0.05658296050349572
+  }
+ ],
+ "mythique": {
+  "dans_v": {
+   "mythiques_par_pack": {
+    "normal": 0.0001,
+    "gold": 0.2,
+    "rush": 0.000151
+   },
+   "cout_par_pack_du_type": {
+    "normal": 0.0,
+    "gold": 0.0,
+    "rush": 0.0
+   },
+   "cout_moyen": 0.0,
+   "mythiques_par_pack_moyen": 0.009370376968503383
+  },
+  "hors_v": {
+   "mythiques_par_pack": {
+    "normal": 0.0001,
+    "gold": 0.2,
+    "rush": 0.000151
+   },
+   "cout_par_pack_du_type": {
+    "normal": 0.005520000000000001,
+    "gold": 11.040000000000001,
+    "rush": 0.008335200000000001
+   },
+   "cout_moyen": 0.5172448086613868,
+   "mythiques_par_pack_moyen": 0.009370376968503383
+  },
+  "hors_v_g_inf": {
+   "mythiques_par_pack": {
+    "normal": 0.0001,
+    "gold": 0.2,
+    "rush": 0.000151
+   },
+   "cout_par_pack_du_type": {
+    "normal": 0.005520000000000001,
+    "gold": 11.040000000000001,
+    "rush": 0.008335200000000001
+   },
+   "cout_moyen": 0.7391038464433497,
+   "mythiques_par_pack_moyen": 0.013389562435567928
+  },
+  "valeur_x_prix": 55.2
+ },
+ "stocks": {
+  "mythiques_par_pack": 0.009370376968503383,
+  "legendaires_par_pack": 0.04931788711691211,
+  "mythiques_par_pack_sans_gold": 0.0001,
+  "legendaires_par_pack_sans_gold": 0.009821,
+  "stock_mythiques": 30,
+  "stock_legendaires": 1050,
+  "epuisement_mythiques": 3201.5787732808294,
+  "epuisement_legendaires": 21290.449801932686,
+  "epuisement_mythiques_sans_gold": 300000.0
+ }
+}

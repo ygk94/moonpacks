@@ -536,3 +536,110 @@ d'affaires, il ne dépend pas du volume, mais il croît avec la durée (`resurre
   pas pour une baleine seule.
 - Le gaz rendu au contrat (une part du gaz brûlé, propre au protocole NEAR) n'est pas compté, faute de source dans le repo.
 - La valeur des jetons après l'achat n'est toujours pas modélisée.
+
+## Série 4 (valeur aléatoire par pack, gold pack redéfini)
+
+Établie le 11/11/2026. Paramètres dans `configs/serie4-valeur.yaml` (à éditer), configs de pack `configs/serie4-020c.yaml`
+et `configs/serie4-050c.yaml` (générées par `python -m memaster_sim.serie4 configs`). Résultats dans `resultats/serie4/`,
+une page par section et `serie4.md`. Modèle : `memaster_sim/valeur.py`. Environ 20 s pour tout (`run`).
+
+### Schéma modélisé
+
+- Chaque pack tire une valeur **V dans une table discrète publiée** de paliers `(bps du prix, poids)`. La couverture d'un
+  type de pack est la moyenne de sa table : elle ne dépend plus des raretés tirées, ni de κ.
+- V est réparti entre les brûlables du pack au prorata d'un multiplicateur par rareté.
+- Le 5e emplacement est tiré parmi les brûlables (rareté de la table favorable, retombée vers le bas puis vers le haut).
+  **Il faut des communes brûlables** : la série 3 n'en a aucune, et 65 % des 5es emplacements remonteraient alors sur
+  11 rares brûlables. On en ajoute 20, tirées parmi les 91 communes vivantes du catalogue v2.
+- Gold pack de pitié (N = 20, p0 = 2 %, k = 0,2 %) : aucune commune, emplacements 1-2 rare ou mieux et 3-4 épique ou
+  mieux (table standard restreinte), 5e légendaire 80 % / mythique 20 %. En moyenne : 1,4 rare, 2,5 épiques,
+  0,86 légendaire, 0,2 mythique.
+- Rush : tables de raretés de la série 3 (rare × 1,17 … mythique × 1,51), sa propre table V. 5 % des packs non gold.
+- Coûts : gaz 0,012 $ payé par l'équipe (prudent), stockage 1 Ko payé par l'acheteur, achat groupé 0,5 à 1 %. NEAR à 2,5 $.
+- Formes : lognormale discrétisée, σ = 0,6 pour normal et rush (20 à 200 %, 27 paliers), σ = 0,4 pour le gold (100 à
+  500 %, 18 paliers), poids entiers sur 10⁶. Variante (a) : moyenne de la table normale à 75 % ; (b) : médiane à 75 %.
+
+### Les deux variantes
+
+| | **(a) moyenne 75 %** | (b) médiane 75 % |
+|---|---:|---:|
+| Table normale : min / q10 / médiane / q90 / max | 20 / 30 / 65 / 140 / 200 % | 20 / 35 / 75 / 160 / 200 % |
+| Moyenne normale | **75,0 %** | 86,6 % |
+| Packs sous 50 % / au-dessus de 100 % | 31,0 % / 20,5 % | 22,3 % / 28,8 % |
+| Table gold : min / q10 / médiane / q90 / max, moyenne | 100 / 110 / 180 / 300 / 500 %, 200 % | 100 / 120 / 200 / 350 / 500 %, 216 % |
+| Table rush, moyenne | 80,0 % (≤ 80 %) | = normale (86,6 %), ne peut pas rester ≤ 80 % |
+| **Couverture du flux réel** (g_pop = 4,64 %, rush) | **81,0 %** | 92,6 % |
+| Effet du gold / du rush | +5,8 / +0,2 pts | +6,0 / 0 pts |
+| Couverture avec g_∞ (6,65 %, compteur revendable) | 83,5 % | 95,2 % |
+| **Marge par pack à 0,20 $** (après δ = 5 %) | **0,025 $ (12 %)** (0,015 $) | 0,001 $ (1 %) (−0,009 $) |
+| **Marge par pack à 0,50 $** (après δ) | **0,080 $ (16 %)** (0,055 $) | 0,021 $ (4 %) (−0,004 $) |
+| R₀ pour 1 % de ruine sur 100 000 ventes | 19 × P : **4 $ / 10 $** | 21 × P : 4 $ / 11 $ |
+| Gain « brûle tout » : normal / rush / cycle de pitié (borne 85 %) | 73 / 78 / 82 % | 84 / 84 / **93 %** |
+| Packs pour 10 NEAR de coûts fixes, 0,20 $ / 0,50 $ | 1 012 / 314 | 18 034 / 1 165 |
+
+1. **(a) reste rentable, mais la marge est divisée par deux par rapport à la série 3** (0,025 $ contre 0,057 $ à 0,20 $),
+   car la couverture du flux passe de 65 à 81 %. 75 % pour la table normale donne 81 % au global : la pitié ajoute
+   5,8 points, le rush 0,2. Pour 75 % au global, la table normale doit viser **68,3 %**.
+2. **(b) n'est pas rentable.** Avec la même forme, une médiane de 75 % donne une moyenne de 86,6 %, et 92,6 % au global :
+   un centime de marge à 0,20 $, 2 centimes à 0,50 $, négatifs après la réserve. Le cycle de pitié dépasse la borne
+   anti-arbitrage (93 % contre 85 %) et le rush ne peut plus être meilleur que le pack normal tout en restant sous 80 %.
+   Une médiane de 75 % avec une moyenne de 75 % n'est possible qu'avec une table penchée à gauche (la plupart des packs
+   entre 75 et 100 %, quelques très mauvais), donc sans « bons drops ».
+3. **La réserve devient négligeable** : 19 × le prix, soit 4 $ à 0,20 $ et 10 $ à 0,50 $ (contre 308 × en série 3), parce
+   que V est borné à 5 × le prix : il n'y a plus de jackpot à couvrir. Passer de 10 000 à 100 000 ventes ne change rien.
+4. **Le gold pack pèse 5,8 points de couverture** (11 % du budget de jetons) : 4,64 % des packs à 200 % au lieu de 75 %.
+5. **Le mythique à 20 % dans le gold pack** : un mythique tous les 107 packs, 94 fois plus qu'avant (1 sur 10 000).
+   - S'il est **dans V** (multiplicateur), il ne coûte rien en jetons : il prend 17 % de la valeur des gold packs et vaut en
+     moyenne 1,67 × le prix (0,33 $ à 0,20 $). Ce n'est plus un jackpot.
+   - S'il garde une **valeur fixe hors V** de 55 × le prix (série 3), il coûte 11 × le prix par gold pack, soit
+     **+51,7 points** de couverture : le flux paierait 133 % du prix, la ruine est certaine. À 5 × le prix et 2 % du gold,
+     il coûte 0,5 point (R₀ 1 % : 27 × P).
+   - **Stock** : avec 10 exemplaires par mythique (`serie-exemple.json`), les 30 mythiques partent en **3 200 packs**
+     (300 000 sans le gold pack), puis le 5e emplacement retombe sur le légendaire. Les légendaires passent de 0,98 à
+     4,9 % des packs : 1 050 exemplaires (50 par carte) partent en 21 000 packs.
+6. **Répartition** (multiplicateurs 1 / 2 / 3 / 6 / 20) : 89 % des packs normaux n'ont qu'une brûlable, qui prend tout V.
+   Dans un pack normal, une légendaire vaut donc en moyenne autant qu'une commune (0,7 × le prix) : la rareté ne porte la
+   valeur que dans le gold pack (légendaire 1,24 × le prix, épique 0,47 ×, rare 0,32 ×). 11 % des cartes brûlables valent
+   moins de 0,05 $ à 0,20 $ (palier de 20 %, ou petite part d'un V partagé), 10 % dans le gold. Des multiplicateurs plus étalés
+   (1 / 2 / 4 / 10 / 40) montent ce chiffre à 16 % dans le gold, sans changer les packs normaux.
+
+### Gold rush
+
+La table de raretés du rush ne coûte plus rien en jetons, puisque V ne dépend pas des raretés. **Garder le rush avec une
+table V de moyenne 80 %** (même forme que la normale : médiane 70 %, 24 % des packs au-dessus de 100 %). Il coûte
+0,2 point de couverture et reste sous la borne (gain 78 %). Le simplifier (table normale, seules les raretés changent)
+est possible et ne coûte rien, mais le rush ne rapporterait alors rien de plus en jetons. En (b), il faut le simplifier.
+
+### Recommandation
+
+1. **Variante (a)** : moyenne 75 % pour la table normale, 200 % pour le gold, 80 % pour le rush. Couverture du flux
+   81 %, marge 0,025 $ à 0,20 $ et 0,08 $ à 0,50 $. Si le porteur veut 75 % au global, baisser la table normale à 68 %.
+   Le pack à 0,50 $ porte mieux ce schéma : à 0,20 $, il faut 1 000 packs pour couvrir 10 NEAR de coûts fixes.
+2. **Tables publiées : `resultats/serie4/tables-valeur.json`** (variante (b) pour comparaison :
+   `tables-valeur-b.json`). La clé `_format` documente le format : `value_tables.{base,gold,rush}.tiers` =
+   `[[bps, poids], …]`, poids entiers sur `weight_total` = 1 000 000, V = prix × bps / 10 000 ; `split_multipliers` ;
+   `gold_pack` (raretés minimales, 5e emplacement 800 000 / 200 000 ppm). `mean_bps`, `median_bps` et `sha256` sont
+   informatifs. Le test `test_json_du_depot_a_jour` vérifie que le fichier suit les paramètres.
+3. **Multiplicateurs de répartition** : commune 1, rare 2, épique 3, légendaire 6, mythique 20 (entiers). Arrondi vers le
+   bas, reste à la carte du dernier emplacement.
+4. **Mythique dans V**, jamais en valeur fixe à 55 × le prix. Avec 20 % dans le gold, il faut accepter des mythiques
+   courants (un tous les 107 packs) et un stock épuisé en 3 200 packs. Pour garder des mythiques rares, passer à 2 % dans
+   le gold (un tous les 975 packs) ; un petit jackpot hors V (5 × le prix) coûte alors 0,5 point.
+5. **Ajouter des communes brûlables** (20 sur 91 vivantes) pour que la retombée du 5e emplacement soit vers le bas.
+6. À 0,20 $, le palier de 20 % (0,04 $) est sous le seuil de 0,05 $ d'une brûlable « qui vaut le geste ». Passer le
+   plancher à 25 % coûte 0,2 point de couverture (0,18 au global) ; sinon l'assumer comme un « pack à chier ».
+
+**À ne pas faire.**
+- La variante (b) avec une forme penchée à droite : 92,6 % de couverture, marge nulle à 0,20 $.
+- Un mythique à valeur fixe hors V avec 20 % dans le gold : +52 points de couverture.
+- Un rush plus généreux que 80 %, ou un rush en (b).
+
+### Limites propres à la série 4
+
+- La forme lognormale et ses σ sont un choix : ils fixent la part de packs sous 50 % et au-dessus de 100 %. Ils sont
+  dans `serie4-valeur.yaml`.
+- g_pop vient de la population lognormale de la série 3. Avec un compteur revendable ou plus de baleines, la couverture va
+  vers 83,5 % (g_∞).
+- Pitié et rush combinés comme en série 3 (un pack est gold, sinon rush avec 5 %). Packs indépendants pour la réserve.
+- Les stocks par carte (10 par mythique, 50 par légendaire) sont ceux, illustratifs, de `serie-exemple.json`.
+- La rareté pilotée par les burns et la résurrection ne sont pas reprises : une carte ressuscitée n'entre pas dans V.
