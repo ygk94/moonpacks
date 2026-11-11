@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import base64
 import json
+import time
 import urllib.error
 import urllib.request
 
 NETWORKS = {
     "mainnet": "https://rpc.mainnet.near.org",
-    "testnet": "https://rpc.testnet.near.org",
+    # rpc.testnet.near.org est déprécié (répond 429 « THIS ENDPOINT IS DEPRECATED »).
+    "testnet": "https://rpc.testnet.fastnear.com",
 }
+# Reprise sur limite de débit (HTTP 429) : attentes successives en secondes, ou Retry-After si fourni.
+RETRY_DELAYS = (1.0, 2.0, 4.0, 8.0)
 
 _B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
@@ -39,12 +43,28 @@ class RpcError(Exception):
 
 
 class Rpc:
-    def __init__(self, url: str, timeout: float = 30.0):
+    def __init__(self, url: str, timeout: float = 30.0, retry_delays=RETRY_DELAYS, sleep=time.sleep):
         self.url = NETWORKS.get(url, url)
         self.timeout = timeout
+        self.retry_delays = tuple(retry_delays)
+        self._sleep = sleep
 
     def call(self, method: str, params):
         body = json.dumps({"jsonrpc": "2.0", "id": "memaster-verifier", "method": method, "params": params})
+        for attempt in range(len(self.retry_delays) + 1):
+            try:
+                return self._call_once(method, body)
+            except urllib.error.HTTPError as e:
+                if e.code != 429 or attempt == len(self.retry_delays):
+                    raise self._http_error(method, e) from e
+                retry_after = e.headers.get("Retry-After") if e.headers else None
+                try:
+                    delay = min(float(retry_after), 60.0) if retry_after else self.retry_delays[attempt]
+                except ValueError:
+                    delay = self.retry_delays[attempt]
+                self._sleep(delay)
+
+    def _call_once(self, method: str, body: str):
         req = urllib.request.Request(
             self.url,
             data=body.encode(),
@@ -53,15 +73,21 @@ class Rpc:
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as r:
                 resp = json.loads(r.read())
-        except urllib.error.HTTPError as e:
-            detail = e.read()[:500].decode("utf-8", "replace")
-            hint = " (transaction inconnue de ce nœud, ou trop ancienne : utilisez un nœud d'archive)" if e.code == 408 else ""
-            raise RpcError(f"{method} : HTTP {e.code}{hint} {detail}") from e
+        except urllib.error.HTTPError:
+            raise  # traité par call() (reprise sur 429), avant URLError dont il hérite
         except urllib.error.URLError as e:
             raise RpcError(f"RPC injoignable ({self.url}) : {e}") from e
         if "error" in resp:
             raise RpcError(f"{method} : {json.dumps(resp['error'], ensure_ascii=False)}")
         return resp["result"]
+
+    @staticmethod
+    def _http_error(method: str, e: urllib.error.HTTPError) -> RpcError:
+        detail = e.read()[:500].decode("utf-8", "replace")
+        hint = " (transaction inconnue de ce nœud, ou trop ancienne : utilisez un nœud d'archive)" if e.code == 408 else ""
+        if e.code == 429:
+            hint = " (limite de débit du RPC, reprises épuisées)"
+        return RpcError(f"{method} : HTTP {e.code}{hint} {detail}")
 
     def _block_ref(self, block_id) -> dict:
         return {"finality": "final"} if block_id is None else {"block_id": block_id}

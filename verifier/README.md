@@ -128,7 +128,9 @@ python3 -m memaster_verifier stats --events serie0.jsonl --table table.json --re
 python3 -m memaster_verifier code --rpc testnet --contract memaster.testnet --wasm memaster.wasm
 ```
 
-`--rpc` accepte une URL, `mainnet` ou `testnet`. Les fichiers d'événements peuvent être un objet JSON, une liste,
+`--rpc` accepte une URL, `mainnet` (`rpc.mainnet.near.org`) ou `testnet` (`https://rpc.testnet.fastnear.com`,
+`rpc.testnet.near.org` étant déprécié). Sur une réponse HTTP 429 (limite de débit), le client réessaie 4 fois
+(1, 2, 4 puis 8 s, ou l'en-tête `Retry-After`) avant d'abandonner. Les fichiers d'événements peuvent être un objet JSON, une liste,
 du JSONL, ou les lignes de logs brutes `EVENT_JSON:{…}`. Les données seules et l'enveloppe NEP-297 sont toutes deux
 acceptées. Pour `table --file`, le mieux est d'enregistrer les octets bruts de la vue (`result` du RPC).
 Les commandes `pack`, `mythic` et `stats` sans `--table` lisent elles aussi la table par pages, et refusent une table
