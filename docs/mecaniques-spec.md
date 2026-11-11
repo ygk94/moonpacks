@@ -1,5 +1,8 @@
 # Mécaniques : spécification du contrat (11/11/2026)
 
+Mise à jour du 11/11 (branche `feat/valeur-contrat`) : gold pack à plancher de rareté par emplacement (section 8) et
+valeur aléatoire en jetons par pack (section 9).
+
 Mise en œuvre de `docs/mecaniques.md` dans `contract/` (branche `feat/mecaniques-contrat`), avec les corrections tirées
 de la simulation de la série 3 (`sim/RAPPORT.md`, branche `feat/mecaniques-sim`). Rien n'est déployé. Les hauteurs sont
 en blocs, avec 0,6 s par bloc supposé (non vérifié dans le repo).
@@ -11,27 +14,30 @@ en blocs, avec 0,6 s par bloc supposé (non vérifié dans le repo).
   JSON** (`skip_serializing_if`) : une table d'avant garde exactement ses octets, son hash et ses tirages.
   `draw_vectors.json`, régénéré par le nouveau code, ne change pas d'un octet.
 - **Ordre JSON** (verrouillé par `hash_stream::tests::mechanics_field_order_is_locked`) :
-  `"mechanics":{"gold_weights":…|null,"pity":{"p0_ppm","k_ppm","n_max"}|null,"burn":{"floor_bps","prior_k"}|null,"rush":{"ratio_bps","min_packs","window_blocks","baseline_blocks","bucket_blocks","duration_blocks","cooldown_blocks","max_per_account","weights"}|null,"resurrection":{"eligible":[…]}|null}`.
+  `"mechanics":{"gold":{"slots":[{"floor","weights"|null,"burnable"}…]}|null,"pity":{"p0_ppm","k_ppm","n_max"}|null,"burn":{"floor_bps","prior_k"}|null,"rush":{"ratio_bps","min_packs","window_blocks","baseline_blocks","bucket_blocks","duration_blocks","cooldown_blocks","max_per_account","weights"}|null,"resurrection":{"eligible":[…]}|null,"value":{"normal":[[bps,poids]…],"gold":[…],"rush":[…],"multipliers":{…}}|null}`.
+  L'ancienne table de poids or (`gold_weights`) est retirée : le gold pack se décrit par planchers (section 8).
 - **Tout état qui influence un tirage est figé puis journalisé.** Le vérificateur recalcule chaque tirage à partir des
   seuls événements (`pack_bought`, `pack_revealed`, `card_redeemed`, `card_resurrected`), sans archive d'état :
   `verifier/` `SeriesReplay`.
-- **Aléa.** Un seul aléa, `acc`, comme avant. Le tirage « gold ou pas » utilise un nouveau tag : `roll(acc, 0, 2)`. Les
-  tags 0 (rareté) et 1 (carte) par emplacement ne changent pas.
+- **Aléa.** Un seul aléa, `acc`, comme avant. Le tirage « gold ou pas » utilise un nouveau tag : `roll(acc, 0, 2)`, la
+  valeur du pack un autre : `roll(acc, 0, 3)`. Les tags 0 (rareté) et 1 (carte) par emplacement ne changent pas.
 - **Dernier reçu du tirage sans échec lié au résultat.** La pitié, les burns et la table de taux sont lus et écrits dans
   `finalize_pack`, sans aucun `require`. Le stockage ajouté est borné et prépayé (entrée de pitié comprise), et le gaz
-  reste fixe (120 Tgas ; 49,1 Tgas au pire mesuré, raretés épuisées en cascade).
+  reste fixe (120 Tgas ; 48,4 Tgas au pire mesuré, raretés épuisées en cascade, gold pack et valeur compris). La valeur
+  ne peut pas déborder : la validation exige que `prix × V_max × multiplicateur_max` tienne sur u128.
 
 Paramètres par défaut, ceux de `contract/scripts/serie-exemple.json` (série v2, poids de base 2 / 20 / 180 / 800 / 8 998) :
 
 | Mécanique | Paramètres par défaut |
 |---|---|
-| Table or | multiplicateurs mythique × 4, légendaire × 4, épique × 3, rare × 2, la commune compense : 8 / 80 / 540 / 1 600 / 7 772 |
+| Gold pack | 5 cartes, aucune commune : emplacements 1 et 2 rare ou mieux (le 2 parmi les brûlables), 3 et 4 épique ou mieux (poids de base tronqués), 5 légendaire 80 % ou mythique 20 % (section 8) |
+| Valeur (provisoire) | normale 20 à 200 % du prix, moyenne 75 % ; rush moyenne 78,5 % ; gold 100 à 800 %, moyenne 218,5 % ; multiplicateurs commune 1, rare 2, épique 5, légendaire 20 (section 9). Calibrage définitif dans `sim/` |
 | Pitié | N = 20, p0 = 2 % (20 000 ppm), k = 0,2 % (2 000 ppm) |
 | Burns | plancher 25 % (`floor_bps` = 2 500), a priori K = 20 (`prior_k`), renormalisation entre brûlables de la rareté |
 | Rush | palier relatif × 2,5 (`ratio_bps` = 25 000), **100 packs au moins** (50 avant la revue), fenêtre courte 6 000 blocs (1 h), fenêtre longue 144 000 (24 h), seaux de 1 500 (15 min, 96 seaux), rush de 3 000 blocs (30 min), pause de 36 000 (6 h), **3 packs rush au plus par compte et par rush** (`max_per_account`) |
 | Résurrection | liste hachée `resurrection.eligible` : règle `dead_epic_legendary` de `build_series.py` (épiques et légendaires « mort… » du catalogue, non adossées : 86 cartes pour la série v2) ; changement d'oracle après 144 000 blocs (24 h, `oracle_delay_blocks` de `new`) |
 | Table rush | mythique × 1,51, légendaire × 1,51, épique × 1,34, rare × 1,17 : 3 / 30 / 241 / 936 / 8 790 |
-| Couverture (hors chaîne) | base 58,7 %, or 184 %, rush 79,9 % ≤ 80 % (valeurs de rareté de la série 3) |
+| Couverture (hors chaîne) | avec table de valeur : valeur moyenne de chaque table (base 75 %, gold 218,5 %, rush 78,5 % ≤ 80 %) ; sans table de valeur : valeurs de rareté de `coverage_check` |
 
 Le rapport de la simulation propose × 2,5 pour le palier. Le message de coordination citait × 1,5 comme exemple. C'est un
 paramètre, et le défaut suit le rapport.
@@ -55,13 +61,17 @@ Une carte ne stocke que sa référence :
 NEP-171, 178 et 181 sont réécrits (sans `NonFungibleToken`), avec les mêmes méthodes, les mêmes messages et la même
 politique de stockage des approbations. `reveal_mythic` ne réécrit plus les cartes scellées : 5 Tgas au lieu de 85,6.
 
-| Stockage d'un pack (mesuré en sandbox) | Avant | Après |
-|---|---|---|
-| Série v2 (5 cartes), 12 packs, au plus | 3 965 o | 848 o sans mécanique, **964 o avec toutes les mécaniques** (premier achat d'un compte compris) |
-| Série v2, prépayé (`storage_per_pack`) | 15 715 o | 1 597 o (0,016 NEAR) avec toutes les mécaniques |
-| Table de 4 cartes | 4 235 o / 11 655 prépayés | 888 o / 1 227 |
-| 200 cartes aux chaînes maximales, 5 / 10 cartes par pack | 7 888 / 14 975 o | 829 / 858 o |
-| 2 000 cartes, 10 cartes par pack, toutes les mécaniques | (non mesuré) | 1 254 o au premier achat, 860 à 946 o ensuite, 2 017 prépayés |
+| Stockage d'un pack (mesuré en sandbox) | Avant | Après | Avec gold pack et valeur (11/11) |
+|---|---|---|---|
+| Série v2 (5 cartes), au plus | 3 965 o | 848 o sans mécanique, 964 o avec toutes les mécaniques (premier achat d'un compte compris) | **971 o** (22 packs, dont un gold) |
+| Série v2, prépayé (`storage_per_pack`) | 15 715 o | 1 597 o (0,016 NEAR) avec toutes les mécaniques | 1 605 o |
+| Table de 4 cartes | 4 235 o / 11 655 prépayés | 888 o / 1 227 | inchangé (sans mécanique) |
+| 200 cartes aux chaînes maximales, 5 / 10 cartes par pack | 7 888 / 14 975 o | 829 / 858 o | inchangé (sans mécanique) |
+| 2 000 cartes, 10 cartes par pack, toutes les mécaniques | (non mesuré) | 1 254 o au premier achat, 860 à 946 o ensuite, 2 017 prépayés | 1 266 o au premier achat, 879 à 947 o ensuite, 2 025 prépayés (gold pack de 10 emplacements) |
+
+La valeur ajoute 7 o par pack (`Pack::value` : `bps` et le masque des brûlables), pas 16 o par carte : les montants se
+recalculent depuis ces 7 o, la table et les raretés des tirages (`draw::split_value`). Le prépayé compte 8 o de plus
+(`PACK_VALUE_BYTES`) et, si le gold pack a plus d'emplacements que `cards_per_pack`, les cartes en plus.
 
 Un pack déjà connu du compte coûte environ 560 o ; le premier achat ajoute les compteurs du compte et l'entrée de pitié.
 Le prépayé est une borne calculée à l'ouverture (`worst_case_pack_storage`) : comptes de 64 caractères, nouveaux blocs de
@@ -73,11 +83,12 @@ liste, premier achat. Comme avant, le surplus n'est pas rendu (un remboursement 
   Vue : `get_pity(account_id, series_id)` → `n`, `p_ppm`, `guaranteed_in`.
 - **Formule** : `p(n) = min(10⁶, p0_ppm + k_ppm × n)` ppm ; `gold_roll = u128_be(sha256(acc ‖ 0x00 ‖ 0x02)[0..16]) mod 10⁶` ;
   gold pack (pitié) si `n + 1 ≥ N` ou `gold_roll < p(n)`. Avec N = 1, tous les packs sont or.
-- **Table du pack** (`draw::pack_mode`) : gold pack de pitié → table or ; sinon, pack rush → table rush ; sinon base.
-  La pitié l'emporte sur le rush.
+- **Table du pack** (`draw::pack_mode`) : gold pack de pitié → gold pack à planchers (section 8) et table de valeur gold ;
+  sinon, pack rush → table rush et table de valeur rush ; sinon base et table de valeur normale. La pitié l'emporte sur le
+  rush.
 - **Mise à jour** : `n ← 0` après un gold pack **ou un pack rush** (le rapport : « un gold pack de rush remet le compteur
   à zéro »), sinon `n ← n + 1`. Le compteur n'atteint jamais N.
-- **Haché** : `gold_weights`, `pity`. **Journalisé** : `pack_revealed.mechanics.pity` = `before`, `gold_roll`, `p_ppm`,
+- **Haché** : `gold`, `pity`. **Journalisé** : `pack_revealed.mechanics.pity` = `before`, `gold_roll`, `p_ppm`,
   `gold`, `after`, et `mode`. Le vérificateur recalcule `gold_roll`, `p`, la décision et `after`, puis chaîne le
   compteur de chaque compte d'un booster à l'autre.
 - **Coût** : environ 120 o au premier tirage du compte dans la série (prépayé), une lecture et une écriture dans le dernier
@@ -225,9 +236,10 @@ Corrections de la simulation : un palier fixe s'emballe (69 % des packs en or à
 
 | Cas | Avant | Après |
 |---|---|---|
-| Série v2 complète, toutes les mécaniques, 12 packs à 160 Tgas | dernier reçu 35,3 Tgas, total 48 | dernier reçu **15,5 Tgas** (14,1 avant la revue), `buy_pack` 8,0, total 29,5 |
-| 2 000 cartes aux chaînes maximales, 10 cartes par pack, toutes les mécaniques | dernier reçu 58,8 Tgas (sans mécanique) | dernier reçu **24,3 Tgas** au pire (19,5 avant la revue : la ressuscitée demande une passe de plus), `buy_pack` 10,3, total 40,5 |
-| 2 000 cartes, 10 par pack, toutes les mécaniques, légendaires, épiques et rares épuisées : chaque emplacement retombe trois fois jusqu'à la commune ; 24 burns, 200 cartes ressuscitables (`worst_case_cascade_with_burns_fits`) | (non mesuré) | dernier reçu **49,1 Tgas** au pire |
+| Série v2 complète, toutes les mécaniques, 12 packs à 160 Tgas | dernier reçu 35,3 Tgas, total 48 | dernier reçu 15,5 Tgas (14,1 avant la revue), `buy_pack` 8,0, total 29,5 ; **avec gold pack et valeur (22 packs, dont un gold) : dernier reçu 15,4 Tgas, `buy_pack` 8,1, total 29,6** |
+| 2 000 cartes aux chaînes maximales, 10 cartes par pack, toutes les mécaniques | dernier reçu 58,8 Tgas (sans mécanique) | dernier reçu 24,3 Tgas au pire (19,5 avant la revue) ; **avec gold pack de 10 emplacements et valeur : 23,3 Tgas au plus** (normal et gold), `buy_pack` 10,4, total 39,8 |
+| 2 000 cartes, 10 par pack, toutes les mécaniques, légendaires, épiques et rares épuisées : chaque emplacement retombe trois fois jusqu'à la commune ; 23 à 24 burns, 200 cartes ressuscitables (`worst_case_cascade_with_burns_fits`) | (non mesuré) | dernier reçu 49,1 Tgas au pire ; **avec gold pack (10 emplacements à plancher légendaire, dont 2 parmi les brûlables : visée, mythique, puis épique, rare, commune) et brûlable garantie : 48,4 Tgas au pire** |
+| Table de valeur et gold pack, 7 cartes, 10 packs (`value_and_gold_pack_end_to_end`) | | dernier reçu 5,2 Tgas, stockage 963 o au plus / 1 475 prépayés |
 | `on_redeem_complete` avec burns | (pas de compteur) | 3,8 Tgas sur 20 fixes |
 | `redeem` complet | 10,4 Tgas | 8,1 Tgas |
 | `reveal_mythic`, 100 scellées | 85,6 Tgas | 5,0 Tgas |
@@ -248,7 +260,76 @@ facteur 2,5.
 | 6 | Faible | Gaz du pire cas non mesuré en cascade | Mesuré : 49,1 Tgas sur 120 | `worst_case_cascade_with_burns_fits` |
 | 7 | Faible | `sealed_tokens[j]` gardé après la révélation | Vidé ; `updated_at` déduit de la date du tirage | `reveal_clears_sealed_tokens_and_keeps_updated_at` |
 
-## 8. Ce qui reste ouvert
+## 8. Gold pack : plancher de rareté par emplacement (11/11)
+
+Décision du porteur : le compteur de pitié (garanti au 20ᵉ pack) est gardé, mais le gold pack change de forme. Il n'est
+plus une table de poids renforcés : c'est une liste d'emplacements, chacun avec un **plancher de rareté**.
+
+- **Table** : `mechanics.gold.slots`, 1 à 10 emplacements (indépendamment de `cards_per_pack` ; le prépayé compte le plus
+  grand des deux). Chaque emplacement a `floor` (plancher), `weights` (poids propres, nuls sous le plancher) ou `null`
+  (poids de base mis à zéro sous le plancher, `draw::gold_slot_weights`), et `burnable` (tiré parmi les brûlables).
+- **Défaut** (`serie-exemple.json`) : 5 cartes, aucune commune. Emplacements 1 et 2 rare ou mieux, 3 et 4 épique ou
+  mieux (poids de base tronqués : la proportion entre raretés au-dessus du plancher est celle de la base), 5 légendaire
+  80 % ou mythique 20 % (`weights` = 20 / 80). L'emplacement 2 est `burnable` : il porte la valeur du pack.
+- **Tirage** : `rarity_roll = roll(acc, slot, 0) mod Σ poids de l'emplacement` (tag inchangé), rareté visée par cumul.
+- **Rareté épuisée** (`draw::fallback_order`, règle définie) : la visée, puis **vers le bas jusqu'au plancher**, puis
+  **vers le haut** (au-dessus de la visée, jusqu'à la mythique), puis **sous le plancher** jusqu'à la commune en dernier
+  recours. Exemples : 5ᵉ emplacement visant la légendaire épuisée → mythique ; légendaire et mythique épuisées →
+  épique ; mythique au plafond → légendaire. Le plancher n'est franchi que si rien n'est tirable au-dessus.
+- **Choix de la carte** : comme avant (`card_roll = roll(acc, slot, 1) mod Σ`, poids des burns compris), restreint aux
+  brûlables pour un emplacement `burnable`.
+- **Validation** : 1 à 10 emplacements ; poids d'un emplacement non tous nuls, nuls sous le plancher, poids mythique
+  seulement avec un engagement pondéré ; une rareté pondérée par un emplacement doit avoir une carte ; `pity` exige
+  `gold`. La table rush garde ses poids renforcés (la contrainte « distincte de la table or » disparaît avec celle-ci).
+- **Haché** : `gold`. **Journalisé** : `pack_revealed.mechanics.mode = "gold"` et les tirages (autant que
+  d'emplacements). Le vérificateur recalcule chaque emplacement (`core.draw_slot_rule`).
+
+## 9. Valeur aléatoire en jetons par pack (11/11)
+
+Décision du porteur : la valeur en jetons d'un pack va de 20 % à 200 % du prix, avec une moyenne vers 75 %.
+
+- **Tables** (`mechanics.value`, hachées) : `normal`, `gold`, `rush`, chacune de 1 à 32 paliers `(valeur en points de base
+  du prix, poids)`, poids non nuls ; `multipliers` par rareté (mythique 0, autres 1 à 10⁶). **Table normale validée à la
+  création : 2 000 ≤ valeur ≤ 20 000 pb.** Tables gold et rush : 1 à 10⁶ pb. Prix borné pour que
+  `⌊prix × V / 10⁴⌋ × multiplicateur` tienne sur u128.
+- **Tirage de V** (dernier reçu) : `value_roll = u128_be(sha256(acc ‖ 0x00 ‖ 0x03)[0..16]) mod Σ poids`, palier par
+  cumul dans l'ordre de la table (`draw::value_tier`). Table gold pour un gold pack, rush pour un pack rush (figé à
+  l'achat), normale sinon.
+- **Répartition** (`draw::split_value`) : `total = ⌊prix × V / 10⁴⌋` yoctoNEAR de valeur, réparti entre les
+  **brûlables du pack** (cartes visibles adossées par la table ou ressuscitées **au moment du tirage**) au prorata du
+  multiplicateur de leur rareté : `⌊total × m_i / Σm⌋`, arrondi vers le bas ; **le reste va à la carte au plus fort
+  multiplicateur, la première dans l'ordre des emplacements en cas d'égalité**. Aucun yocto n'est perdu.
+- **Brûlable garantie** : le dernier emplacement d'un pack normal (base ou rush) est tiré parmi les brûlables. Sa rareté
+  visée suit le tirage normal (`rarity_roll` inchangé), avec retombée vers le bas parmi les brûlables, puis vers le haut
+  si aucune rareté inférieure n'en a (`fallback_order(visée, commune)`). Un gold pack a son emplacement `burnable`
+  (le 2 par défaut), avec la règle de la section 8. Une mythique n'est jamais une brûlable ici : son adossement est dans
+  son contenu, secret jusqu'à la révélation.
+- **Validation** : avec une table de valeur, ou un emplacement gold `burnable`, il faut une carte **adossée par la table,
+  sans plafond et de poids non nul** (une commune ou une rare brûlable illimitée, par exemple). Comme la retombée parcourt
+  toutes les raretés visibles, l'emplacement trouve toujours une brûlable et le pack en a toujours au moins une.
+- **Adossement transmis** : `redeem` envoie au redeemer `(asset_id, amount)`, avec `asset_id` de la carte (table ou
+  oracle) et **`amount` = part de la valeur du pack** pour cet exemplaire. `get_backing`, `get_card` et
+  `card_redeemed` donnent ce montant. Le redeemer reste abstrait : il reçoit des yoctoNEAR de valeur, pas des jetons, et
+  la conversion dépend du financement, non décidé. Dans une série à table de valeur, l'`amount` de la table n'est donc
+  plus lu pour les exemplaires tirés brûlables.
+- **Cas spéciaux (adossement fixe, documentés)** : une **mythique** garde l'adossement de son contenu révélé ; un
+  exemplaire **devenu brûlable après son tirage** (résurrection) n'a pas de part de valeur et garde le montant de
+  l'oracle. Les exemplaires tirés après la résurrection, eux, ont une part.
+- **Stockage** : `Pack::value` = `bps` (4 o) et le masque des brûlables (2 o), 7 o avec l'option ; les montants sont
+  recalculés à la lecture. Prépayé : `PACK_VALUE_BYTES` = 8 o.
+- **Dernier reçu sans échec lié au résultat** : aucun `require` ; les dépassements sont exclus à la création ; sans
+  brûlable (impossible pour une table validée), rien n'est réparti.
+- **Haché** : `value`. **Journalisé** : `pack_revealed.mechanics.value` = `roll`, `tier`, `bps`, `total`, `amounts`
+  (par emplacement, `null` hors brûlables), et `resurrect_seq` (les brûlables du tirage dépendent des résurrections).
+  Le vérificateur recalcule V, le total, la répartition au bit près, et la brûlable garantie (rejeu des
+  `card_resurrected`).
+- **Tables provisoires** (`serie-exemple.json`, à remplacer par celles de `sim/` via `--tables-valeur`) : normale
+  `[[2000,15],[3000,13],[4000,10],[5000,10],[6000,10],[8000,10],[10000,10],[12000,8],[15000,5],[20000,9]]` (moyenne
+  exacte 75 %), rush moyenne 78,5 %, gold `[[10000,30],[15000,25],[20000,20],[30000,13],[50000,8],[80000,4]]`
+  (218,5 %), multiplicateurs commune 1, rare 2, épique 5, légendaire 20. `build_series.py` vérifie les bornes du contrat
+  et refuse une table rush de moyenne > 80 % (`coverage_check.max_rush`).
+
+## 10. Ce qui reste ouvert
 
 - Variante du compteur dans un NFT revendable (section 2).
 - `prior_k` et `min_packs` à recaler sur la simulation de la série 3 quand elle sera fusionnée. Le plafond par compte
@@ -259,3 +340,7 @@ facteur 2,5.
 - Temps de bloc réel (0,6 s supposé) pour convertir 1 h, 24 h et 6 h en blocs.
 - `nft_metadata_update` pour les exemplaires d'une carte ressuscitée (non émis).
 - Mesures sur testnet.
+- Tables de valeur et multiplicateurs définitifs (calibrage dans `sim/`) ; financement réel de la valeur transmise au
+  redeemer.
+- Série v2 d'exemple : deux brûlables factices seulement (une commune, une légendaire) ; la brûlable garantie retombe
+  donc presque toujours sur la même commune.
