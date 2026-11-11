@@ -69,7 +69,7 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
 
   // Données préchargées pendant la signature : définitions des cartes et fiches publiques.
   useEffect(() => {
-    getCardDefs().catch(() => undefined);
+    if (request.kind === "buy") getCardDefs(request.series.series_id).catch(() => undefined);
     loadCatalog().catch(() => undefined);
     getConfig()
       .then((c) => setSteps(c.reveal_steps))

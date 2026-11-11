@@ -34,3 +34,21 @@ describe("contract version", () => {
     expect(await isV3Contract()).toBe(true);
   });
 });
+
+describe("card definitions", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    view.mockReset();
+  });
+
+  it("are cached per series (v3 has an entry and a standard series)", async () => {
+    view.mockImplementation(async (method: string, args: { series_id: number }) =>
+      method === "get_series" ? { card_count: 1 } : [{ card_id: `card-of-series-${args.series_id}` }],
+    );
+    const { getCardDefs } = await import("./contract");
+    expect((await getCardDefs(0))[0].card_id).toBe("card-of-series-0");
+    expect((await getCardDefs(1))[0].card_id).toBe("card-of-series-1");
+    await getCardDefs(1);
+    expect(view.mock.calls.filter(([m]) => m === "get_series_cards")).toHaveLength(2);
+  });
+});

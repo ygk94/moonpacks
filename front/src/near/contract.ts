@@ -81,11 +81,13 @@ export async function getAllRates(seriesId = SERIES_ID): Promise<RatesPage> {
   return merged;
 }
 
-// Définitions de cartes de la série, chargées une fois (1 646 cartes = 9 pages).
-let cardDefs: Promise<CardDef[]> | null = null;
+// Définitions de cartes d'une série, chargées une fois par série (1 646 cartes = 9 pages). Le cache est par série :
+// le contrat v3 en a deux (entrée et standard), chacune avec sa table.
+const cardDefs = new Map<number, Promise<CardDef[]>>();
 export function getCardDefs(seriesId = SERIES_ID): Promise<CardDef[]> {
-  if (!cardDefs) {
-    cardDefs = (async () => {
+  let p = cardDefs.get(seriesId);
+  if (!p) {
+    p = (async () => {
       const s = await getSeries(seriesId);
       const pages: Promise<CardDef[]>[] = [];
       for (let from = 0; from < s.card_count; from += 200) {
@@ -93,9 +95,10 @@ export function getCardDefs(seriesId = SERIES_ID): Promise<CardDef[]> {
       }
       return (await Promise.all(pages)).flat();
     })();
-    cardDefs.catch(() => (cardDefs = null));
+    p.catch(() => cardDefs.delete(seriesId));
+    cardDefs.set(seriesId, p);
   }
-  return cardDefs;
+  return p;
 }
 
 /**
