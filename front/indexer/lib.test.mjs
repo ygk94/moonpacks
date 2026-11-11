@@ -67,13 +67,13 @@ describe("rankTrending", () => {
     const rows = [
       { event: "card_listed", card_id: "bonk", kind: "visible", rarity: "legendary", price: "5", ts: 1 },
       { event: "card_listed", card_id: "bonk", kind: "visible", rarity: "legendary", price: "6", ts: 2 },
-      { event: "card_sold", card_id: "doge", kind: "visible", rarity: "common", price: "3", ts: 3 },
-      { event: "card_sold", card_id: "doge", kind: "visible", rarity: "common", price: "4", ts: 5 },
+      { event: "card_sold", card_id: "popcat", kind: "visible", rarity: "common", price: "3", ts: 3 },
+      { event: "card_sold", card_id: "popcat", kind: "visible", rarity: "common", price: "4", ts: 5 },
       { event: "card_listed", card_id: null, kind: "mythic", rarity: "mythic", price: "9", ts: 4 },
       { event: "card_listed", card_id: null, kind: "mythic", rarity: "mythic", price: "9", ts: 4 },
     ];
     const out = rankTrending(rows);
-    expect(out.map((g) => g.card_id)).toEqual(["doge", "bonk", null]);
+    expect(out.map((g) => g.card_id)).toEqual(["popcat", "bonk", null]);
     expect(out[0]).toMatchObject({ sales: 2, listings: 0, volume: "7", last_price: "4", score: 4 });
     expect(out[2]).toMatchObject({ kind: "mythic", listings: 2 });
     expect(rankTrending(rows, 1)).toHaveLength(1);

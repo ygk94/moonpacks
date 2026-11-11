@@ -56,4 +56,22 @@ describe("check-mythics", () => {
     expect(r.status).toBe(0);
     expect(r.stderr).toMatch(/homonym/);
   });
+
+  it("tolerates a mythic term inside a longer public card name, id or abridged id, but not alone", () => {
+    const catalog = JSON.stringify({
+      "baby-zrbx-cash-babyzrbxcash": { ticker: "BABYZRBXCASH", name: "Baby ZRBX Cash †", coingecko: "zorblax-coin-junior" },
+    });
+    // Visuel d'une carte publique : nom sans « † », id abrégé comme dans art/ (abreger_id), id CoinGecko dérivé.
+    const svg = "<svg><text>Baby ZRBX Cash</text><text>baby-zrbx-…zrbxcash</text><desc>zorblax-coin-junior</desc></svg>";
+    const ok = run(fakeFront({ "public/catalog.json": catalog, "public/cards/baby-zrbx-cash-babyzrbxcash.svg": svg }));
+    expect(ok.status).toBe(0);
+    expect(ok.stderr).toMatch(/2 file\(s\) contain a mythic term only inside a public card/);
+    expect(ok.stderr + ok.stdout).not.toMatch(/ZRBX|Zorblax|babyzrbx/i);
+
+    const leak = run(
+      fakeFront({ "public/catalog.json": catalog, "public/cards/baby-zrbx-cash-babyzrbxcash.svg": svg + "<text>ZRBX</text>" }),
+    );
+    expect(leak.status).toBe(1);
+    expect(leak.stderr).toMatch(/mythic ticker found/);
+  });
 });

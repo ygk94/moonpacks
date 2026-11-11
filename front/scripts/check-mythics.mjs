@@ -4,8 +4,8 @@
 // 1. Toujours : pas de fiche mythique dans public/catalog.json, pas de fichier `mythique-*` dans public/cards/.
 // 2. Si le fichier secret existe (docs/data/secrets/mythiques.json, hors git, écrit par consolider.py) : aucun
 //    vrai nom, ticker, id CoinGecko ou adresse de mythique dans src/, public/, dist/, indexer/ et index.html.
-//    Les noms et tickers sont cherchés en mot entier ; un homonyme d'une carte publique (même ticker qu'une
-//    carte du catalogue, par exemple) est signalé mais ne fait pas échouer.
+//    Les noms et tickers sont cherchés en mot entier. Une occurrence qui n'est qu'à l'intérieur du nom, du
+//    ticker, de l'id ou de l'adresse d'une carte publique (homonyme, dérivé) est signalée mais ne fait pas échouer.
 //
 // Usage : node scripts/check-mythics.mjs [--secrets FICHIER] [--root DOSSIER]   (code de sortie 1 si fuite)
 
@@ -24,6 +24,7 @@ const secrets = resolve(opt("--secrets", resolve(ici, "..", "..", "docs", "data"
 
 const errors = [];
 const warnings = [];
+const homonyms = new Set();
 
 // --- 1. Contrôles de structure ----------------------------------------------------------------
 
@@ -55,9 +56,23 @@ let scanned = 0;
 if (existsSync(secrets)) {
   const raw = JSON.parse(readFileSync(secrets, "utf8"));
   const mythics = raw.mythiques ?? raw;
-  const publicWords = new Set(
-    Object.values(catalog).flatMap((e) => [e.ticker, e.name].filter(Boolean).map((v) => String(v).toLowerCase())),
-  );
+  // Textes publics : id, ticker, nom, adresse et id CoinGecko de chaque carte du catalogue. Le catalogue contient
+  // des cartes dont le nom ou l'id contient celui d'une mythique (copies, dérivés) : ces occurrences-là sont
+  // retirées du texte avant la recherche, et seulement signalées.
+  // Les visuels de art/ abrègent l'id (`abreger_id` : 10 premiers caractères, « … », 8 derniers) et le nom
+  // perd ses marques finales (« † ») : ces formes-là comptent aussi comme publiques.
+  const variants = (v) => {
+    const s = String(v);
+    const out = [s, s.replace(/[^\p{L}\p{N}]+$/u, "")];
+    if (s.length > 22) out.push(`${s.slice(0, 10)}…${s.slice(-8)}`);
+    return out.filter(Boolean);
+  };
+  const publicTexts = [
+    ...new Set(
+      Object.entries(catalog).flatMap(([id, e]) => [id, e.ticker, e.name, e.address, e.coingecko].filter(Boolean).flatMap(variants)),
+    ),
+  ];
+  const escRe = (v) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const terms = [];
   for (const m of mythics) {
     for (const k of ["nom", "ticker", "coingecko_id", "adresse"]) {
@@ -66,7 +81,10 @@ if (existsSync(secrets)) {
       const esc = v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       // Mot entier pour un nom ou un ticker ; sous-chaîne pour un id ou une adresse.
       const re = k === "nom" || k === "ticker" ? new RegExp(`(?<![\\p{L}\\p{N}])${esc}(?![\\p{L}\\p{N}])`, "iu") : new RegExp(esc, "i");
-      terms.push({ kind: k, value: v, re, homonym: publicWords.has(v.toLowerCase()) });
+      // Textes publics qui contiennent le terme, du plus long au plus court, en une seule expression.
+      const hosts = publicTexts.filter((p) => re.test(p)).sort((a, b) => b.length - a.length);
+      const strip = hosts.length ? new RegExp(hosts.map(escRe).join("|"), "giu") : null;
+      terms.push({ kind: k, re, strip });
     }
   }
   const targets = [
@@ -83,7 +101,7 @@ if (existsSync(secrets)) {
     for (const t of terms) {
       if (!t.re.test(text)) continue;
       const where = `${relative(root, p)}: mythic ${t.kind} found`;
-      if (t.homonym) warnings.push(`${where} (also a public card's name or ticker: homonym, not counted)`);
+      if (t.strip && !t.re.test(text.replace(t.strip, " "))) homonyms.add(relative(root, p));
       else errors.push(where);
     }
   }
@@ -91,6 +109,14 @@ if (existsSync(secrets)) {
   warnings.push(`secret file not found (${relative(process.cwd(), secrets)}): only structural checks were run`);
 }
 
+if (homonyms.size) {
+  // Un fichier par ligne serait trop long (des centaines de visuels), et les noms de fichiers trahiraient le
+  // terme : on compte seulement.
+  const list = [...homonyms];
+  warnings.push(
+    `${list.length} file(s) contain a mythic term only inside a public card's name, ticker or id (homonym, not counted)`,
+  );
+}
 for (const w of warnings) console.warn(`[check-mythics] warning: ${w}`);
 if (errors.length) {
   for (const e of errors) console.error(`[check-mythics] LEAK: ${e}`);
