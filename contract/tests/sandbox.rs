@@ -556,12 +556,12 @@ async fn mythic_reveal_and_commitment_check() -> Result<()> {
     let env = setup().await?;
     let sel: [u8; 32] = sha(&[b"sel secret de test"]);
     let content = MythicContent {
-        title: "PEPE MYTHIQUE".into(),
-        media: Some("ipfs://bafy/pepe-mythic.png".into()),
+        title: "ZORGLUB MYTHIQUE".into(),
+        media: Some("ipfs://bafy/zorglub-mythic.png".into()),
         reference: None,
-        backing: Some(Backing { asset_id: "nep141:pepe.tkn.near".into(), amount: U128(777) }),
+        backing: Some(Backing { asset_id: "nep141:zorglub.tkn.near".into(), amount: U128(777) }),
     };
-    let mut m = mythic_secret("pepe-mythic", &sel, &content);
+    let mut m = mythic_secret("zorglub-mythic", &sel, &content);
     m.cap = 6;
     let t = table(
         "Mythiques",
@@ -575,7 +575,7 @@ async fn mythic_reveal_and_commitment_check() -> Result<()> {
 
     // La table publique ne montre que l'engagement.
     let raw = env.contract.view("get_series_table").args_json(json!({ "series_id": sid })).await?.result;
-    assert!(!String::from_utf8_lossy(&raw).contains("pepe"), "le mème mythique ne doit pas apparaître");
+    assert!(!String::from_utf8_lossy(&raw).contains("zorglub"), "le mème mythique ne doit pas apparaître");
     let hash = sha(&[&raw]);
     assert_eq!(hex::encode(hash), series_view(&env, sid).await?["table_hash"].as_str().unwrap(), "hash = sha256(octets de la vue)");
 
@@ -596,7 +596,7 @@ async fn mythic_reveal_and_commitment_check() -> Result<()> {
     let bad = env
         .owner
         .call(env.contract.id(), "reveal_mythic")
-        .args_json(json!({ "series_id": sid, "mythic_index": 0, "card_id": "pepe-mythic", "sel": hex::encode([0u8; 32]), "content": content }))
+        .args_json(json!({ "series_id": sid, "mythic_index": 0, "card_id": "zorglub-mythic", "sel": hex::encode([0u8; 32]), "content": content }))
         .deposit(NearToken::from_near(1))
         .max_gas()
         .transact()
@@ -607,7 +607,7 @@ async fn mythic_reveal_and_commitment_check() -> Result<()> {
     let ok = env
         .owner
         .call(env.contract.id(), "reveal_mythic")
-        .args_json(json!({ "series_id": sid, "mythic_index": 0, "card_id": "pepe-mythic", "sel": hex::encode(sel), "content": content }))
+        .args_json(json!({ "series_id": sid, "mythic_index": 0, "card_id": "zorglub-mythic", "sel": hex::encode(sel), "content": content }))
         .deposit(NearToken::from_near(1))
         .max_gas()
         .transact()
@@ -631,7 +631,7 @@ async fn mythic_reveal_and_commitment_check() -> Result<()> {
     let backing: Value = env.contract.view("get_backing").args_json(json!({ "token_id": sealed_id })).await?.json()?;
     assert_eq!(backing["amount"], "777");
     let views: Value = env.contract.view("get_mythic_commitments").args_json(json!({ "series_id": sid })).await?.json()?;
-    assert_eq!(views[0]["revealed"]["card_id"], "pepe-mythic");
+    assert_eq!(views[0]["revealed"]["card_id"], "zorglub-mythic");
 
     // Après la révélation, la mythique sort directement avec contenu et adossement.
     let r2 = buy(&env, &env.bob, sid).await?;
@@ -661,7 +661,7 @@ fn assert_anonymous_mythic(tok: &Value) {
     keys.sort();
     assert_eq!(keys, ["pack_id", "rarity", "series_id"], "{extra}");
     let txt = tok.to_string().to_lowercase();
-    assert!(!txt.contains("pepe"), "le coin apparaît : {txt}");
+    assert!(!txt.contains("zorglub"), "le coin apparaît : {txt}");
 }
 
 async fn simple_backed_series(env: &Env) -> Result<u32> {
