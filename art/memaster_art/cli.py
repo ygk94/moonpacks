@@ -11,6 +11,7 @@ from .catalogue_v2 import lire_catalogue_v2
 from .metadonnees import en_octets, metadonnees_carte, metadonnees_dos
 from .planche import planches
 from .rendu import rendre_carte, rendre_dos
+from .anglais import en_anglais
 
 
 def _ecrire(chemin: str, donnees: bytes) -> None:
@@ -26,13 +27,15 @@ def sceller(c):
                    cle="", adresse="", scellee=True)
 
 
-def generer(cartes, out: str, base_url: str = "", planche: bool = False) -> dict:
+def generer(cartes, out: str, base_url: str = "", planche: bool = False, langue: str = "fr") -> dict:
+    """`langue=\"en\"` : textes visibles des SVG en anglais (les métadonnées JSON ne changent pas)."""
+    traduire = en_anglais if langue == "en" else (lambda s: s)
     os.makedirs(out, exist_ok=True)
     entrees = []
     stats = {"cartes": 0, "octets_max": 0, "mythiques": 0, "scellees": 0}
     dos = None
     if any(c.rarete == "mythique" for c in cartes):
-        dos = rendre_dos().encode("utf-8")
+        dos = traduire(rendre_dos()).encode("utf-8")
         _ecrire(os.path.join(out, "dos-mythique.svg"), dos)
         _ecrire(os.path.join(out, "dos-mythique.json"), en_octets(metadonnees_dos(dos, base_url)))
         entrees.append(("dos-mythique.svg", "dos scellé · mythique"))
@@ -50,7 +53,7 @@ def generer(cartes, out: str, base_url: str = "", planche: bool = False) -> dict
             stats["mythiques"] += 1
             stats["scellees"] += 1
             continue
-        svg = rendre_carte(c).encode("utf-8")
+        svg = traduire(rendre_carte(c)).encode("utf-8")
         meta, ref = metadonnees_carte(c, svg, base_url)
         base = os.path.join(out, c.nom_fichier)
         _ecrire(base + ".svg", svg)
@@ -79,6 +82,8 @@ def main(argv=None) -> int:
     ap.add_argument("--base-url", default="", help="préfixe des champs media et reference (ex. https://…/)")
     ap.add_argument("--mythiques", default="",
                     help="N° (ou tickers) à passer en mythique (règle v2), ex. 1,2,3 ; un ticker vise toutes les cartes qui le portent")
+    ap.add_argument("--langue", choices=("fr", "en"), default="fr",
+                    help="langue des textes visibles des SVG (en : pour le front, interface en anglais)")
     a = ap.parse_args(argv)
 
     v2 = a.catalogue.lower().endswith(".json")
@@ -98,6 +103,6 @@ def main(argv=None) -> int:
         ]
     if a.limit is not None:
         cartes = cartes[: a.limit]
-    stats = generer(cartes, a.out, a.base_url, a.planche)
+    stats = generer(cartes, a.out, a.base_url, a.planche, a.langue)
     print(json.dumps(stats, ensure_ascii=False))
     return 0
