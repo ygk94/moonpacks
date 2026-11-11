@@ -1890,6 +1890,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mock-oracle"
+version = "0.1.0"
+dependencies = [
+ "near-sdk",
+]
+
+[[package]]
 name = "mock-redeemer"
 version = "0.1.0"
 dependencies = [

@@ -23,6 +23,7 @@ static BUILD_LOCK: Mutex<()> = Mutex::new(());
 static WASM_PROD: OnceCell<Vec<u8>> = OnceCell::const_new();
 static WASM_HOOKS: OnceCell<Vec<u8>> = OnceCell::const_new();
 static WASM_MOCK: OnceCell<Vec<u8>> = OnceCell::const_new();
+static WASM_ORACLE: OnceCell<Vec<u8>> = OnceCell::const_new();
 
 fn build(manifest: &str, features: Option<&str>, target: &str) -> Vec<u8> {
     let _g = BUILD_LOCK.lock().unwrap_or_else(|e| e.into_inner());
@@ -55,6 +56,14 @@ async fn wasm_mock() -> &'static [u8] {
     WASM_MOCK
         .get_or_init(|| async {
             tokio::task::spawn_blocking(|| build("mock-redeemer/Cargo.toml", None, "mock")).await.unwrap()
+        })
+        .await
+}
+
+async fn wasm_oracle() -> &'static [u8] {
+    WASM_ORACLE
+        .get_or_init(|| async {
+            tokio::task::spawn_blocking(|| build("mock-oracle/Cargo.toml", None, "oracle")).await.unwrap()
         })
         .await
 }
@@ -194,6 +203,21 @@ fn revealed(r: &ExecutionFinalResult) -> Value {
     ev[0].clone()
 }
 
+/// Lignes `EVENT_JSON:` des événements utiles au rejeu d'une série, dans l'ordre des reçus.
+fn series_event_lines(r: &ExecutionFinalResult) -> Vec<String> {
+    const NAMES: [&str; 4] = ["pack_bought", "pack_revealed", "card_redeemed", "card_resurrected"];
+    r.receipt_outcomes()
+        .iter()
+        .flat_map(|o| o.logs.iter())
+        .filter(|l| {
+            l.strip_prefix("EVENT_JSON:")
+                .and_then(|j| serde_json::from_str::<Value>(j).ok())
+                .is_some_and(|v| v["standard"] == "memaster" && NAMES.contains(&v["event"].as_str().unwrap_or("")))
+        })
+        .cloned()
+        .collect()
+}
+
 fn token_ids(ev: &Value) -> Vec<String> {
     ev["draws"].as_array().unwrap().iter().map(|d| d["token_id"].as_str().unwrap().to_string()).collect()
 }
@@ -212,10 +236,13 @@ fn verify_pack_event(ev: &Value, owner: &str, table: &SeriesTable) {
         assert_eq!(hex::encode(acc), s["acc"].as_str().unwrap());
     }
     assert_eq!(hex::encode(acc), ev["acc"].as_str().unwrap());
-    let total: u128 = [table.rarity_weights.mythic, table.rarity_weights.legendary, table.rarity_weights.epic, table.rarity_weights.rare, table.rarity_weights.common]
-        .iter()
-        .map(|x| *x as u128)
-        .sum();
+    // Table de taux du pack (série à mécaniques : base, or ou rush, journalisée).
+    let w = match ev["mechanics"]["mode"].as_str() {
+        Some("gold") => table.mechanics.as_ref().and_then(|m| m.gold_weights.clone()).unwrap(),
+        Some("rush") => table.mechanics.as_ref().and_then(|m| m.rush.as_ref()).map(|r| r.weights.clone()).unwrap(),
+        _ => table.rarity_weights.clone(),
+    };
+    let total: u128 = [w.mythic, w.legendary, w.epic, w.rare, w.common].iter().map(|x| *x as u128).sum();
     for d in ev["draws"].as_array().unwrap() {
         let slot = d["slot"].as_u64().unwrap() as u8;
         let h = sha(&[&acc, &[slot, 0]]);
@@ -1209,8 +1236,10 @@ async fn catalogue_v2_batched_load_and_packs() -> Result<()> {
         );
         worst_total = worst_total.max(r.total_gas_burnt.as_gas());
         worst_used = worst_used.max(a.storage_usage - b.storage_usage);
-        jsonl.push_str(&serde_json::to_string(&json!({ "standard": "memaster", "version": "1.0.0", "event": "pack_revealed", "data": [ev] }))?);
-        jsonl.push('\n');
+        for l in series_event_lines(&r) {
+            jsonl.push_str(&l);
+            jsonl.push('\n');
+        }
     }
     println!(
         "  12 boosters à {} Tgas : gaz total max {:.2} Tgas, buy_pack max {:.2} Tgas (budget 20), dernier reçu max {:.2} Tgas (budget 120), stockage max {} o / prépayé {} o",
@@ -1227,7 +1256,8 @@ async fn catalogue_v2_batched_load_and_packs() -> Result<()> {
     std::fs::write(&events_path, jsonl)?;
     let (ok, txt) = run_verifier(&["pack", "--event", events_path.to_str().unwrap(), "--table", out.join("table.json").to_str().unwrap()]);
     assert!(ok, "vérificateur pack : {txt}");
-    println!("  vérificateur Python : 12 boosters rejoués depuis l'ouverture, VÉRIFIÉ");
+    assert!(!txt.contains("NON CONFORME"), "{txt}");
+    println!("  vérificateur Python : 12 boosters rejoués depuis l'ouverture (mécaniques de serie-exemple.json), VÉRIFIÉ");
     std::fs::remove_dir_all(&dir).ok();
     Ok(())
 }
@@ -1257,6 +1287,22 @@ async fn max_size_series_fits() -> Result<()> {
         .collect();
     let mut t = table("Taille max", NEAR / 10, weights(1, 1, 1, 1, 1), cards, mythics, &env.owner);
     t.cards_per_pack = 10;
+    // Pire cas des mécaniques : toutes actives (pitié garantie un pack sur deux, burns, rush).
+    t.mechanics = Some(Mechanics {
+        gold_weights: Some(weights(4, 4, 3, 2, 1)),
+        pity: Some(PityParams { p0_ppm: 20_000, k_ppm: 2_000, n_max: 2 }),
+        burn: Some(BurnParams { floor_bps: 2_500 }),
+        rush: Some(RushParams {
+            ratio_bps: 25_000,
+            min_packs: 50,
+            window_blocks: 6_000,
+            baseline_blocks: 144_000,
+            bucket_blocks: 1_500,
+            duration_blocks: 3_000,
+            cooldown_blocks: 36_000,
+            weights: weights(2, 2, 2, 2, 1),
+        }),
+    });
     t.royalties = (0..10).map(|i| Royalty { account_id: format!("r{i}.test.near").parse().unwrap(), bps: 100 }).collect();
     let mut first = t.clone();
     first.cards.truncate(memaster::MAX_CARDS_PER_CALL);
@@ -1340,19 +1386,28 @@ async fn max_size_series_fits() -> Result<()> {
     ]);
     assert!(ok && txt.contains(&format!("sha256 calculé : {h}")), "vérificateur table : {txt}");
 
-    for _ in 0..3 {
+    let prepaid = series_view(&env, sid).await?["storage_per_pack"].as_u64().unwrap();
+    for _ in 0..4 {
+        let b = env.worker.view_account(env.contract.id()).await?;
         let r = buy(&env, &env.alice, sid).await?;
         assert!(r.is_success(), "{:?}", r.failures());
+        let a = env.worker.view_account(env.contract.id()).await?;
         let ev = revealed(&r);
         verify_pack_event(&ev, env.alice.id().as_str(), &t);
         let outs = r.receipt_outcomes();
+        let last = outs.iter().map(|o| o.gas_burnt.as_gas()).max().unwrap();
         println!(
-            "  booster de 10 cartes à 160 Tgas : total {:.2} Tgas, buy_pack {:.2} Tgas, dernier reçu {:.2} Tgas",
+            "  booster de 10 cartes à 160 Tgas (mécaniques, table {}) : total {:.2} Tgas, buy_pack {:.2} Tgas, dernier reçu {:.2} Tgas, stockage {} o / prépayé {} o",
+            ev["mechanics"]["mode"],
             tgas(r.total_gas_burnt.as_gas()),
             tgas(outs[0].gas_burnt.as_gas()),
-            tgas(outs.iter().map(|o| o.gas_burnt.as_gas()).max().unwrap())
+            tgas(last),
+            a.storage_usage - b.storage_usage,
+            prepaid
         );
         assert!(outs[0].gas_burnt.as_gas() < 20_000_000_000_000);
+        assert!(last < memaster::FINAL_STEP_GAS.as_gas(), "dernier reçu dans son gaz fixe");
+        assert!(a.storage_usage - b.storage_usage <= prepaid);
     }
     Ok(())
 }
@@ -1431,5 +1486,157 @@ async fn draft_storage_is_paid_by_owner_and_refunded_on_delete() -> Result<()> {
     let r = env.owner.call(env.contract.id(), "delete_draft").args_json(json!({ "series_id": open })).max_gas().transact().await?;
     assert!(format!("{:?}", r.failures()).contains("Seul un brouillon"));
     assert_eq!(open, sid + 1, "identifiants jamais réutilisés");
+    Ok(())
+}
+
+// ------------------------------------------------------------------ mécaniques
+
+/// Série à toutes les mécaniques, de bout en bout : pitié (N = 3), gold rush déclenché par un pic
+/// d'achats (palier relatif, pause), burns jusqu'à la dernière carte d'un coin, résurrection d'une
+/// épique par l'oracle factice. Tous les événements sont rejoués par le vérificateur Python, sans
+/// archive d'état. Mesures de gaz et de stockage imprimées.
+#[tokio::test]
+async fn mechanics_end_to_end() -> Result<()> {
+    let env = setup().await?;
+    let oc = env.worker.root_account()?.create_subaccount("oracle").initial_balance(NearToken::from_near(20)).transact().await?.into_result()?;
+    let oracle = oc.deploy(wasm_oracle().await).await?.into_result()?;
+    oracle.call("new").args_json(json!({ "memaster": env.contract.id(), "operator": env.owner.id() })).transact().await?.into_result()?;
+    env.owner.call(env.contract.id(), "set_price_oracle").args_json(json!({ "price_oracle_id": oracle.id() })).transact().await?.into_result()?;
+
+    let mut t = table(
+        "Mécaniques",
+        NEAR / 10,
+        weights(0, 20, 100, 200, 680),
+        vec![
+            card("leg_a", Rarity::Legendary, 1, None, true),
+            card("leg_b", Rarity::Legendary, 1, None, false),
+            card("epic_a", Rarity::Epic, 1, None, true),
+            card("epic_b", Rarity::Epic, 1, None, true),
+            card("epic_c", Rarity::Epic, 1, None, false),
+            card("rare", Rarity::Rare, 1, None, false),
+            card("com_a", Rarity::Common, 10, None, true),
+            card("com_b", Rarity::Common, 10, None, true),
+            card("com_c", Rarity::Common, 10, None, false),
+        ],
+        vec![],
+        &env.owner,
+    );
+    t.mechanics = Some(Mechanics {
+        gold_weights: Some(weights(0, 80, 300, 300, 320)),
+        pity: Some(PityParams { p0_ppm: 100_000, k_ppm: 50_000, n_max: 3 }),
+        burn: Some(BurnParams { floor_bps: 2_500 }),
+        rush: Some(RushParams {
+            ratio_bps: 15_000,
+            min_packs: 2,
+            window_blocks: 10,
+            baseline_blocks: 50,
+            bucket_blocks: 5,
+            duration_blocks: 20,
+            cooldown_blocks: 20,
+            weights: weights(0, 30, 150, 250, 570),
+        }),
+    });
+    let sid = open_series(&env, &t).await?;
+    let prepaid = series_view(&env, sid).await?["storage_per_pack"].as_u64().unwrap();
+    let mut lines: Vec<String> = vec![];
+    let mut held: Vec<(String, usize, Account)> = vec![]; // (token_id, index, propriétaire)
+    let (mut max_used, mut max_last, mut modes) = (0u64, 0u64, std::collections::BTreeMap::<String, u32>::new());
+    let buyers = [env.alice.clone(), env.bob.clone(), env.carol.clone()];
+    let mut k = 0usize;
+    macro_rules! buy_one {
+        () => {{
+            let who = &buyers[k % 3];
+            k += 1;
+            let b = env.worker.view_account(env.contract.id()).await?;
+            let r = buy(&env, who, sid).await?;
+            assert!(r.is_success(), "{:?}", r.failures());
+            let a = env.worker.view_account(env.contract.id()).await?;
+            max_used = max_used.max(a.storage_usage - b.storage_usage);
+            let last = r.receipt_outcomes().iter().filter(|o| o.logs.iter().any(|l| l.contains("pack_revealed"))).map(|o| o.gas_burnt.as_gas()).max().unwrap();
+            max_last = max_last.max(last);
+            let ev = revealed(&r);
+            verify_pack_event(&ev, who.id().as_str(), &t);
+            *modes.entry(ev["mechanics"]["mode"].as_str().unwrap().to_string()).or_default() += 1;
+            for d in ev["draws"].as_array().unwrap() {
+                held.push((d["token_id"].as_str().unwrap().to_string(), d["index"].as_u64().unwrap() as usize, who.clone()));
+            }
+            lines.extend(series_event_lines(&r));
+            ev
+        }};
+    }
+    // 1. Trafic calme, puis la fenêtre longue (50 blocs) se remplit.
+    for _ in 0..3 {
+        buy_one!();
+    }
+    env.worker.fast_forward(60).await?;
+    // 2. Pic d'achats consécutifs : le rythme court dépasse 1,5 × la moyenne, le rush se déclenche.
+    let mut rush_packs = 0;
+    for _ in 0..8 {
+        let ev = buy_one!();
+        rush_packs += ev["mechanics"]["rush"].as_bool().unwrap() as u32;
+    }
+    assert!(rush_packs > 0, "aucun pack rush pendant le pic");
+    let rs: Value = env.contract.view("get_rush_state").args_json(json!({ "series_id": sid })).await?.json()?;
+    println!("\n=== MÉCANIQUES : {rush_packs} packs rush pendant le pic, état du rush {rs}");
+    // 3. Burns : toutes les com_a (jusqu'à la dernière), quelques epic_a.
+    let mut burn_gas = 0u64;
+    let to_burn: Vec<_> = held.iter().filter(|(_, i, _)| *i == 6 || *i == 2).cloned().collect();
+    for (tid, _, who) in &to_burn {
+        let r = who.call(env.contract.id(), "redeem").args_json(json!({ "token_id": tid })).deposit(NearToken::from_yoctonear(1)).gas(Gas::from_tgas(100)).transact().await?;
+        assert!(r.is_success(), "{:?}", r.failures());
+        let cb = r.receipt_outcomes().iter().filter(|o| o.logs.iter().any(|l| l.contains("card_redeemed"))).map(|o| o.gas_burnt.as_gas()).max().unwrap();
+        burn_gas = burn_gas.max(cb);
+        lines.extend(series_event_lines(&r));
+    }
+    let sv = series_view(&env, sid).await?;
+    assert_eq!(sv["burned"][6].as_u64().unwrap() as usize, to_burn.iter().filter(|x| x.1 == 6).count());
+    let rates: Value = env.contract.view("get_rates").args_json(json!({ "series_id": sid })).await?.json()?;
+    println!("  {} burns (toutes les com_a, jusqu'à la dernière, et les epic_a), on_redeem_complete {:.2} Tgas au plus (20 fixes) ; communes : {}", to_burn.len(), tgas(burn_gas), rates["rarities"][4]["cards"]);
+    assert!(burn_gas < 20_000_000_000_000);
+    // 4. Résurrection d'une épique morte par l'oracle (rare et commune refusées).
+    for (idx, ok) in [(4u32, true), (5, false), (8, false)] {
+        let r = env.owner.call(oracle.id(), "push_resurrection")
+            .args_json(json!({ "series_id": sid, "card_index": idx, "asset_id": "nep141:revived.near", "amount": "5" }))
+            .deposit(NearToken::from_millinear(10)).max_gas().transact().await?;
+        let logs = series_event_lines(&r);
+        assert_eq!(!logs.is_empty(), ok, "résurrection de {idx} : {:?}", r.failures());
+        lines.extend(logs);
+    }
+    let epic_c = held.iter().find(|x| x.1 == 4);
+    if let Some((tid, _, _)) = epic_c {
+        let b: Option<Backing> = env.contract.view("get_backing").args_json(json!({ "token_id": tid })).await?.json()?;
+        assert_eq!(b.unwrap().amount, U128(5), "exemplaire existant ressuscité");
+    }
+    // 5. Achats après burns et résurrection (pause du rush comprise).
+    env.worker.fast_forward(5).await?;
+    for _ in 0..6 {
+        buy_one!();
+    }
+    println!(
+        "  {} boosters : tables {:?}, stockage {} o au plus / prépayé {} o, dernier reçu {:.2} Tgas au plus",
+        k, modes, max_used, prepaid, tgas(max_last)
+    );
+    assert!(modes.get("gold").copied().unwrap_or(0) > 0, "pitié : aucun gold pack");
+    assert!(max_used <= prepaid);
+    // 6. Vérificateur Python : rejeu de tous les événements (achats, tirages, burns, résurrections).
+    let dir = std::path::PathBuf::from(format!("{}/target/near-test/mech-{}", env!("CARGO_MANIFEST_DIR"), std::process::id()));
+    std::fs::create_dir_all(&dir)?;
+    std::fs::write(dir.join("events.jsonl"), lines.join("\n"))?;
+    std::fs::write(dir.join("table.json"), serde_json::to_vec(&t)?)?;
+    let (ok, txt) = run_verifier(&["pack", "--event", dir.join("events.jsonl").to_str().unwrap(), "--table", dir.join("table.json").to_str().unwrap()]);
+    assert!(ok && !txt.contains("NON CONFORME"), "vérificateur : {txt}");
+    assert!(txt.contains("burns ") && txt.contains("résurrections 1"), "{txt}");
+    println!("  vérificateur Python : {} événements rejoués, VÉRIFIÉ", lines.len());
+    // Vecteurs du vérificateur (verifier/tests/vectors/sandbox_mech_vectors.json), sur demande.
+    if let Ok(out) = std::env::var("MECH_VECTORS_OUT") {
+        let events: Vec<Value> = lines.iter().map(|l| serde_json::from_str(l.strip_prefix("EVENT_JSON:").unwrap()).unwrap()).collect();
+        let doc = json!({
+            "source": "tests/sandbox.rs mechanics_end_to_end (contrat déployé dans near-sandbox, événements réels)",
+            "table_raw": String::from_utf8(serde_json::to_vec(&t)?)?,
+            "events": events,
+        });
+        std::fs::write(out, serde_json::to_string_pretty(&doc)? + "\n")?;
+    }
+    std::fs::remove_dir_all(&dir).ok();
     Ok(())
 }

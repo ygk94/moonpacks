@@ -158,6 +158,7 @@ fn rand_table(rng: &mut Rng) -> SeriesTable {
         cards,
         mythics,
         royalties,
+        mechanics: None,
     }
 }
 
@@ -269,6 +270,147 @@ fn draw_vectors() {
             "source": "memaster::draw (contract/src/draw.rs), serde_json::to_vec(SeriesTable), sha256",
             "cases": cases,
             "mythics": mythics,
+        }),
+    );
+}
+
+// ------------------------------------------------------------------ mécaniques
+
+fn rand_weights(rng: &mut Rng) -> RarityWeights {
+    RarityWeights {
+        mythic: rng.below(4) as u32,
+        legendary: rng.below(50) as u32,
+        epic: rng.below(300) as u32,
+        rare: rng.below(800) as u32,
+        common: 1 + rng.below(3000) as u32,
+    }
+}
+
+fn rand_rush(rng: &mut Rng) -> RushParams {
+    let bucket = 1 + rng.below(10);
+    let ml = 2 + rng.below(30);
+    let mw = 1 + rng.below(ml - 1);
+    RushParams {
+        ratio_bps: 10_000 + rng.below(30_000) as u32,
+        min_packs: 1 + rng.below(6) as u32,
+        window_blocks: mw * bucket,
+        baseline_blocks: ml * bucket,
+        bucket_blocks: bucket,
+        duration_blocks: 1 + rng.below(40),
+        cooldown_blocks: rng.below(60),
+        weights: rand_weights(rng),
+    }
+}
+
+/// Vecteurs des mécaniques (code pur de `draw.rs`) : table de taux du pack (pitié, rush), tirages
+/// avec burns renormalisés et résurrections, sérialisation des tables à mécaniques, et séquences
+/// d'achats du gold rush.
+#[test]
+fn mech_vectors() {
+    let mut rng = Rng(0x6d65_6361_6e69_7175);
+    let mut cases = Vec::new();
+    for case in 0..120 {
+        let mut table = rand_table(&mut rng);
+        let mech = Mechanics {
+            gold_weights: rng.chance(4, 5).then(|| rand_weights(&mut rng)),
+            pity: rng.chance(4, 5).then(|| PityParams {
+                p0_ppm: rng.below(300_000) as u32,
+                k_ppm: rng.below(100_000) as u32,
+                n_max: 1 + rng.below(30) as u32,
+            }),
+            burn: rng.chance(3, 4).then(|| BurnParams { floor_bps: rng.below(10_001) as u32 }),
+            rush: rng.chance(1, 2).then(|| rand_rush(&mut rng)),
+        };
+        table.mechanics = Some(mech.clone());
+        let table_json = serde_json::to_string(&table).unwrap();
+        let table_hash = sha(&[table_json.as_bytes()]);
+        let acc = rng.bytes32();
+        let pity_n = rng.below(35) as u32;
+        let rush = mech.rush.is_some() && rng.chance(1, 3);
+        let (pity_gold, gold_roll, p_ppm) = match &mech.pity {
+            Some(p) => draw::pity_is_gold(p, pity_n, &acc),
+            None => (false, draw::gold_roll(&acc), 0),
+        };
+        let mode = draw::pack_mode(pity_gold && mech.gold_weights.is_some(), rush);
+        let weights = draw::mode_weights(&table, mode).clone();
+        // Compteurs : émises, brûlées (≤ émises), brûlables (table ou ressuscitées).
+        let mut minted: Vec<u32> = table
+            .cards
+            .iter()
+            .map(|c| match c.cap {
+                Some(cap) if rng.chance(1, 3) => cap,
+                _ => rng.below(12) as u32,
+            })
+            .collect();
+        let burned: Vec<u32> = minted.iter().map(|m| rng.below(*m as u64 + 1) as u32).collect();
+        let mut cards: Vec<DrawCard> = table.cards.iter().map(DrawCard::from).collect();
+        for c in cards.iter_mut() {
+            if !c.backed && rng.chance(1, 6) {
+                c.backed = true; // ressuscitée
+            }
+        }
+        let backed: Vec<bool> = cards.iter().map(|c| c.backed).collect();
+        let mut mythic_minted: Vec<u32> =
+            table.mythics.iter().map(|m| (m.cap as u64).saturating_sub(rng.below(3)) as u32).collect();
+        let (minted_before, mythic_before) = (minted.clone(), mythic_minted.clone());
+        let bv = mech.burn.as_ref().map(|b| draw::BurnView { burned: &burned, floor_bps: b.floor_bps });
+        let mut draws = Vec::new();
+        for slot in 0..table.cards_per_pack {
+            let d = draw::draw_slot_mech(&weights, &cards, &table.mythics, &minted, &mythic_minted, bv.as_ref(), &acc, slot);
+            draws.push(draw_json(&d, slot));
+            match d.kind {
+                CardKind::Visible => minted[d.index as usize] += 1,
+                CardKind::Mythic => mythic_minted[d.index as usize] += 1,
+            }
+        }
+        cases.push(json!({
+            "case": case,
+            "table": table,
+            "table_json": table_json,
+            "table_hash": hex::encode(table_hash),
+            "acc": hex::encode(acc),
+            "pity_n": pity_n,
+            "rush": rush,
+            "gold_roll": gold_roll,
+            "p_ppm": p_ppm,
+            "pity_gold": pity_gold,
+            "mode": mode,
+            "minted": minted_before,
+            "mythic_minted": mythic_before,
+            "burned": burned,
+            "backed": backed,
+            "draws": draws,
+            "minted_after": minted,
+            "mythic_minted_after": mythic_minted,
+        }));
+    }
+    // Gold rush : séquences d'achats (calme, pics, longues pauses).
+    let mut rushes = Vec::new();
+    for _ in 0..30 {
+        let p = rand_rush(&mut rng);
+        let mut st = RushState::default();
+        let mut h = rng.below(1_000);
+        let mut buys = Vec::new();
+        for _ in 0..250 {
+            h += match rng.below(10) {
+                0..=5 => 0,
+                6..=8 => 1 + rng.below(3 * p.bucket_blocks),
+                _ => rng.below(p.baseline_blocks * 2),
+            };
+            let o = draw::rush_on_buy(&p, &mut st, h);
+            buys.push(json!({
+                "height": h, "active": o.active, "window_count": o.window_count,
+                "baseline_count": o.baseline_count, "triggered": o.triggered,
+            }));
+        }
+        rushes.push(json!({ "params": p, "buys": buys, "rush_count": st.rush_count }));
+    }
+    write_json(
+        "mech_vectors.json",
+        &json!({
+            "source": "memaster::draw (contract/src/draw.rs) : pity_is_gold, pack_mode, mode_weights, draw_slot_mech, rush_on_buy",
+            "cases": cases,
+            "rushes": rushes,
         }),
     );
 }
@@ -484,6 +626,7 @@ async fn sandbox_vectors() -> anyhow::Result<()> {
         ],
         mythics: vec![mythic_commit("pepe-mythic", &sel, &content, 1, 2)],
         royalties: vec![Royalty { account_id: ctx.owner.id().as_str().parse().unwrap(), bps: 500 }],
+        mechanics: None,
     };
     let (mut s0, _) = run_series(&ctx, "distribution", &t0, &buyers, 90, |_| None).await?;
     // Révélation après coup (la mythique est sortie au moins une fois).
@@ -512,6 +655,7 @@ async fn sandbox_vectors() -> anyhow::Result<()> {
         ],
         mythics: vec![],
         royalties: vec![],
+        mechanics: None,
     };
     let (s1, _) = run_series(&ctx, "cascade", &t1, &buyers, 4, |_| None).await?;
 
@@ -545,6 +689,7 @@ async fn sandbox_vectors() -> anyhow::Result<()> {
         ],
         mythics: vec![],
         royalties: vec![],
+        mechanics: None,
     };
     let (s2, _) = run_series(&ctx, "unicode", &t2, &buyers, 2, |_| None).await?;
 
