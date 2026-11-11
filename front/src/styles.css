@@ -282,6 +282,8 @@ input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .offer__usd { color: var(--muted); font-weight: 600; }
 .confirm { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem; display: flex; flex-direction: column; gap: 0.6rem; }
 .confirm p { margin: 0; }
+.buy-confirm h2 { margin: 0 2rem 0 0; font-size: 1.2rem; }
+.buy-confirm .block { display: block; }
 @media (max-width: 640px) { .offer { flex-direction: column; text-align: left; } }
 
 .rush { margin-top: 1.2rem; padding: 1rem 1.2rem; border-radius: var(--radius); border: 1px solid #4a3a12; background: linear-gradient(120deg, #1d1606, var(--panel)); }

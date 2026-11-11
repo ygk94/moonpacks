@@ -77,8 +77,7 @@ Pas de routeur ni de bibliothèque d'état : un routeur par hash suffit (`#/shop
   réservé ; les autres comptes voient que seul l'acheteur peut relancer). Un pack `stuck` propose « Refund »
   (`refund_stuck_pack`, contrat v3 : prix et stockage non utilisé rendus à l'acheteur, quel que soit le compte qui
   le demande), puis affiche le statut `refunded` et le montant rendu. Sur `app2`, un pack `stuck` affiche un message
-  de contact. Le rejeu d'une
-  ouverture passée se fait depuis Collection, onglet Packs, ou par l'URL `#/open?pack=N`.
+  de contact. Le rejeu d'une ouverture passée se fait depuis Collection, onglet Packs, ou par l'URL `#/open?pack=N`.
 - **Vérification d'un tirage** (`src/verify/`) : un bouton « Verify this pack » dans le récapitulatif de
   l'ouverture et dans Collection, onglet Packs. Deux niveaux, portés de `verifier/` :
   - **sans état** (`verify.ts`) : hash de la table recalculé, chaîne des graines jusqu'à `acc`, jet de rareté de
@@ -99,7 +98,9 @@ Pas de routeur ni de bibliothèque d'état : un routeur par hash suffit (`#/shop
   cours publics.
 - **Pas de compteur de pitié.** Le gold pack n'est annoncé nulle part avant la déchirure.
 - **Pas de fausse urgence** : le seul compte à rebours est celui du gold rush, calculé depuis `rush_until` et le
-  temps de bloc. L'achat demande une confirmation et renvoie vers les taux.
+  temps de bloc. L'achat d'un pack demande une confirmation et renvoie vers les taux. L'achat d'une carte sur le
+  marché aussi : « Buy » ouvre un récapitulatif avec le prix exact en NEAR, les redevances prises sur ce prix
+  (`nft_payout`, NEP-199) et la part du vendeur, puis « Confirm and buy » signe.
 - **Bandeau permanent** « Demo · NEAR testnet » avec un lien vers les mentions légales, visible aussi pendant
   l'ouverture et dans les fenêtres.
 - **Interface en anglais.** Les paniques du contrat sont traduites dans `src/near/errors.ts` par leur code stable

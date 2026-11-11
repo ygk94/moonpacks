@@ -22,6 +22,9 @@ export const getPack = (packId: number) => view<PackView | null>("get_pack", { p
 export const getCard = (tokenId: string) => view<CardView | null>("get_card", { token_id: tokenId });
 export const getBacking = (tokenId: string) => view<Backing | null>("get_backing", { token_id: tokenId });
 export const getListing = (tokenId: string) => view<Listing | null>("get_listing", { token_id: tokenId });
+/** NEP-199 : répartition de `balance` (yoctoNEAR) entre les redevances de la série et le propriétaire. */
+export const getPayout = (tokenId: string, balance: string) =>
+  view<{ payout: Record<string, string> }>("nft_payout", { token_id: tokenId, balance, max_len_payout: null });
 /** Adossement donné par l'oracle à une carte d'un coin mort (`card_resurrected`), ou `null`. */
 export const getResurrected = (seriesId: number, cardIndex: number) =>
   view<Backing | null>("get_resurrected", { series_id: seriesId, card_index: cardIndex });

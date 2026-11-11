@@ -9,9 +9,10 @@ import { Modal } from "../components/Modal";
 import { loadCatalog } from "../lib/catalog";
 import { fetchSales, fetchTrending } from "../lib/indexer";
 import { formatNearExact, formatUsd, RARITY_LABEL, shortAccount, yoctoToNumber } from "../lib/format";
+import { payoutBreakdown, type PayoutBreakdown } from "../lib/market";
 import { nearUsd } from "../lib/prices";
 import { useAsync } from "../lib/useAsync";
-import { getCard, getListings } from "../near/contract";
+import { getCard, getListings, getPayout } from "../near/contract";
 import { humanError } from "../near/errors";
 import type { CardView, Listing } from "../near/types";
 import { useWallet } from "../near/wallet";
@@ -29,6 +30,8 @@ export function Market() {
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  // Achat en deux temps (consigne : pas d'achat en un clic) : récapitulatif du prix exact et des redevances.
+  const [confirming, setConfirming] = useState<Row | null>(null);
   const usd = useAsync(() => nearUsd(), []);
 
   const rows = useAsync(async (): Promise<Row[]> => {
@@ -117,6 +120,7 @@ export function Market() {
   }, [rows.data, indexed.data, catalog.data]);
 
   const buy = async (r: Row) => {
+    setConfirming(null);
     setBusy(r.tokenId);
     setMessage(null);
     try {
@@ -215,7 +219,7 @@ export function Market() {
                     Manage
                   </button>
                 ) : (
-                  <button className="btn btn--primary" disabled={!accountId || busy === r.tokenId} onClick={() => buy(r)}>
+                  <button className="btn btn--primary" disabled={!accountId || busy === r.tokenId} onClick={() => setConfirming(r)}>
                     {busy === r.tokenId ? "Buying…" : accountId ? "Buy" : "Connect to buy"}
                   </button>
                 )}
@@ -225,9 +229,73 @@ export function Market() {
         })}
       </div>
 
+      <Modal open={confirming != null} onClose={() => setConfirming(null)}>
+        {confirming && (
+          <BuyConfirm row={confirming} nearPrice={nearPrice} onConfirm={() => buy(confirming)} onCancel={() => setConfirming(null)} />
+        )}
+      </Modal>
+
       <Modal open={open != null} onClose={() => setOpen(null)} wide>
         {open && <CardDetail tokenId={open} onChanged={rows.reload} />}
       </Modal>
+    </div>
+  );
+}
+
+/** Récapitulatif avant achat : prix exact payé, redevances comprises dans ce prix, part du vendeur. */
+export function BuyConfirm({
+  row,
+  nearPrice,
+  onConfirm,
+  onCancel,
+}: {
+  row: Row;
+  nearPrice: number | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const split = useAsync(
+    async (): Promise<PayoutBreakdown> =>
+      payoutBreakdown(await getPayout(row.tokenId, row.listing.price), row.listing.seller_id, row.listing.price),
+    [row.tokenId, row.listing.price],
+  );
+  const near = (y: bigint | string) => `${formatNearExact(y)} NEAR`;
+  return (
+    <div className="confirm buy-confirm">
+      <h2>
+        Buy {row.ticker} #{row.tokenId}
+      </h2>
+      <p>
+        You pay exactly <strong>{near(row.listing.price)}</strong>
+        {nearPrice != null && <> (≈ {formatUsd(yoctoToNumber(row.listing.price) * nearPrice)})</>}, plus the network gas.
+      </p>
+      {split.loading && !split.data && <p className="muted small">Reading the royalties…</p>}
+      {split.error != null && <p className="muted small">The royalties could not be read right now. They are included in the price.</p>}
+      {split.data && (
+        <dl className="facts">
+          <dt>Royalties</dt>
+          <dd>
+            {split.data.royalties.length === 0
+              ? "None"
+              : split.data.royalties.map((r) => (
+                  <span key={r.account} className="block">
+                    {near(r.amount)} to {shortAccount(r.account)}
+                  </span>
+                ))}
+          </dd>
+          <dt>Seller receives</dt>
+          <dd>{near(split.data.seller)}</dd>
+        </dl>
+      )}
+      <p className="small muted">Royalties are taken from the price, not added to it. The purchase is final once signed.</p>
+      <div className="row">
+        <button className="btn btn--primary" onClick={onConfirm}>
+          Confirm and buy for {near(row.listing.price)}
+        </button>
+        <button className="btn btn--ghost" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
