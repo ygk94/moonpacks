@@ -1,5 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+
+// La fenêtre est rendue dans <body> : un parent avec `backdrop-filter` (l'en-tête collant) sert sinon de repère aux
+// éléments `position: fixed`, et la fenêtre de connexion ouverte depuis l'en-tête restait coincée dans ses 56 px.
 
 export function Modal({ open, onClose, children, wide }: { open: boolean; onClose: () => void; children: ReactNode; wide?: boolean }) {
   useEffect(() => {
@@ -8,7 +12,7 @@ export function Modal({ open, onClose, children, wide }: { open: boolean; onClos
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
   }, [open, onClose]);
-  return (
+  const content = (
     <AnimatePresence>
       {open && (
         <motion.div
@@ -37,4 +41,5 @@ export function Modal({ open, onClose, children, wide }: { open: boolean; onClos
       )}
     </AnimatePresence>
   );
+  return typeof document === "undefined" ? content : createPortal(content, document.body);
 }
