@@ -61,6 +61,11 @@ const connector = new NearConnector({
   walletConnect: walletConnect as unknown as NearConnectorOptions["walletConnect"],
 });
 
+// Wallet de test (clé locale injectée par `npm run e2e`) : seulement en dev et avec VITE_E2E_KEY_WALLET=1.
+// `import.meta.env.DEV` vaut `false` dans un build : le module n'y est jamais inclus.
+const E2E_KEY_WALLET = import.meta.env.DEV && import.meta.env.VITE_E2E_KEY_WALLET === "1";
+const testWallet = E2E_KEY_WALLET ? import("./testKeyWallet") : null;
+
 const isEvmAccount = (id: string | null) => !!id && /^0x[0-9a-f]{40}$/i.test(id);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
@@ -83,6 +88,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         // MetaMask en premier, puis l'ordre du manifeste.
         .sort((a, b) => Number(b.evm) - Number(a.evm));
       setOptions(list);
+      testWallet?.then((m) => setOptions((o) => (o.some((w) => w.id === m.TEST_WALLET_ID) ? o : [m.TEST_WALLET_OPTION, ...o])));
     };
     const onIn = (t: { wallet: NearWalletBase; accounts: { accountId: string }[] }) => {
       setWallet(t.wallet);
@@ -117,17 +123,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const connect = useCallback(async (walletId: string) => {
-    const w = await connector.connect({ walletId });
+    const test = await testWallet;
+    const w = test && walletId === test.TEST_WALLET_ID ? await test.createTestKeyWallet() : await connector.connect({ walletId });
     const accounts = await w.getAccounts({ network: NETWORK });
     setWallet(w);
     setAccountId(accounts[0]?.accountId ?? null);
   }, []);
 
   const disconnect = useCallback(async () => {
-    await connector.disconnect();
+    const test = await testWallet;
+    if (!(test && wallet?.manifest.id === test.TEST_WALLET_ID)) await connector.disconnect();
     setWallet(null);
     setAccountId(null);
-  }, []);
+  }, [wallet]);
 
   const call = useCallback(
     async (method: string, args: Record<string, unknown>, opts: CallOptions = {}) => {

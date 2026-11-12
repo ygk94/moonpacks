@@ -6,7 +6,7 @@
   "scripts": {
     "prepare-assets": "node scripts/prepare-assets.mjs",
     "dev": "node scripts/prepare-assets.mjs && vite",
-    "build": "node scripts/prepare-assets.mjs && tsc -b && vite build && node scripts/check-mythics.mjs",
+    "build": "node scripts/prepare-assets.mjs && tsc -b && vite build && node scripts/check-no-e2e-wallet.mjs && node scripts/check-mythics.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "indexer": "node indexer/indexer.mjs",
