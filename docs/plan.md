@@ -42,7 +42,7 @@ Chaque test est petit, isolé, et se fait avant d'écrire le vrai contrat.
 ## Phase 2 : économie et catalogue
 
 - [x] **2.0 Catalogue v2** (11/11) : 100 % mèmes, surtout des anciens pump → mort, toutes chaînes. 1 649 cartes
-  (mythique 3 scellés « ? » = DOGE, SHIB, PEPE ; légendaire 21 ; épique 235 ; rare 230 ; commune 1 160) et
+  (mythique 3 scellés « ? » ; légendaire 21 ; épique 235 ; rare 230 ; commune 1 160) et
   101 « À décider ». Script relançable `docs/recherche-v2/consolider.py`, surclassements manuels dans
   `docs/recherche-v2/surclassements.md`. La disponibilité sur NEAR Intents ne filtre plus le catalogue.
 

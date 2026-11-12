@@ -104,7 +104,7 @@ quantité, puis établir le plan de tout ce qu'il reste à faire.
 ## 11/11 : catalogue v2 et socle technique
 
 **Demande.** La liste v1 ne va pas. Catalogue **full mèmes**, surtout des anciens qui ont explosé, ont rendu des gens
-riches et ne valent plus rien. Ceux qui ont connu un pic fou sont légendaires. DOGE, SHIB et PEPE sont mythiques mais on ne
+riches et ne valent plus rien. Ceux qui ont connu un pic fou sont légendaires. Trois coins choisis sont mythiques mais on ne
 communique pas dessus : « ? » dans le catalogue. Une grosse liste de mèmes morts en communes. Toutes les chaînes,
 recherches en parallèle. Burn : on verra plus tard comment financer ; le retrait vers les exchanges n'est pas notre
 problème. Lancer le technique en sous-agents (simulation, contrat Rust NFT…), pas de front.

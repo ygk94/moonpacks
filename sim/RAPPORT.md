@@ -67,7 +67,7 @@ maison. Sans `V_cap`, l'écart disparaît (test `test_monte_carlo_retrouve_l_exe
 
 Les trois jeux partagent le catalogue v2 provisoire : 520 communes, 150 rares, 80 épiques, 45 légendaires, 3 mythiques.
 Les 13 brûlables sont répartis ainsi : 2 communes, 2 rares, 1 épique, 5 légendaires (WIF, PENGU, SPX, BOME, TURBO), et les
-3 mythiques (DOGE, SHIB, PEPE). Ces effectifs sont des paramètres.
+3 mythiques (scellées). Ces effectifs sont des paramètres.
 
 | | **A : 10 NEAR, équilibré** | **B : 10 NEAR, jackpot fréquent** | **C : 5 NEAR, entrée** |
 |---|---:|---:|---:|
@@ -158,7 +158,7 @@ Les jeux B et C donnent les mêmes tendances (`resultats/serie1-B-10near-sensibi
    0,1 %. Si c'est trop pour l'équipe, prendre B (800 NEAR) ou baisser la valeur du mythique.
 3. **Fixer `V_cap` juste au-dessus du mythique**, puis la réserve. Le mythique est le premier levier sur la réserve.
 4. **Garder β entre 60 et 65 %.** Monter plus haut coûte en marge et en réserve, et rapproche d'une promesse de gain.
-5. **Élargir les brûlables avant la série 1**, ou leur donner plusieurs visuels. Sinon, DOGE, SHIB et PEPE mis à part, les
+5. **Élargir les brûlables avant la série 1**, ou leur donner plusieurs visuels. Sinon, les 3 mythiques mises à part, les
    cartes brûlables seront les plus courantes. Les 58 « candidats » d'Intents sont la première piste.
 6. **Pour la démo du hackathon**, sans vente au public, la réserve est théorique. Une série de démo peut garder les mêmes
    tables avec un `V_cap` et un mythique réduits.
