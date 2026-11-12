@@ -20,7 +20,6 @@ Python 3 stdlib uniquement, aucun appel réseau.
 
 import argparse
 import csv
-import hashlib
 import json
 import os
 import re
@@ -32,12 +31,24 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DATE = "11/11/2026"
 
 RARETES = ["mythique", "légendaire", "épique", "rare", "commune"]
-# n° v1 -> sha256 (16 premiers hex) du ticker attendu : le vrai ticker ne figure pas dans un fichier suivi.
-MYTHIQUES_V1 = {"1": "6776fd13088f74ab", "2": "a5915d515f620ea2", "3": "e63ffac3f5e5cf4a"}
+# Quelles cartes v1 sont mythiques : lu dans le fichier secret (ignoré par git), jamais écrit ici,
+# ni en clair ni en empreinte (une empreinte courte d'un ticker se retrouve par force brute).
+SECRETS = os.path.join(ROOT, "docs", "data", "secrets", "mythiques.json")
+RE_ORIGINE_V1 = re.compile(r"^v1 n° ?(\d+)$")
 
 
-def empreinte_ticker(t):
-    return hashlib.sha256(norm_ticker(t).encode("utf-8")).hexdigest()[:16]
+def charger_mythiques_v1(path):
+    """{n° v1 : ticker} des mythiques, d'après `origines` (« v1 n° X ») et `ticker` du fichier secret."""
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    items = data.get("mythiques", []) if isinstance(data, dict) else data
+    out = {}
+    for e in items:
+        nums = [m.group(1) for m in (RE_ORIGINE_V1.match(o.strip()) for o in e.get("origines", [])) if m]
+        if len(nums) != 1 or not e.get("ticker"):
+            raise SystemExit("%s : chaque mythique doit avoir un ticker et une origine « v1 n° X »" % path)
+        out[nums[0]] = e["ticker"]
+    return out
 BURN = "à définir"
 
 # Doublons relevés par R5 : (gardé, absorbé)
@@ -779,7 +790,8 @@ def absorber(garde, autre, raison, journal):
 
 # ----------------------------------------------------------------- fusion
 
-def construire(root, extras=(), r4=True):
+def construire(root, extras=(), r4=True, mythiques=None):
+    """`mythiques` : {n° v1 : ticker} (charger_mythiques_v1) ; la carte v1 doit porter ce ticker."""
     d = lambda *p: os.path.join(root, *p)
     journal_fusions, journal_ignores, homonymes, corr_refusees = [], [], [], []
 
@@ -795,9 +807,10 @@ def construire(root, extras=(), r4=True):
             cartes[abs_].retiree = True
             cartes[abs_].notes.append("fusionnée")
 
-    for num, tk in MYTHIQUES_V1.items():
-        if num in cartes and empreinte_ticker(cartes[num].ticker) == tk:
-            cartes[num].mythique = True
+    for num, tk in (mythiques or {}).items():
+        if num not in cartes or norm_ticker(cartes[num].ticker) != norm_ticker(tk):
+            raise SystemExit("mythique annoncée en v1 n° %s introuvable dans catalogue-final.md" % num)
+        cartes[num].mythique = True
 
     # fichiers de recherche dans l'ordre de récence
     fichiers = []
@@ -1064,8 +1077,8 @@ def objet_json(c):
         ("lancement", c.lancement), ("epoque", c.epoque),
         ("pic", c.pic_txt), ("pic_usd", c.pic_v), ("nature_pic", c.pic_nat),
         ("etat", c.etat or "à vérifier"), ("histoire", c.histoire),
-        ("rarete", c.rarete), ("rarete_proposee", c.proposee), ("raison_rarete", c.raison),
-        ("pic_aberrant", c.aberrant),
+        ("rarete", c.rarete), ("rarete_proposee", "mythique" if c.mythique else c.proposee),
+        ("raison_rarete", c.raison), ("pic_aberrant", c.aberrant),
         ("surclassement", c.surclasse["rarete"] if c.surclasse else ""),
         ("drapeau", drapeau_txt(c)), ("drapeau_auto", c.drapeau_auto),
         ("burn", BURN), ("source", " ; ".join(c.sources[:4])),
@@ -1591,9 +1604,16 @@ def main(argv=None):
                     help="produire aussi catalogue-demo.md et catalogue-demo.json (catalogue de démo filtré)")
     ap.add_argument("--min-brulables", type=int, default=MIN_BRULABLES,
                     help="démo : brûlables possibles visés avant réintégration (défaut %d)" % MIN_BRULABLES)
+    ap.add_argument("--mythiques", default=None,
+                    help="fichier secret qui désigne les mythiques (défaut : docs/data/secrets/mythiques.json "
+                         "de la racine) ; lu avant d'être réécrit")
     a = ap.parse_args(argv)
 
-    res = construire(a.root, a.extra, r4=not a.sans_r4)
+    src = a.mythiques or os.path.join(a.root, "docs", "data", "secrets", "mythiques.json")
+    if not os.path.exists(src):
+        raise SystemExit("%s absent : impossible de savoir quelles cartes sont mythiques (fichier hors git, "
+                         "à demander au porteur)" % src)
+    res = construire(a.root, a.extra, r4=not a.sans_r4, mythiques=charger_mythiques_v1(src))
     cat, dec = finaliser(res["actives"], res["surclassements"])
     if a.out_dir:
         os.makedirs(a.out_dir, exist_ok=True)
