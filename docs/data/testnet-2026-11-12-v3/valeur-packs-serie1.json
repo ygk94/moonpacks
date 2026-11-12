@@ -1,0 +1,907 @@
+{
+ "series_id": 1,
+ "price_yocto": "138100000000000000000000",
+ "required_deposit_yocto": "154150000000000000000000",
+ "packs": [
+  {
+   "pack_id": 21,
+   "owner": "buyer1",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20000,
+   "V_bps": 2000,
+   "tier": 0,
+   "total_yocto": "27620000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 702,
+    "refund": "9030000000000000000000"
+   },
+   "refund_near": 0.00903,
+   "net_cost_near": 0.1480073549772592,
+   "gas_tgas": 29.989462585092,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": 702,
+   "last_card": "black-dragon-blackdragon",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "black-dragon-blackdragon",
+     "rarity": "common",
+     "asset_id": "nep141:blackdragon.tkn.near",
+     "amount_yocto": "27620000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 22,
+   "owner": "buyer2",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20000,
+   "V_bps": 2000,
+   "tier": 0,
+   "total_yocto": "27620000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 694,
+    "refund": "9110000000000000000000"
+   },
+   "refund_near": 0.00911,
+   "net_cost_near": 0.1479257461588939,
+   "gas_tgas": 29.973374401439,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": 694,
+   "last_card": "nearkat-nearkat",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "nearkat-nearkat",
+     "rarity": "common",
+     "asset_id": "nep141:kat.token0.near",
+     "amount_yocto": "27620000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 23,
+   "owner": "buyer3",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20000,
+   "V_bps": 9500,
+   "tier": 15,
+   "total_yocto": "131195000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 694,
+    "refund": "9110000000000000000000"
+   },
+   "refund_near": 0.00911,
+   "net_cost_near": 0.1479442642756494,
+   "gas_tgas": 30.158555568994,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": 694,
+   "last_card": "jambo-meme-cooking-jambo",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "jambo-meme-cooking-jambo",
+     "rarity": "common",
+     "asset_id": "nep141:jambo-1679.meme-cooking.near",
+     "amount_yocto": "131195000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 24,
+   "owner": "buyer1",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20020,
+   "V_bps": 4500,
+   "tier": 5,
+   "total_yocto": "62145000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 606,
+    "refund": "9990000000000000000000"
+   },
+   "refund_near": 0.00999,
+   "net_cost_near": 0.1470918180060204,
+   "gas_tgas": 30.434092872704,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": 606,
+   "last_card": "nearkat-nearkat",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "nearkat-nearkat",
+     "rarity": "common",
+     "asset_id": "nep141:kat.token0.near",
+     "amount_yocto": "62145000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 25,
+   "owner": "buyer2",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20020,
+   "V_bps": 3000,
+   "tier": 2,
+   "total_yocto": "41430000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 655,
+    "refund": "9500000000000000000000"
+   },
+   "refund_near": 0.009500000000000001,
+   "net_cost_near": 0.1476454491304022,
+   "gas_tgas": 31.070404116522,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": 655,
+   "last_card": "nearkat-nearkat",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "nearkat-nearkat",
+     "rarity": "common",
+     "asset_id": "nep141:kat.token0.near",
+     "amount_yocto": "41430000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 26,
+   "owner": "buyer3",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20020,
+   "V_bps": 6500,
+   "tier": 9,
+   "total_yocto": "89765000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 606,
+    "refund": "9990000000000000000000"
+   },
+   "refund_near": 0.00999,
+   "net_cost_near": 0.1470470889885366,
+   "gas_tgas": 29.986802697866,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": 606,
+   "last_card": "jambo-meme-cooking-jambo",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "jambo-meme-cooking-jambo",
+     "rarity": "common",
+     "asset_id": "nep141:jambo-1679.meme-cooking.near",
+     "amount_yocto": "89765000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "rare",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 27,
+   "owner": "buyer3",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20040,
+   "V_bps": 4500,
+   "tier": 5,
+   "total_yocto": "62145000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 606,
+    "refund": "9990000000000000000000"
+   },
+   "refund_near": 0.00999,
+   "net_cost_near": 0.1470524134590887,
+   "gas_tgas": 30.040047403387,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "nearkat-nearkat",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "nearkat-nearkat",
+     "rarity": "common",
+     "asset_id": "nep141:kat.token0.near",
+     "amount_yocto": "62145000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 28,
+   "owner": "buyer1",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20040,
+   "V_bps": 5500,
+   "tier": 7,
+   "total_yocto": "75955000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 606,
+    "refund": "9990000000000000000000"
+   },
+   "refund_near": 0.00999,
+   "net_cost_near": 0.147046751997985,
+   "gas_tgas": 29.98343279235,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "jambo-meme-cooking-jambo",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "jambo-meme-cooking-jambo",
+     "rarity": "common",
+     "asset_id": "nep141:jambo-1679.meme-cooking.near",
+     "amount_yocto": "75955000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 29,
+   "owner": "buyer2",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20040,
+   "V_bps": 6000,
+   "tier": 8,
+   "total_yocto": "82860000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 606,
+    "refund": "9990000000000000000000"
+   },
+   "refund_near": 0.00999,
+   "net_cost_near": 0.1470372619278435,
+   "gas_tgas": 29.888532090935,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "black-dragon-blackdragon",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "black-dragon-blackdragon",
+     "rarity": "common",
+     "asset_id": "nep141:blackdragon.tkn.near",
+     "amount_yocto": "82860000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 30,
+   "owner": "buyer1",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20060,
+   "V_bps": 4000,
+   "tier": 4,
+   "total_yocto": "55240000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 606,
+    "refund": "9990000000000000000000"
+   },
+   "refund_near": 0.00999,
+   "net_cost_near": 0.1470868702047077,
+   "gas_tgas": 30.384614859577,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "nearkat-nearkat",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "nearkat-nearkat",
+     "rarity": "common",
+     "asset_id": "nep141:kat.token0.near",
+     "amount_yocto": "55240000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 31,
+   "owner": "buyer3",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20060,
+   "V_bps": 13000,
+   "tier": 19,
+   "total_yocto": "179530000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 606,
+    "refund": "9990000000000000000000"
+   },
+   "refund_near": 0.00999,
+   "net_cost_near": 0.14703568643228682,
+   "gas_tgas": 29.872777135368,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "nearkat-nearkat",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "nearkat-nearkat",
+     "rarity": "common",
+     "asset_id": "nep141:kat.token0.near",
+     "amount_yocto": "179530000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 32,
+   "owner": "buyer3",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20080,
+   "V_bps": 9000,
+   "tier": 14,
+   "total_yocto": "124290000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 606,
+    "refund": "9990000000000000000000"
+   },
+   "refund_near": 0.00999,
+   "net_cost_near": 0.1470606322380339,
+   "gas_tgas": 30.122235192839,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "nearkat-nearkat",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "nearkat-nearkat",
+     "rarity": "common",
+     "asset_id": "nep141:kat.token0.near",
+     "amount_yocto": "124290000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 33,
+   "owner": "buyer1",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20080,
+   "V_bps": 5500,
+   "tier": 7,
+   "total_yocto": "75955000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 606,
+    "refund": "9990000000000000000000"
+   },
+   "refund_near": 0.00999,
+   "net_cost_near": 0.147122234629673,
+   "gas_tgas": 30.73825910923,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "jambo-meme-cooking-jambo",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "jambo-meme-cooking-jambo",
+     "rarity": "common",
+     "asset_id": "nep141:jambo-1679.meme-cooking.near",
+     "amount_yocto": "75955000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 34,
+   "owner": "buyer2",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20060,
+   "V_bps": 6000,
+   "tier": 8,
+   "total_yocto": "82860000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 606,
+    "refund": "9990000000000000000000"
+   },
+   "refund_near": 0.00999,
+   "net_cost_near": 0.1470474478207855,
+   "gas_tgas": 29.990391020355,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "jambo-meme-cooking-jambo",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "jambo-meme-cooking-jambo",
+     "rarity": "common",
+     "asset_id": "nep141:jambo-1679.meme-cooking.near",
+     "amount_yocto": "82860000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 35,
+   "owner": "buyer2",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20080,
+   "V_bps": 6500,
+   "tier": 9,
+   "total_yocto": "89765000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 606,
+    "refund": "9990000000000000000000"
+   },
+   "refund_near": 0.00999,
+   "net_cost_near": 0.1470529578579882,
+   "gas_tgas": 30.045491392382,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "nearkat-nearkat",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "nearkat-nearkat",
+     "rarity": "common",
+     "asset_id": "nep141:kat.token0.near",
+     "amount_yocto": "89765000000000000000000"
+    }
+   ],
+   "rarities": [
+    "rare",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 36,
+   "owner": "buyer3",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20100,
+   "V_bps": 9000,
+   "tier": 14,
+   "total_yocto": "124290000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 694,
+    "refund": "9110000000000000000000"
+   },
+   "refund_near": 0.00911,
+   "net_cost_near": 0.1478892809027531,
+   "gas_tgas": 29.608721840031,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "black-dragon-blackdragon",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "black-dragon-blackdragon",
+     "rarity": "common",
+     "asset_id": "nep141:blackdragon.tkn.near",
+     "amount_yocto": "124290000000000000000000"
+    }
+   ],
+   "rarities": [
+    "rare",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 37,
+   "owner": "buyer1",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20100,
+   "V_bps": 8000,
+   "tier": 12,
+   "total_yocto": "110480000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 694,
+    "refund": "9110000000000000000000"
+   },
+   "refund_near": 0.00911,
+   "net_cost_near": 0.1479085291190521,
+   "gas_tgas": 29.801204003021,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "jambo-meme-cooking-jambo",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "jambo-meme-cooking-jambo",
+     "rarity": "common",
+     "asset_id": "nep141:jambo-1679.meme-cooking.near",
+     "amount_yocto": "110480000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "rare",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 38,
+   "owner": "buyer1",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20120,
+   "V_bps": 4000,
+   "tier": 4,
+   "total_yocto": "55240000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 655,
+    "refund": "9500000000000000000000"
+   },
+   "refund_near": 0.009500000000000001,
+   "net_cost_near": 0.1475839517004982,
+   "gas_tgas": 30.455429817482,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "jambo-meme-cooking-jambo",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "jambo-meme-cooking-jambo",
+     "rarity": "common",
+     "asset_id": "nep141:jambo-1679.meme-cooking.near",
+     "amount_yocto": "55240000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 39,
+   "owner": "buyer2",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20100,
+   "V_bps": 7500,
+   "tier": 11,
+   "total_yocto": "103575000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 694,
+    "refund": "9110000000000000000000"
+   },
+   "refund_near": 0.00911,
+   "net_cost_near": 0.1478978120024317,
+   "gas_tgas": 29.694032836817,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "jambo-meme-cooking-jambo",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "jambo-meme-cooking-jambo",
+     "rarity": "common",
+     "asset_id": "nep141:jambo-1679.meme-cooking.near",
+     "amount_yocto": "103575000000000000000000"
+    }
+   ],
+   "rarities": [
+    "epic",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  },
+  {
+   "pack_id": 40,
+   "owner": "buyer3",
+   "mode": "base",
+   "gold": false,
+   "p_ppb": 20120,
+   "V_bps": 6000,
+   "tier": 8,
+   "total_yocto": "82860000000000000000000",
+   "storage": {
+    "prepaid_bytes": 1605,
+    "used_bytes": 606,
+    "refund": "9990000000000000000000"
+   },
+   "refund_near": 0.00999,
+   "net_cost_near": 0.147027470857609,
+   "gas_tgas": 29.79062138859,
+   "blocks_buy_to_reveal": 3,
+   "storage_delta_tx": null,
+   "last_card": "nearkat-nearkat",
+   "last_rarity": "common",
+   "burnables": [
+    {
+     "slot": 4,
+     "card_id": "nearkat-nearkat",
+     "rarity": "common",
+     "asset_id": "nep141:kat.token0.near",
+     "amount_yocto": "82860000000000000000000"
+    }
+   ],
+   "rarities": [
+    "common",
+    "common",
+    "common",
+    "common",
+    "common"
+   ],
+   "kinds": [
+    "visible",
+    "visible",
+    "visible",
+    "visible",
+    "visible"
+   ]
+  }
+ ]
+}

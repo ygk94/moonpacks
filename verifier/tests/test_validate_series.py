@@ -3,6 +3,7 @@
 préimages des mythiques et fuites dans les fichiers publics. Faux noms de mythiques seulement."""
 
 import copy
+import os
 import json
 import shutil
 import subprocess
@@ -324,6 +325,29 @@ class Leaks(Base):
             # Titre engagé recopié tel quel (chaîne JSON) : fuite, même sans le mot « mythique ».
             f["ok.md"].write_text(json.dumps({"title": self.secrets[0]["content"]["title"]}))
             self.assertIn("titre de la mythique 0", "\n".join(self.scan([f["ok.md"]]).errors))
+
+    def test_common_mythic_media_is_not_a_leak(self):
+        # build_series.py --media-base : le visuel « ? » commun est dans le contenu engagé de chaque
+        # mythique et dans manifest.json["mythic_media"]. Il est public : ce n'est pas une fuite, mais
+        # un média propre à une mythique en reste une.
+        common = "ipfs://bafyX/mythique.svg"
+        secrets = json.loads(json.dumps(self.secrets))
+        for s in secrets:
+            s["content"]["media"] = common
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "manifest.json"
+            f.write_text(json.dumps({"mythic_media": common}))
+            res = vs.Result()
+            vs.scan_leaks([str(f)], secrets, [], res, rel="/", public_media=[common])
+            self.assertTrue(res.ok, res.errors)
+            res = vs.Result()
+            vs.scan_leaks([str(f)], secrets, [], res, rel="/")
+            self.assertIn("media de la mythique 0", "\n".join(res.errors))
+            secrets[1]["content"]["media"] = "ipfs://bafyX/propre.svg"
+            f.write_text(json.dumps({"mythic_media": common, "x": "ipfs://bafyX/propre.svg"}))
+            res = vs.Result()
+            vs.scan_leaks([str(f)], secrets, [], res, rel="/", public_media=[common])
+            self.assertEqual(res.errors, ["FUITE : media de la mythique 1 dans " + os.path.relpath(str(f), "/")])
 
 
 if __name__ == "__main__":

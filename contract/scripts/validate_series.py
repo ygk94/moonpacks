@@ -570,10 +570,13 @@ def git_files() -> list[str]:
     return [os.path.join(REPO, x) for x in r.stdout.decode().split("\0") if x]
 
 
-def scan_leaks(files: list[str], secrets: list[dict], names, res: Result, rel=REPO) -> None:
+def scan_leaks(files: list[str], secrets: list[dict], names, res: Result, rel=REPO, public_media=()) -> None:
     """Secrets exacts (sel, card_id et titre engagés en chaîne JSON, média) partout ; vrai nom ou
-    ticker sur une ligne qui parle de mythique. Aucun secret n'est recopié dans les messages."""
+    ticker sur une ligne qui parle de mythique. Aucun secret n'est recopié dans les messages.
+    `public_media` : médias publics par construction (le visuel « ? » commun à toutes les mythiques,
+    `mythic_media` du manifeste), qui ne désignent aucune mythique et ne sont donc pas des fuites."""
     exact = []
+    public_media = {m for m in public_media if m}
     for j, p in enumerate(secrets or []):
         c = p.get("content") or {}
         if p.get("sel"):
@@ -582,7 +585,7 @@ def scan_leaks(files: list[str], secrets: list[dict], names, res: Result, rel=RE
             if isinstance(v, str) and v:
                 exact.append((j, k, json.dumps(v, ensure_ascii=False).encode("utf-8")))
         for k in ("media", "reference"):
-            if isinstance(c.get(k), str) and c[k]:
+            if isinstance(c.get(k), str) and c[k] and c[k] not in public_media:
                 exact.append((j, k, c[k].encode("utf-8")))
     pats = [(j, re.compile(r"(?<![A-Za-z0-9])" + re.escape(w) + r"(?![A-Za-z0-9])", re.I)) for j, ws in (names or []) for w in ws]
     for f in files:
@@ -689,7 +692,14 @@ def validate(path, secrets_path=None, names_path=None, scan=(), git=False, max_r
         check_preimages(table, secrets, res)
     names = load_names(names_path) if names_path and os.path.exists(names_path) else []
     files = _files(public + list(scan)) + (git_files() if git else [])
-    scan_leaks(sorted(set(files)), secrets, names, res)
+    # Visuel « ? » commun (build_series.py --media-base / mythic_media) : public par construction,
+    # écrit dans le manifeste et identique pour toutes les mythiques.
+    shared = []
+    manifest = os.path.join(path, "manifest.json") if os.path.isdir(path) else None
+    if manifest and os.path.exists(manifest):
+        with open(manifest, encoding="utf-8") as f:
+            shared.append(json.load(f).get("mythic_media"))
+    scan_leaks(sorted(set(files)), secrets, names, res, public_media=shared)
     summary["table_hash"] = core.table_hash(table).hex()
     summary["cards"] = len(table.get("cards", []))
     summary["files_scanned"] = len(set(files))

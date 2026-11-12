@@ -1,0 +1,362 @@
+{
+ "tests": [
+  {
+   "test": "burn",
+   "signer": "buyer1.memaster-demo-j7xg7z.testnet",
+   "method": "redeem",
+   "args": {
+    "token_id": "4"
+   },
+   "tx": "Eryt1E5PkR2MNyQR3z5WQRCbuA2jtq1jhTZ3aWMUMuZG",
+   "status": "ok",
+   "error": null,
+   "gas_tgas": 16.89,
+   "receipts": [
+    [
+     "tx",
+     0.31
+    ],
+    [
+     "redeem",
+     5.8
+    ],
+    [
+     "redeem",
+     1.24
+    ],
+    [
+     "refund",
+     0.22
+    ],
+    [
+     "on_redeem_complete",
+     8.42
+    ],
+    [
+     "refund",
+     0.22
+    ],
+    [
+     "refund",
+     0.22
+    ],
+    [
+     "refund",
+     0.22
+    ],
+    [
+     "refund",
+     0.22
+    ]
+   ],
+   "events": [
+    {
+     "standard": "memaster",
+     "version": "1.0.0",
+     "event": "redeem_started",
+     "data": [
+      {
+       "token_id": "4",
+       "owner_id": "buyer1.memaster-demo-j7xg7z.testnet",
+       "redeemer_id": "redeemer3.memaster-demo-j7xg7z.testnet",
+       "asset_id": "nep141:blackdragon.tkn.near",
+       "amount": "77280000000000000000000"
+      }
+     ]
+    },
+    {
+     "standard": "nep171",
+     "version": "1.0.0",
+     "event": "nft_burn",
+     "data": [
+      {
+       "owner_id": "buyer1.memaster-demo-j7xg7z.testnet",
+       "token_ids": [
+        "4"
+       ],
+       "memo": "redeem"
+      }
+     ]
+    },
+    {
+     "standard": "memaster",
+     "version": "1.0.0",
+     "event": "card_redeemed",
+     "data": [
+      {
+       "token_id": "4",
+       "owner_id": "buyer1.memaster-demo-j7xg7z.testnet",
+       "asset_id": "nep141:blackdragon.tkn.near",
+       "amount": "77280000000000000000000",
+       "replaced_by": null,
+       "series_id": 0,
+       "kind": "visible",
+       "index": 189,
+       "burn_seq": 1,
+       "freed_bytes": 16,
+       "storage_refund": "160000000000000000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "test": "retry_tiers",
+   "signer": "buyer2.memaster-demo-j7xg7z.testnet",
+   "method": "retry_reveal",
+   "args": {
+    "pack_id": 0
+   },
+   "tx": "EkN5d87wVgNcm9eLJj6bGUSpBxA5gSDKt9iU69R5YH7k",
+   "status": "Failure",
+   "error": "E_ALREADY_REVEALED: Tirage déjà écrit : relance interdite",
+   "gas_tgas": 2.31,
+   "receipts": [
+    [
+     "tx",
+     0.31
+    ],
+    [
+     "retry_reveal",
+     1.78
+    ],
+    [
+     "refund",
+     0.22
+    ]
+   ],
+   "events": []
+  },
+  {
+   "test": "list",
+   "signer": "buyer2.memaster-demo-j7xg7z.testnet",
+   "method": "list",
+   "args": {
+    "token_id": "10",
+    "price": "20000000000000000000000"
+   },
+   "tx": "5qCzLXeL9D9M2g84R7iDnDuojN52RtefSHqTDcaLUN7D",
+   "status": "ok",
+   "error": null,
+   "gas_tgas": 2.91,
+   "receipts": [
+    [
+     "tx",
+     0.31
+    ],
+    [
+     "list",
+     2.38
+    ],
+    [
+     "refund",
+     0.22
+    ]
+   ],
+   "events": [
+    {
+     "standard": "memaster",
+     "version": "1.0.0",
+     "event": "card_listed",
+     "data": [
+      {
+       "token_id": "10",
+       "seller_id": "buyer2.memaster-demo-j7xg7z.testnet",
+       "price": "20000000000000000000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "test": "market_buy",
+   "signer": "buyer3.memaster-demo-j7xg7z.testnet",
+   "method": "buy",
+   "args": {
+    "token_id": "10",
+    "expected_price": "20000000000000000000000"
+   },
+   "tx": "DX5TQhWbDzW3R1VZXgR6yniUDzSgb17AyNRGWtPvKfSh",
+   "status": "ok",
+   "error": null,
+   "gas_tgas": 7.67,
+   "receipts": [
+    [
+     "tx",
+     0.31
+    ],
+    [
+     "buy",
+     6.69
+    ],
+    [
+     "?",
+     0.22
+    ],
+    [
+     "refund",
+     0.22
+    ],
+    [
+     "refund",
+     0.22
+    ]
+   ],
+   "events": [
+    {
+     "standard": "nep171",
+     "version": "1.0.0",
+     "event": "nft_transfer",
+     "data": [
+      {
+       "old_owner_id": "buyer2.memaster-demo-j7xg7z.testnet",
+       "new_owner_id": "buyer3.memaster-demo-j7xg7z.testnet",
+       "token_ids": [
+        "10"
+       ],
+       "memo": "market"
+      }
+     ]
+    },
+    {
+     "standard": "memaster",
+     "version": "1.0.0",
+     "event": "card_sold",
+     "data": [
+      {
+       "token_id": "10",
+       "seller_id": "buyer2.memaster-demo-j7xg7z.testnet",
+       "buyer_id": "buyer3.memaster-demo-j7xg7z.testnet",
+       "price": "20000000000000000000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "test": "withdraw_petit",
+   "signer": "memaster-demo-j7xg7z.testnet",
+   "method": "withdraw_revenue",
+   "args": {
+    "amount": "100000000000000000000000"
+   },
+   "tx": "C2jujv8c2KhkiUYctnqxfdy2dvu9hKSrTvAnnTWMvTNU",
+   "status": "ok",
+   "error": null,
+   "gas_tgas": 3.32,
+   "receipts": [
+    [
+     "tx",
+     0.31
+    ],
+    [
+     "withdraw_revenue",
+     2.34
+    ],
+    [
+     "refund",
+     0.22
+    ],
+    [
+     "refund",
+     0.22
+    ],
+    [
+     "refund",
+     0.22
+    ]
+   ],
+   "events": [
+    {
+     "standard": "memaster",
+     "version": "1.0.0",
+     "event": "revenue_withdrawn",
+     "data": [
+      {
+       "amount": "100000000000000000000000",
+       "to": "memaster-demo-j7xg7z.testnet",
+       "balance_before": "19839383186874975800000002",
+       "committed": "14381120000000000000000000",
+       "withdrawable_before": "5458263186874975800000002",
+       "withdrawn_total": "100000000000000000000000",
+       "revenue": "3921200000000000000000000",
+       "block_height": 277286129
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "test": "withdraw_plafond",
+   "signer": "memaster-demo-j7xg7z.testnet",
+   "method": "withdraw_revenue",
+   "args": {
+    "amount": "6358263186874975800000002"
+   },
+   "tx": "G4sB9z2w26Rdk1ERmuLvDJB5E1rrFz1N2Rd9MfccuwGj",
+   "status": "Failure",
+   "error": "E_WITHDRAW_LIMIT: Retrait refusé : 6358263186874975800000002 yoctoNEAR demandés, 5358263186874975800000003 retirables (engagements 14381120000000000000000000)",
+   "gas_tgas": 2.49,
+   "receipts": [
+    [
+     "tx",
+     0.31
+    ],
+    [
+     "withdraw_revenue",
+     1.73
+    ],
+    [
+     "refund",
+     0.22
+    ],
+    [
+     "refund",
+     0.22
+    ]
+   ],
+   "events": []
+  }
+ ],
+ "treasury": {
+  "avant": {
+   "balance": "19839543186874975800000000",
+   "storage_bytes": 1087999,
+   "storage_locked": "10879990000000000000000000",
+   "listing_deposits": "0",
+   "pack_escrow": "0",
+   "value_reserved": "2579060000000000000000000",
+   "min_reserve": "1000000000000000000000000",
+   "committed": "14459050000000000000000000",
+   "withdrawable": "5380493186874975800000000",
+   "revenue": "3921200000000000000000000",
+   "withdrawn": "0"
+  },
+  "apres-burn": {
+   "balance": "19839383186874975800000001",
+   "storage_bytes": 1087934,
+   "storage_locked": "10879340000000000000000000",
+   "listing_deposits": "0",
+   "pack_escrow": "0",
+   "value_reserved": "2501780000000000000000000",
+   "min_reserve": "1000000000000000000000000",
+   "committed": "14381120000000000000000000",
+   "withdrawable": "5458263186874975800000001",
+   "revenue": "3921200000000000000000000",
+   "withdrawn": "0"
+  },
+  "apres-retrait": {
+   "balance": "19739383186874975800000002",
+   "storage_bytes": 1087934,
+   "storage_locked": "10879340000000000000000000",
+   "listing_deposits": "0",
+   "pack_escrow": "0",
+   "value_reserved": "2501780000000000000000000",
+   "min_reserve": "1000000000000000000000000",
+   "committed": "14381120000000000000000000",
+   "withdrawable": "5358263186874975800000002",
+   "revenue": "3921200000000000000000000",
+   "withdrawn": "100000000000000000000000"
+  }
+ }
+}
