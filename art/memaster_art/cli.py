@@ -81,7 +81,7 @@ def main(argv=None) -> int:
     ap.add_argument("--planche", action="store_true", help="produire des planches HTML de 50 cartes")
     ap.add_argument("--base-url", default="", help="préfixe des champs media et reference (ex. https://…/)")
     ap.add_argument("--mythiques", default="",
-                    help="N° (ou tickers) à passer en mythique (règle v2), ex. 1,2,3 ; un ticker vise toutes les cartes qui le portent")
+                    help="N° (ou tickers) à passer en mythique (règle v2), ex. 12,40 ; un ticker vise toutes les cartes qui le portent")
     ap.add_argument("--langue", choices=("fr", "en"), default="fr",
                     help="langue des textes visibles des SVG (en : pour le front, interface en anglais)")
     a = ap.parse_args(argv)

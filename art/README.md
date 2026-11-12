@@ -29,11 +29,11 @@ Options :
   coin ne changent pas. Le front s'en sert (`front/scripts/prepare-assets.mjs`) ; les métadonnées JSON restent en français.
 - `--planche` : planches HTML de contact, 50 cartes par page (`planche-01.html`, …), à ouvrir dans un navigateur.
 - `--base-url https://…/` : préfixe des champs `media` et `reference`. Vide par défaut : chemins relatifs.
-- `--mythiques 1,2,3` : passe ces N° en mythique (règle v2). On peut aussi donner un ticker, mais il vise toutes
+- `--mythiques 12,40` : passe ces N° en mythique (règle v2). On peut aussi donner un ticker, mais il vise toutes
   les cartes qui le portent (homonymes compris). Un catalogue v2 dont la
   colonne Rareté vaut déjà « mythique » n'a pas besoin de cette option.
 
-`out/` est ignoré par git (`art/.gitignore`). `exemples/` est versionné : 11 cartes et le dos scellé, en SVG,
+`out/` est ignoré par git (`art/.gitignore`). `exemples/v2/` est versionné ; `exemples/` (v1) se régénère : 9 cartes, plus 2 mythiques scellées et le dos si le fichier secret est là, en SVG,
 PNG et JSON, plus une planche.
 
 ## Catalogue v2 (`docs/data/catalogue-v2.json`)
