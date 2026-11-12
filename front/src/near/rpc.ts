@@ -1,27 +1,51 @@
-// Client JSON-RPC minimal (fastnear). Les vues sont gratuites ; reprise courte sur 429 et erreurs réseau.
+// Client JSON-RPC minimal (fastnear). Les vues sont gratuites. fastnear limite le débit (429, souvent sans en-tête
+// CORS : le navigateur n'y voit qu'un échec réseau) : au plus MAX_INFLIGHT requêtes à la fois, et reprise avec un
+// recul exponentiel (0,4 s, 0,8 s, 1,6 s, 3,2 s) sur 429, 5xx et échec réseau. Une erreur du contrat ne se reprend pas.
 
 import { CONTRACT_ID, RPC_URL } from "../config";
 
 let nextId = 1;
+const MAX_INFLIGHT = 6;
+const TRIES = 5;
 
-async function rpc<T>(method: string, params: unknown, tries = 3): Promise<T> {
+/** File d'attente : au plus `n` tâches en cours. */
+export function createLimiter(n: number) {
+  let active = 0;
+  const waiting: (() => void)[] = [];
+  return async function limit<T>(task: () => Promise<T>): Promise<T> {
+    if (active >= n) await new Promise<void>((r) => waiting.push(r));
+    active++;
+    try {
+      return await task();
+    } finally {
+      active--;
+      waiting.shift()?.();
+    }
+  };
+}
+const limit = createLimiter(MAX_INFLIGHT);
+
+async function rpc<T>(method: string, params: unknown, tries = TRIES): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
-      const res = await fetch(RPC_URL, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: nextId++, method, params }),
+      return await limit(async () => {
+        const res = await fetch(RPC_URL, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: nextId++, method, params }),
+        });
+        if (res.status === 429 || res.status >= 500) throw new Error(`RPC ${res.status}`);
+        const body = await res.json();
+        if (body.error) {
+          const msg = body.error?.data ?? body.error?.cause?.name ?? body.error?.message ?? "RPC error";
+          throw new RpcError(typeof msg === "string" ? msg : JSON.stringify(msg));
+        }
+        return body.result as T;
       });
-      if (res.status === 429 || res.status >= 500) throw new Error(`RPC ${res.status}`);
-      const body = await res.json();
-      if (body.error) {
-        const msg = body.error?.data ?? body.error?.cause?.name ?? body.error?.message ?? "RPC error";
-        throw new RpcError(typeof msg === "string" ? msg : JSON.stringify(msg));
-      }
-      return body.result as T;
     } catch (e) {
       if (e instanceof RpcError || attempt + 1 >= tries) throw e;
-      await new Promise((r) => setTimeout(r, 300 * 2 ** attempt));
+      // Hors de la file pendant l'attente : les autres requêtes avancent.
+      await new Promise((r) => setTimeout(r, 400 * 2 ** attempt * (0.75 + Math.random() / 2)));
     }
   }
 }

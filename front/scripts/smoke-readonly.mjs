@@ -53,14 +53,17 @@ async function newPage({ account = false, mobile = false } = {}) {
   return { ctx, page, errors };
 }
 
-// Cours publics : CoinGecko renvoie 429 sans en-tête CORS quand on dépasse son débit gratuit.
-const EXTERNAL = /favicon|api\.coingecko\.com|api\.dexscreener\.com|Failed to load resource: net::ERR_FAILED/;
+// Cours publics : CoinGecko renvoie 429 sans en-tête CORS quand on dépasse son débit gratuit. Le RPC fastnear fait de
+// même quand il limite le débit (le front reprend la requête plus tard) : ces messages sont comptés à part. Le
+// contenu des pages, lui, est toujours vérifié.
+const EXTERNAL =
+  /favicon|api\.coingecko\.com|api\.dexscreener\.com|Failed to load resource: net::ERR_FAILED|Access to fetch at 'https:\/\/rpc\.testnet\.fastnear\.com\/' from origin .* blocked by CORS policy|requestfailed: https:\/\/rpc\.testnet\.fastnear\.com\/ net::ERR_FAILED|http 429: https:\/\/rpc\.testnet\.fastnear\.com/;
 
 function flush(name, errors) {
   const useful = errors.filter((e) => !EXTERNAL.test(e));
   const external = errors.length - useful.length;
   if (useful.length) failed++;
-  log(`[${name}] ${useful.length ? "ERRORS:\n  " + useful.join("\n  ") : "no error"}${external ? ` (${external} public price API message(s) ignored)` : ""}`);
+  log(`[${name}] ${useful.length ? "ERRORS:\n  " + useful.join("\n  ") : "no error"}${external ? ` (${external} public API message(s) ignored: prices, RPC rate limit)` : ""}`);
 }
 
 async function bodyText(page) {
@@ -184,15 +187,28 @@ for (const packId of [0, 12, 30]) {
   await ctx.close();
 }
 
-// 5. Marché et mentions légales
+// 5. Marché et mentions légales. Marché avec un compte affiché (sans wallet) : « Buy » doit ouvrir la confirmation
+// (prix exact, redevances), qu'on annule. Aucune signature possible.
 for (const [name, hash, file] of [["market", "#/market", "09-market.png"], ["legal", "#/legal", "10-legal.png"]]) {
-  const { ctx, page, errors } = await newPage();
+  const { ctx, page, errors } = await newPage({ account: name === "market" });
   await page.goto(BASE + hash);
   await page.waitForTimeout(4000);
   await page.screenshot({ path: OUT + file, fullPage: true });
   const t = await bodyText(page);
   rules(name, t);
   log(`[${name}]`, t.replace(/\n+/g, " | ").slice(0, 300));
+  if (name === "market") {
+    const buy = page.locator(".listing").getByRole("button", { name: "Buy", exact: true });
+    if (await buy.count()) {
+      await buy.first().click();
+      const c = await page.locator(".buy-confirm").innerText({ timeout: 5000 }).catch(() => "");
+      if (!/You pay exactly [\d.]+ NEAR/.test(c)) (failed++, log("[market] MISSING purchase confirmation"));
+      await page.waitForTimeout(1500);
+      log("[market] confirmation:", (await page.locator(".buy-confirm").innerText().catch(() => "")).replace(/\n+/g, " | ").slice(0, 240));
+      await page.screenshot({ path: OUT + "09b-market-confirm.png", fullPage: false });
+      await page.getByRole("button", { name: "Cancel" }).click();
+    } else log("[market] no listing from another account: confirmation not exercised");
+  }
   flush(name, errors);
   await ctx.close();
 }
