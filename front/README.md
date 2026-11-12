@@ -50,8 +50,11 @@ résurrections), dans l'ordre d'exécution.
 ## Configuration
 
 Les variables `VITE_*` sont décrites dans `.env.example`, valeurs par défaut comprises. Aucune clé n'est nécessaire.
-Par défaut, le front vise le contrat **v2** `app2.memaster-demo-j7xg7z.testnet` (voir `docs/testnet.md`), et non
-`app.…`, l'ancienne version que cite la consigne. Le RPC est fastnear. Le front refuse de démarrer hors testnet.
+Par défaut, le front (et l'indexeur) visent le contrat **v3** `app3.memaster-demo-j7xg7z.testnet`, avec deux
+séries ouvertes (entrée et standard), et non `app2.…` (v2, `docs/testnet.md`) ni `app.…`, l'ancienne version que
+cite la consigne. `VITE_CONTRACT_ID=app2.memaster-demo-j7xg7z.testnet npm run dev` revient à la v2 : les erreurs
+sans code, le pack `stuck` sans remboursement et le stockage non rendu y sont gérés. Le RPC est fastnear. Le front
+refuse de démarrer hors testnet.
 
 ## Pile
 

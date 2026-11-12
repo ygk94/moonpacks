@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { eventsFromTx, listenHost, rankTrending, tokensFromReveal } from "./lib.mjs";
 
 const env = process.env;
-const CONTRACT = env.INDEXER_CONTRACT_ID ?? env.VITE_CONTRACT_ID ?? "app2.memaster-demo-j7xg7z.testnet";
+const CONTRACT = env.INDEXER_CONTRACT_ID ?? env.VITE_CONTRACT_ID ?? "app3.memaster-demo-j7xg7z.testnet";
 const TX_API = env.INDEXER_TX_API ?? "https://tx.test.fastnear.com";
 const RPC = env.INDEXER_RPC_URL ?? env.VITE_RPC_URL ?? "https://rpc.testnet.fastnear.com";
 const PORT = Number(env.INDEXER_PORT ?? 8787);

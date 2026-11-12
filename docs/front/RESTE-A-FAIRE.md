@@ -27,7 +27,7 @@ cd front && npm run indexer                 # facultatif, second terminal
 |---|---|---|---|
 | 1 | **Nom du projet** | « Memaster », provisoire, partout dans le front | Le nom, puis le logo, les visuels de packs et le domaine |
 | 2 | **Pile iOS** | Rien n'est commencé dans `mobile/` | React Native (Expo) : code partagé avec le web, near-connect réutilisable. Ou Swift : animations natives, mais near-connect est en JavaScript ; compromis possible, une `WKWebView` pour la connexion et la signature |
-| 3 | **Prix des packs** | Le contrat n'a qu'une série, à **0,1 NEAR**. La boutique affiche toutes les séries ouvertes | Créer les séries « entrée » (0,20 $) et « standard » (0,50 $) côté contrat. Le prix est fixé en NEAR, donc le prix en dollars bougera |
+| 3 | **Prix des packs** | Contrat v3 (`app3`) : deux séries ouvertes, « Memaster Entry » (0,0552 NEAR) et « Memaster Standard » (0,1381 NEAR), environ 0,20 $ et 0,50 $ au cours du déploiement. La boutique les affiche toutes les deux | Le prix est fixé en NEAR : le prix en dollars bougera. La page des taux et le gold rush ne montrent encore que la série 0 (`VITE_SERIES_ID`) |
 | 4 | **Quantité de jetons d'une carte brûlable** | L'adossement (`amount`) est une **valeur en yoctoNEAR**, pas une quantité de jetons (`docs/mecaniques-spec.md`). Le front estime `amount × cours NEAR / cours du coin`. Pour un coin presque sans valeur, ça donne des nombres énormes (« 25,800T SHIBDOGE ») | Comment le redeemer achète les jetons, et où le front lit la vraie quantité |
 | 5 | **Dépôt de stockage** | Le contrat exige **0,016 NEAR** par pack (pire cas). **Contrat v3 : l'excédent est rendu à l'ouverture** (environ 0,0057 NEAR au premier pack d'un compte, davantage ensuite) ; la boutique le dit et le récapitulatif affiche le montant rendu | Rien, sauf si le dépôt joint doit baisser |
 | 6 | **Dépôt rendu au burn ?** | **Contrat v3 : oui, en partie.** Le burn rend le stockage libéré (`card_redeemed.storage_refund`, environ 16 o pour un burn ordinaire) ; l'emplacement du pack reste écrit (`docs/mecaniques-spec.md`, 12.2). Le front affiche le montant rendu après le burn, sans promesse avant | Corriger la consigne (« rendu au burn » → « l'excédent est rendu à l'ouverture, le stockage libéré au burn ») |
@@ -35,7 +35,7 @@ cd front && npm run indexer                 # facultatif, second terminal
 | 8 | **MetaMask sur iOS / WalletConnect** | near-connect affiche MetaMask (« Ethereum Wallets ») en premier. WalletConnect n'est pas branché | Créer un `projectId` WalletConnect (gratuit) ; je le brancherai par variable d'environnement |
 | 9 | **Mention « simulation »** | Rien n'est affiché sur les parties simulées (redeemer et jetons factices sur testnet) | Le texte et l'endroit (hors périmètre pour l'instant, consigne § 7) |
 | 10 | **Mentions légales** | Page en place ; l'éditeur et le contact sont « à compléter » | Les informations d'éditeur |
-| 11 | **Contrat visé** | La consigne cite `app.memaster-demo-j7xg7z.testnet`. Le front vise **`app2.…`**, la dernière version (`docs/testnet.md`) | Confirmer `app2`, ou donner le nouveau compte après le redéploiement prévu (variable `VITE_CONTRACT_ID`) |
+| 11 | **Contrat visé** | Le front et l'indexeur visent par défaut **`app3.…`** (v3, deux séries). `VITE_CONTRACT_ID` (et `INDEXER_CONTRACT_ID`) changent de contrat ; `app2` reste pris en charge | Confirmer `app3` |
 | 12 | **Push, PR, déploiement public** | Rien n'est poussé (consigne § 9) | Ton accord |
 
 ## 2. Tests qui demandent un wallet
