@@ -136,14 +136,19 @@ La liste complète des décisions, des tests et du travail restants est dans `do
 
 ## Testé
 
-- `npm test` : 66 tests. Formats et montants (BigInt), événements, traduction de chaque message de panique du
-  contrat (lus dans `contract/src/`), ordre de révélation, rendu « ? » des mythiques, suivi du burn, vérification
+- `npm test` : 110 tests. Formats et montants (BigInt), événements, traduction par code de chaque erreur de
+  `contract/ERRORS.md` (et repli français pour `app2`), pack `stuck` remboursable et relance réservée à l'acheteur,
+  stockage rendu (ouverture, burn, texte de la boutique), confirmation d'achat sur le marché, dépôt d'annonce lu
+  dans `get_config`, cache et recul des cours publics, file du RPC, cache des cartes par série, écoute locale de
+  Vite et de l'indexeur, ordre de révélation, rendu « ? » des mythiques, suivi du burn, vérification
   sans état et rejeu complet sur les vrais packs du testnet (falsifications rejetées), vecteurs de
   `verifier/tests/vectors/` (draw.rs et contrat en sandbox : tirages, plafonds, gold pack, burns, résurrections,
-  valeur, gold rush), logique de l'indexeur, contrôle anti-fuite des mythiques.
+  valeur, gold rush), logique de l'indexeur (événements v3 compris), contrôle anti-fuite des mythiques.
 - `npm run smoke` (avec `npm run dev`, et `npm run indexer` pour la vérification complète) : parcours en lecture
   seule dans Chromium sans tête (Playwright, `npx playwright install chromium-headless-shell` une fois), captures
-  dans `smoke-captures/`. Aucun wallet ni transaction.
+  dans `smoke-captures/`. Aucun wallet ni transaction. Les échecs CORS du RPC fastnear quand il limite le débit
+  sont comptés à part, comme ceux des cours publics ; le contenu des pages reste vérifié. Passé le 12/11 contre
+  `app3` (boutique à deux séries, packs 0, 12 et 30 entièrement vérifiés, stockage rendu affiché).
 - Build et vérification des types.
 - Contre le contrat v2 sur testnet, dans un navigateur : boutique (prix, dépôt, gold rush), rejeu complet de packs
   réels jusqu'au récapitulatif, page des taux (taux, hash de table, hash du code), vérification des packs 0, 12 et
