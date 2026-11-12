@@ -1,7 +1,7 @@
 """Rend des SVG de cartes en PNG pour relecture (macOS : qlmanage + sips ;
 sinon rsvg-convert ou cairosvg s'ils sont installés).
 
-    python3 outils/rendre_png.py out/0001-doge.svg out/0010-bonk.svg --dest /tmp/png
+    python3 outils/rendre_png.py out/0010-bonk.svg out/0007-wif.svg --dest /tmp/png
 """
 
 import argparse

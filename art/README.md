@@ -11,7 +11,7 @@ Depuis `art/` :
 python3 -m memaster_art --catalogue ../docs/catalogue-final.md --out out/ [--limit N] [--planche]
 python3 -m unittest discover -s tests                     # tests
 python3 -m memaster_art.exemples --catalogue ../docs/catalogue-final.md --dest exemples --png
-python3 outils/rendre_png.py out/0001-doge.svg --dest /tmp/png   # relecture en PNG
+python3 outils/rendre_png.py out/0010-bonk.svg --dest /tmp/png   # relecture en PNG
 ```
 
 Catalogue v2 (JSON, détecté par l'extension) :
@@ -59,9 +59,9 @@ PNG et JSON, plus une planche.
 
 | Fichier | Contenu |
 |---|---|
-| `0001-doge.svg` | Visuel, 500 × 700 (5:7), 4 à 15 Ko |
-| `0001-doge.json` | Métadonnées NEP-177 : `title`, `description`, `media`, `media_hash`, `extra`, `reference`, `reference_hash` |
-| `0001-doge.ref.json` | JSON hors chaîne pointé par `reference` |
+| `0010-bonk.svg` | Visuel, 500 × 700 (5:7), 4 à 15 Ko |
+| `0010-bonk.json` | Métadonnées NEP-177 : `title`, `description`, `media`, `media_hash`, `extra`, `reference`, `reference_hash` |
+| `0010-bonk.ref.json` | JSON hors chaîne pointé par `reference` |
 | `dos-mythique.svg` / `.json` | Dos scellé « ? », commun à toutes les mythiques (s'il y en a) |
 
 `media_hash` et `reference_hash` sont le sha256 du fichier, en base64. `extra` est une chaîne JSON, comme le veut
