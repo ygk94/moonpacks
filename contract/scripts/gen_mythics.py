@@ -5,8 +5,8 @@ Usage :
     python3 scripts/gen_mythics.py ENTREE.json PUBLIC.json SECRETS.json
 
 ENTREE.json : liste de mythiques
-    [{"card_id": "pepe", "weight": 1, "cap": 3,
-      "content": {"title": "PEPE", "media": "ipfs://…", "reference": null,
+    [{"card_id": "zorb", "weight": 1, "cap": 3,
+      "content": {"title": "ZORB", "media": "ipfs://…", "reference": null,
                   "backing": {"asset_id": "nep141:…", "amount": "1000"}}}]
 
 PUBLIC.json  : liste `mythics` à mettre dans la table (commitment, content_hash, weight, cap).
