@@ -21,7 +21,7 @@ puis lance Vite :
 
 Ces fichiers sont ignorés par git. Autres commandes : `npm run build` (vérification des types et build de prod dans
 `dist/`, suivi du contrôle anti-fuite des mythiques), `npm run typecheck`, `npm test` (vitest, puis le même
-contrôle), `npm run check:mythics` et `npm run smoke` (voir « Testé »).
+contrôle), `npm run check:mythics`, `npm run smoke` et `npm run e2e` (voir « Testé »).
 
 ## Indexeur (facultatif)
 
@@ -117,14 +117,15 @@ La liste complète des décisions, des tests et du travail restants est dans `do
 1. **Quantité de jetons.** Sur testnet, l'adossement (`amount`) est une part de la valeur du pack en yoctoNEAR, pas
    une quantité de jetons (`docs/mecaniques-spec.md`). Le front l'estime avec `amount × cours NEAR / cours du coin`.
    Il faudra lire la vraie quantité quand le redeemer achètera les jetons.
-2. **Dépôt de stockage.** Le contrat demande le pire cas, 0,016 NEAR par pack (`required_deposit − price`). La
+2. **Dépôt de stockage.** Le contrat demande le pire cas, 0,01605 NEAR par pack (1 605 o, `required_deposit − price`). La
    consigne parle d'environ 0,006 NEAR, et 0,01 NEAR au premier pack. Le front affiche le montant joint et
    l'estimation de ce qui est réellement consommé. Contrat v3 (reconnu à sa vue `get_treasury`) : la boutique précise
    que l'excédent est rendu à l'ouverture ; le récapitulatif de l'ouverture affiche le montant rendu
    (`pack_revealed.storage.refund`, sinon `get_pack` : prépayé − `storage_used`), et le burn le stockage libéré
    rendu (`card_redeemed.storage_refund`). Sur `app2`, rien de cela n'est promis.
-3. **Prix des packs.** Le contrat n'a qu'une série, à 0,1 NEAR. Les packs à 0,20 $ et 0,50 $ demandent de nouvelles
-   séries côté contrat. La boutique affiche déjà toutes les séries ouvertes.
+3. **Prix des packs.** `app3` a deux séries, « Memaster Entry » (0,0552 NEAR) et « Memaster Standard » (0,1381 NEAR),
+   environ 0,20 $ et 0,50 $ au cours du déploiement. La boutique, la page des taux (sélecteur de série,
+   `#/rates?series=1`) et le gold rush (un panneau par série) les montrent toutes les deux.
 4. **Trending.** Il vient de l'indexeur (ventes et annonces sur 24 h, plus les dernières ventes), et à défaut des
    annonces en cours. Pour un déploiement public, il faudra héberger l'indexeur ; il vise un seul contrat.
 5. **Pack bloqué.** Le contrat n'accepte `retry_reveal` que sur un pack `pending`, et en v3 que de l'acheteur. Après
@@ -134,21 +135,52 @@ La liste complète des décisions, des tests et du travail restants est dans `do
    `VITE_WALLETCONNECT_PROJECT_ID` est vide (`projectId` gratuit sur cloud.reown.com). Son client n'est chargé
    que s'il est actif. Non testé sur un téléphone.
 
+## Wallet de test et parcours e2e
+
+`npm run e2e` déroule les parcours qui demandent un wallet, sur testnet, avec de vraies transactions signées par les
+comptes `buyer1` et `buyer2` (Playwright, Chromium sans tête). Il lance lui-même Vite (port 5183, avec
+`VITE_E2E_KEY_WALLET=1`) et l'indexeur (port 8797, base `indexer/data/e2e-<contrat>.sqlite`), puis les arrête par PID.
+Captures et `report.json` (hashs des transactions) dans `e2e-captures/` ou `--out DOSSIER` ; `--only buy,low,burn,market`
+pour n'en lancer qu'une partie. Coût d'un passage complet : environ 0,23 NEAR sur `buyer1` (deux packs), 0,0012 NEAR sur
+`buyer2`.
+
+- **Wallet de test** (`src/near/testKeyWallet.ts`, `src/near/keySigner.ts`) : il suit l'interface de l'adaptateur
+  near-connect et ne signe que des `FunctionCall` (borsh minimal, ed25519 par WebCrypto, `send_tx`). Il n'est chargé
+  qu'en dev avec `VITE_E2E_KEY_WALLET=1`. Il est **absent de tout build de production** : `npm run build` le contrôle
+  (`scripts/check-no-e2e-wallet.mjs`), et `scripts/e2e-wallet-build.test.ts` construit le front avec et sans le drapeau.
+- **Clés** : lues dans `~/.near-credentials/testnet/buyer{1,2}.memaster-demo-j7xg7z.testnet.json` par le script, puis
+  injectées dans la page par `page.addInitScript` ; le wallet les retire de `window` dès qu'il les a lues. Jamais de
+  `VITE_*`, de fichier du dépôt ni de log. Le script échoue si une clé apparaît dans une réponse servie par Vite ou dans
+  un fichier qu'il écrit.
+- **Parcours** : `buy` (pack en série 0 puis en série 1 : dépôt joint = prix + 0,01605 NEAR, ouverture jusqu'au
+  récapitulatif, stockage rendu affiché, « Verify this pack » jusqu'à « Draw fully verified »), `low` (compte implicite
+  neuf crédité de 0,01 NEAR : achat refusé avec « Your wallet balance is too low for this transaction. », puis compte
+  supprimé au profit de `buyer1`), `burn` (burn depuis le détail : `redeem_started`, `card_redeemed`, stockage libéré
+  rendu affiché), `market` (mise en vente à 0,00123 NEAR, retrait, nouvelle mise en vente, achat par `buyer2` via la
+  confirmation, puis « Trending » et les dernières ventes lus dans l'indexeur).
+
 ## Testé
 
-- `npm test` : 110 tests. Formats et montants (BigInt), événements, traduction par code de chaque erreur de
+- `npm test` : 126 tests. Formats et montants (BigInt), événements, traduction par code de chaque erreur de
   `contract/ERRORS.md` (et repli français pour `app2`), pack `stuck` remboursable et relance réservée à l'acheteur,
   stockage rendu (ouverture, burn, texte de la boutique), confirmation d'achat sur le marché, dépôt d'annonce lu
   dans `get_config`, cache et recul des cours publics, file du RPC, cache des cartes par série, écoute locale de
   Vite et de l'indexeur, ordre de révélation, rendu « ? » des mythiques, suivi du burn, vérification
   sans état et rejeu complet sur les vrais packs du testnet (falsifications rejetées), vecteurs de
   `verifier/tests/vectors/` (draw.rs et contrat en sandbox : tirages, plafonds, gold pack, burns, résurrections,
-  valeur, gold rush), logique de l'indexeur (événements v3 compris), contrôle anti-fuite des mythiques.
+  valeur, gold rush), logique de l'indexeur (événements v3 compris), contrôle anti-fuite des mythiques, signature du wallet de test (borsh, ed25519) et son absence du build de production,
+  sélecteur de série et gold rush par série, relecture après mise en vente.
 - `npm run smoke` (avec `npm run dev`, et `npm run indexer` pour la vérification complète) : parcours en lecture
   seule dans Chromium sans tête (Playwright, `npx playwright install chromium-headless-shell` une fois), captures
   dans `smoke-captures/`. Aucun wallet ni transaction. Les échecs CORS du RPC fastnear quand il limite le débit
   sont comptés à part, comme ceux des cours publics ; le contenu des pages reste vérifié. Passé le 12/11 contre
-  `app3` (boutique à deux séries, packs 0, 12 et 30 entièrement vérifiés, stockage rendu affiché).
+  `app3` (boutique à deux séries, packs 0, 12 et 30 entièrement vérifiés, stockage rendu affiché, sélecteur de série
+  de la page des taux).
+- `npm run e2e` : les quatre parcours passés le 12/11 contre `app3` (détail et hashs dans
+  `docs/front/RESTE-A-FAIRE.md`). Il a trouvé deux défauts, corrigés : la fenêtre « Connect wallet » ouverte depuis
+  l'en-tête restait coincée dans l'en-tête (son `backdrop-filter` servait de repère aux éléments fixes ; les fenêtres
+  sont maintenant rendues dans `<body>`), et le détail d'une carte remise en vente pouvait garder l'ancien état (nœud
+  RPC en retard ; il est maintenant relu jusqu'au nouvel état).
 - Build et vérification des types.
 - Contre le contrat v2 sur testnet, dans un navigateur : boutique (prix, dépôt, gold rush), rejeu complet de packs
   réels jusqu'au récapitulatif, page des taux (taux, hash de table, hash du code), vérification des packs 0, 12 et
@@ -156,5 +188,6 @@ La liste complète des décisions, des tests et du travail restants est dans `do
   page mobile.
 - Indexeur : il a rattrapé les 45 transactions du contrat, avec autant d'événements que dans le relevé de référence
   (31 `pack_bought`, 31 `pack_revealed`, 62 `reveal_step`).
-- **Pas encore testé, faute de wallet** : connexion, achat signé, burn, mise en vente et achat sur le marché. Il
-  n'y a pas encore eu de vente ni de résurrection sur `app2`, donc « Trending » et les dernières ventes sont vides.
+- **Pas encore testé** : MetaMask réel (compte `0x…`, transaction de setup) et wallet NEAR natif, ouverture sur un vrai
+  iPhone, pack réellement bloqué (`stuck`) débloqué depuis l'interface. Le wallet de test couvre la signature, pas
+  l'intégration de near-connect avec un vrai wallet.
