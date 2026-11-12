@@ -45,7 +45,7 @@ déployer sur un nouveau compte, comme `app2`.
 | `src/tests_v3.rs` | Tests unitaires de la v3 (stockage rendu, pack `stuck` remboursé, retrait, codes d'erreur) |
 | `ERRORS.md` | Codes d'erreur stables : code, texte français, proposition anglaise, qui peut la provoquer |
 | `scripts/build_series.py` | Arguments des appels de série à partir du catalogue v2, vrais noms des mythiques lus dans `docs/data/secrets/mythiques.json`, tables de valeur (`--tables-valeur`) (voir « Série v2 ») |
-| `scripts/validate_series.py` | Validateur à lancer avant `open_series` : règles du contrat réécrites hors ligne (en accord avec `validate_table` sur des tables mutées au hasard, `tests_fuzz.rs`), lots du dossier de sortie, valeur moyenne (rush ≤ 80 %, normale ≤ 100 %), préimages des mythiques révélables, aucun secret dans les fichiers publics (`--git` : fichiers suivis). Appelé aussi par `build_series.py` |
+| `scripts/validate_series.py` | Validateur à lancer avant `open_series` : règles du contrat réécrites hors ligne (en accord avec `validate_table` sur des tables mutées au hasard, `tests_fuzz.rs`), lots du dossier de sortie, valeur moyenne (rush ≤ 80 %, normale ≤ 100 %), préimages des mythiques révélables, aucun secret dans les fichiers publics (`--git` : fichiers suivis ; `validate_series.py --git` sans table : contrôle anti-fuite seul, nom, ticker, id, adresse ou n° v1 relié à « mythique », empreintes courtes ; testé par `verifier/tests/test_validate_series.py`). Appelé aussi par `build_series.py` |
 
 ### Séries et table figée
 

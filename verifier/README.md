@@ -202,6 +202,8 @@ NEAR_SANDBOX_BIN_PATH=/chemin/near-sandbox \
 construire avec `cargo near build non-reproducible-wasm` dans `contract/`. Sans `NEAR_SANDBOX_BIN_PATH`,
 near-workspaces télécharge le binaire near-sandbox. `SKIP_PY_RPC=1` saute l'appel au CLI Python.
 
+Le 12/11/2026, `sandbox_vectors.json` a aussi été régénéré (wasm v3) avec une mythique de test au nom inventé : les vecteurs ne contiennent aucun vrai coin relié à une mythique, et le CLI Python les vérifie toujours contre le RPC du sandbox.
+
 Résultat au 12/11/2026 (contrat v3) : `draw_vectors.json` et `mech_vectors.json` régénérés sont identiques à l'octet
 (le tirage ne change pas) ; `sandbox_mech_vectors.json` et `sandbox_vectors.json` ont été régénérés avec le wasm v3
 (événements avec le bloc `storage`, nouveaux champs de `card_redeemed`) et le CLI Python les vérifie contre le RPC du

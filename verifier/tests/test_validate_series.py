@@ -350,5 +350,60 @@ class Leaks(Base):
             self.assertEqual(res.errors, ["FUITE : media de la mythique 1 dans " + os.path.relpath(str(f), "/")])
 
 
+    def test_ids_addresses_numbers_and_fingerprints_are_detected(self):
+        """Id CoinGecko, adresse et n° v1 à côté de « mythique », empreinte courte n'importe où."""
+        import hashlib
+        secret = {"mythiques": [{"nom": "Fictif Delta", "ticker": "FKDEL", "coingecko_id": "fictif-delta",
+                                 "adresse": "0xfeedfacefeedfacefeedfacefeedfacefeedface", "origines": ["v1 n° 777"]}]}
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "noms.json"
+            p.write_text(json.dumps(secret), encoding="utf-8")
+            names, v1 = vs.load_names(str(p)), vs.load_v1_numbers(str(p))
+            fp = hashlib.sha256(b"FKDEL").hexdigest()[:16]
+            f = {k: Path(d) / k for k in ("id.md", "adr.md", "num.py", "fp.py", "ok.md")}
+            f["id.md"].write_text("| M1 | `fictif-delta` |\n")
+            f["adr.md"].write_text("adresse de la mythique : 0xFEEDFACEFEEDFACEFEEDFACEFEEDFACEFEEDFACE\n")
+            f["num.py"].write_text("# Mythiques : n° 777 du catalogue v1\n")
+            f["fp.py"].write_text(f'TABLE = {{"777": "{fp}"}}\n')
+            f["ok.md"].write_text("| 777 | Fictif Delta | FKDEL | légendaire |\nmythique : ?\n")
+            res = vs.Result()
+            vs.scan_leaks([str(x) for x in f.values()], [], names, res, rel="/", v1_numbers=v1)
+            joined = "\n".join(res.errors)
+            for k in ("id.md:1", "adr.md:1", "num.py:1", "empreinte courte d'un secret de la mythique 0 dans"):
+                self.assertIn(k, joined)
+            self.assertIn("fp.py", joined)
+            self.assertNotIn("ok.md", joined)
+            for x in ("fictif-delta", "FKDEL", "777", fp):
+                self.assertNotIn(x, joined, "le message ne recopie pas le secret")
+
+
+REAL_NAMES = CONTRACT.parent / "docs" / "data" / "secrets" / "mythiques.json"
+
+
+class TrackedFiles(unittest.TestCase):
+    """Contrôle anti-fuite de tout le dépôt (`validate_series.py --git`). Avec le vrai fichier secret,
+    aucun fichier suivi ne doit relier un vrai nom, ticker, id, adresse ou n° v1 à une mythique, ni
+    garder d'empreinte courte. Sans lui (clone propre), on vérifie au moins que les dossiers secrets
+    sont ignorés et vides dans git."""
+
+    def setUp(self):
+        try:
+            self.files = vs.git_files()
+        except (OSError, subprocess.CalledProcessError):
+            self.skipTest("pas un dépôt git")
+
+    def test_secret_dirs_are_ignored_and_untracked(self):
+        rel = [os.path.relpath(x, vs.REPO) for x in self.files]
+        for d in ("docs/data/secrets/", "contract/scripts/secrets/"):
+            self.assertEqual([x for x in rel if x.startswith(d)], [], d)
+            r = subprocess.run(["git", "-C", vs.REPO, "check-ignore", "-q", d + "mythiques.json"])
+            self.assertEqual(r.returncode, 0, f"{d} doit être ignoré par git")
+
+    @unittest.skipUnless(REAL_NAMES.exists(), "fichier secret absent (clone propre)")
+    def test_no_tracked_file_identifies_a_mythic(self):
+        res, _ = vs.validate(None, None, str(REAL_NAMES), git=True)
+        self.assertEqual(res.errors, [], "\n".join(res.errors))
+
+
 if __name__ == "__main__":
     unittest.main()

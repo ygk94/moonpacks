@@ -730,10 +730,10 @@ async fn sandbox_vectors() -> anyhow::Result<()> {
     // Série 0 : plafonds sur les légendaires et une mythique (cap 2) au contenu Unicode.
     let sel: [u8; 32] = sha(&[b"memaster verifier vectors"]);
     let content = MythicContent {
-        title: "Pépé « mythique » 🐸 \"v1\"".into(),
-        media: Some("ipfs://bafy/pepe-mythic.png".into()),
+        title: "Zorbé « mythique » 🪐 \"v1\"".into(),
+        media: Some("ipfs://bafy/zorb-mythic.png".into()),
         reference: None,
-        backing: Some(Backing { asset_id: "nep141:pepe.tkn.near".into(), amount: U128(777) }),
+        backing: Some(Backing { asset_id: "nep141:zorb.tkn.near".into(), amount: U128(777) }),
     };
     let t0 = SeriesTable {
         name: "Distribution".into(),
@@ -748,7 +748,7 @@ async fn sandbox_vectors() -> anyhow::Result<()> {
             card_("com_a", Rarity::Common, 3, None, true),
             card_("com_b", Rarity::Common, 1, None, false),
         ],
-        mythics: vec![mythic_commit("pepe-mythic", &sel, &content, 1, 2)],
+        mythics: vec![mythic_commit("zorb-mythic", &sel, &content, 1, 2)],
         royalties: vec![Royalty { account_id: ctx.owner.id().as_str().parse().unwrap(), bps: 500 }],
         mechanics: None,
     };
@@ -757,7 +757,7 @@ async fn sandbox_vectors() -> anyhow::Result<()> {
     let sid0 = s0["series_id"].as_u64().unwrap() as u32;
     let mythic_minted: u64 = s0["mythic_minted_final"][0].as_u64().unwrap();
     anyhow::ensure!(mythic_minted > 0, "aucune mythique sortie en 90 boosters");
-    let rev = reveal(&ctx, sid0, 0, "pepe-mythic", &sel, &content).await?;
+    let rev = reveal(&ctx, sid0, 0, "zorb-mythic", &sel, &content).await?;
     let commitments: Value =
         ctx.contract.view("get_mythic_commitments").args_json(json!({ "series_id": sid0 })).await?.json()?;
     s0["mythic_revealed"] = json!([rev]);
