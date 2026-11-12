@@ -108,7 +108,7 @@ export function Collection({ onReplay }: { onReplay: (packId: number) => void })
           )}
           <div className="grid">
             {shown.map((c) => (
-              <div key={c.tokenId} className="grid__item">
+              <div key={c.tokenId} className="grid__item" data-token={c.tokenId}>
                 <Card
                   cardId={c.cardId}
                   rarity={c.rarity}

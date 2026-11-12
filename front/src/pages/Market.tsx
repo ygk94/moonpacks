@@ -199,7 +199,7 @@ export function Market() {
         {rows.data?.map((r) => {
           const mine = r.listing.seller_id === accountId;
           return (
-            <div key={r.tokenId} className="grid__item listing">
+            <div key={r.tokenId} className="grid__item listing" data-token={r.tokenId}>
               <Card
                 cardId={r.card?.card_id ?? null}
                 rarity={r.card?.rarity ?? "common"}

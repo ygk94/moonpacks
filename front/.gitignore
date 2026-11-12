@@ -10,3 +10,5 @@ public/catalog.json
 indexer/data/
 # Captures de npm run smoke
 smoke-captures/
+# Captures et rapport de npm run e2e
+e2e-captures/
