@@ -114,6 +114,19 @@ function rules(name, text) {
   const imgs = await page.locator(".rates-list__row img").evaluateAll((els) => els.map((e) => e.getAttribute("src")));
   log(`[rates] mythic images: ${[...new Set(imgs)].join(", ")}`);
   await page.screenshot({ path: OUT + "03-rates-mythic.png", fullPage: false });
+  // Plusieurs séries (v3) : le sélecteur change les taux et le hash de table affichés.
+  const tabs = page.locator(".series-picker button");
+  if ((await tabs.count()) > 1) {
+    const hashOf = async () => ((await bodyText(page)).match(/table hash\n(\S+)/) ?? [, "?"])[1];
+    const first = await hashOf();
+    await tabs.nth(1).click();
+    await page.waitForFunction((h) => !document.body.innerText.includes(h) && !/table hash\n…/.test(document.body.innerText), first, { timeout: 30000 });
+    await page.locator("table.table tbody tr").first().waitFor({ timeout: 30000 });
+    const second = await hashOf();
+    log(`[rates] series picker: ${(await tabs.allInnerTexts()).join(" / ")} | table hashes ${first.slice(0, 8)}… → ${second.slice(0, 8)}… | url ${new URL(page.url()).hash}`);
+    if (first === second || !/series=1/.test(page.url())) (failed++, log("[rates] series picker did not switch the series"));
+    await page.screenshot({ path: OUT + "03b-rates-series1.png", fullPage: false });
+  }
   flush("rates", errors);
   await ctx.close();
 }

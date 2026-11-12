@@ -9,6 +9,7 @@ import { formatDuration, formatNearExact, formatUsd, yoctoToNumber } from "../li
 import { nearUsd } from "../lib/prices";
 import { useAsync } from "../lib/useAsync";
 import { storageDepositNote } from "../lib/pack";
+import { rushTarget } from "../lib/series";
 import { getPackCount, getRushState, getSeries, getSeriesCount, isV3Contract } from "../near/contract";
 import type { RushState, SeriesView } from "../near/types";
 import { useWallet } from "../near/wallet";
@@ -39,7 +40,10 @@ export function Shop({ onBuy }: { onBuy: (s: SeriesView) => void }) {
         </div>
       </section>
 
-      <RushPanel accountId={accountId} />
+      {/* Un gold rush par série (contrat v3 : entrée et standard), chacun avec son propre avancement. */}
+      {series.data?.map((s) => (
+        <RushPanel key={s.series_id} accountId={accountId} series={s} multi={series.data!.length > 1} />
+      ))}
 
       {series.loading && !series.data && <p className="muted">Loading packs…</p>}
       {series.error != null && <p className="error">Could not load the packs. Please refresh.</p>}
@@ -130,15 +134,18 @@ function PackOffer({
   );
 }
 
-/** Gold rush : avancement collectif réel, et pendant un rush, sa fin et les packs rush restants du compte. */
-function RushPanel({ accountId }: { accountId: string | null }) {
+/**
+ * Gold rush d'une série : avancement collectif réel, et pendant un rush, sa fin et les packs rush restants du compte.
+ * Avec plusieurs séries, le titre nomme la série (chaque série a son propre rush).
+ */
+export function RushPanel({ accountId, series, multi }: { accountId: string | null; series: SeriesView; multi: boolean }) {
   const [rush, setRush] = useState<RushState | null>(null);
   const [now, setNow] = useState(Date.now());
   const [fetchedAt, setFetchedAt] = useState(Date.now());
   useEffect(() => {
     let stop = false;
     const load = () =>
-      getRushState(accountId)
+      getRushState(accountId, series.series_id)
         .then((r) => {
           if (stop) return;
           setRush(r);
@@ -153,8 +160,14 @@ function RushPanel({ accountId }: { accountId: string | null }) {
       clearInterval(poll);
       clearInterval(clock);
     };
-  }, [accountId]);
+  }, [accountId, series.series_id]);
 
+  return <RushView rush={rush} name={multi ? series.name : null} now={now} fetchedAt={fetchedAt} />;
+}
+
+/** Rendu d'un état de rush (séparé pour les tests). */
+export function RushView({ rush, name, now, fetchedAt }: { rush: RushState | null; name: string | null; now: number; fetchedAt: number }) {
+  const suffix = name ? ` · ${name}` : "";
   if (!rush?.enabled || !rush.params || rush.height == null) return null;
   const p = rush.params;
   const elapsedBlocks = (now - fetchedAt) / 1000 / BLOCK_TIME_S;
@@ -164,7 +177,7 @@ function RushPanel({ accountId }: { accountId: string | null }) {
     const left = (rush.rush_until - height) * BLOCK_TIME_S;
     return (
       <section className="rush rush--active">
-        <div className="rush__title">⚡ Gold rush in progress</div>
+        <div className="rush__title">⚡ Gold rush in progress{suffix}</div>
         <p>Drop rates are improved for everyone until the rush ends.</p>
         <div className="rush__stats">
           <div>
@@ -182,21 +195,15 @@ function RushPanel({ accountId }: { accountId: string | null }) {
     );
   }
 
-  // Seuil : au moins `min_packs` packs dans la fenêtre, et un rythme `ratio` fois supérieur à la moyenne.
-  const bsz = Math.max(1, p.bucket_blocks);
-  const ml = Math.max(1, Math.floor(p.baseline_blocks / bsz));
-  const mw = Math.min(Math.max(1, Math.floor(p.window_blocks / bsz)), ml);
   const window = rush.window_count ?? 0;
-  const baseline = rush.baseline_count ?? 0;
-  const byRatio = Math.ceil((p.ratio_bps * baseline * mw) / (ml * 10_000));
-  const target = Math.max(p.min_packs, byRatio, 1);
+  const target = rushTarget(rush);
   const pct = Math.min(100, (window / target) * 100);
   const paused = rush.pause_until != null && height <= rush.pause_until;
   const windowLabel = formatDuration(p.window_blocks * BLOCK_TIME_S);
 
   return (
     <section className="rush">
-      <div className="rush__title">Gold rush</div>
+      <div className="rush__title">Gold rush{suffix}</div>
       <p>
         When the community opens enough packs in a short time, drop rates improve for everyone for about{" "}
         {formatDuration(p.duration_blocks * BLOCK_TIME_S)}.

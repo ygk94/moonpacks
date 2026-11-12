@@ -5,11 +5,13 @@ import { useMemo, useState } from "react";
 import { Card } from "../components/Card";
 import { CONTRACT_ID, EXPLORER, SERIES_ID } from "../config";
 import { loadCatalog } from "../lib/catalog";
-import { RARITY_LABEL } from "../lib/format";
+import { formatNearExact, RARITY_LABEL } from "../lib/format";
+import { navigate, useRoute } from "../lib/router";
+import { pickSeries, publicSeries } from "../lib/series";
 import { useAsync } from "../lib/useAsync";
-import { getAllRates, getTableHash } from "../near/contract";
+import { getAllRates, getSeries, getSeriesCount, getTableHash } from "../near/contract";
 import { viewAccount } from "../near/rpc";
-import { RARITIES, type RatesCard, type Rarity } from "../near/types";
+import { RARITIES, type RatesCard, type Rarity, type SeriesView } from "../near/types";
 
 const PAGE = 50;
 
@@ -26,18 +28,55 @@ function oneIn(ppb: number): string {
   return `1 in ${n >= 1000 ? Math.round(n).toLocaleString("en-US") : n.toPrecision(3)}`;
 }
 
+/** Choix de la série (contrat v3 : « entrée » et « standard ») ; l'URL garde le choix : #/rates?series=1. */
+export function SeriesPicker({ list, current, onPick }: { list: SeriesView[]; current: number; onPick: (id: number) => void }) {
+  if (list.length < 2) return null;
+  return (
+    <div className="tabs series-picker" role="tablist" aria-label="Series">
+      {list.map((s) => (
+        <button
+          key={s.series_id}
+          role="tab"
+          aria-selected={s.series_id === current}
+          className={s.series_id === current ? "active" : ""}
+          onClick={() => onPick(s.series_id)}
+        >
+          {s.name} <small className="muted">· {formatNearExact(s.price)} NEAR</small>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function Transparency() {
-  const rates = useAsync(() => getAllRates(), []);
-  const hash = useAsync(() => getTableHash(), []);
+  const { params } = useRoute();
+  const list = useAsync(async () => {
+    const n = await getSeriesCount();
+    return publicSeries(await Promise.all(Array.from({ length: n }, (_, i) => getSeries(i))));
+  }, []);
+  // Tant que la liste n'est pas lue, on part de la série demandée (ou VITE_SERIES_ID) pour ne pas attendre.
+  const param = params.get("series");
+  const seriesId = list.data
+    ? (pickSeries(param, list.data, SERIES_ID) ?? SERIES_ID)
+    : param != null && /^\d+$/.test(param)
+      ? Number(param)
+      : SERIES_ID;
+  const current = list.data?.find((s) => s.series_id === seriesId);
+  const rates = useAsync(() => getAllRates(seriesId), [seriesId]);
+  const hash = useAsync(() => getTableHash(seriesId), [seriesId]);
   const account = useAsync(() => viewAccount(CONTRACT_ID), []);
   const catalog = useAsync(() => loadCatalog(), []);
   const [query, setQuery] = useState("");
   const [rarity, setRarity] = useState<Rarity | "all">("all");
   const [onlyBurnable, setOnlyBurnable] = useState(false);
   const [page, setPage] = useState(0);
+  const pick = (id: number) => {
+    setPage(0);
+    navigate(`/rates?series=${id}`);
+  };
 
   const rows = useMemo(() => {
-    if (!rates.data) return [];
+    if (!rates.data || rates.loading) return [];
     const out: (RatesCard & { rarity: Rarity; ticker: string; name: string })[] = [];
     for (const r of rates.data.rarities) {
       for (const c of r.cards) {
@@ -52,7 +91,7 @@ export function Transparency() {
         (!onlyBurnable || c.burnable) &&
         (!q || c.ticker.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)),
     );
-  }, [rates.data, catalog.data, query, rarity, onlyBurnable]);
+  }, [rates.data, rates.loading, catalog.data, query, rarity, onlyBurnable]);
 
   const pages = Math.max(1, Math.ceil(rows.length / PAGE));
   const shown = rows.slice(page * PAGE, page * PAGE + PAGE);
@@ -65,12 +104,13 @@ export function Transparency() {
         Every rate below is read directly from the contract. The cards are drawn on-chain from a table whose hash was
         frozen when the series opened, so anyone can check that the published rates are the ones used.
       </p>
+      {list.data && <SeriesPicker list={list.data} current={seriesId} onPick={pick} />}
 
       <section className="panel">
-        <h2>Chance per card slot</h2>
-        {rates.loading && !rates.data && <p className="muted">Reading the rates from the contract…</p>}
+        <h2>Chance per card slot{current && list.data && list.data.length > 1 ? ` · ${current.name}` : ""}</h2>
+        {rates.loading && <p className="muted">Reading the rates from the contract…</p>}
         {rates.error != null && <p className="error">Could not read the rates.</p>}
-        {rates.data && (
+        {rates.data && !rates.loading && (
           <table className="table">
             <thead>
               <tr>
@@ -175,10 +215,13 @@ export function Transparency() {
           </dd>
           <dt>Contract code hash</dt>
           <dd className="mono break">{account.data?.code_hash ?? "…"}</dd>
-          <dt>Series {SERIES_ID} table hash</dt>
-          <dd className="mono break">{hash.data?.stored ?? "…"}</dd>
+          <dt>
+            Series {seriesId}
+            {current ? ` (${current.name})` : ""} table hash
+          </dt>
+          <dd className="mono break">{hash.loading ? "…" : (hash.data?.stored ?? "…")}</dd>
           <dt>Cards in the table</dt>
-          <dd>{hash.data?.card_count ?? "…"}</dd>
+          <dd>{hash.loading ? "…" : (hash.data?.card_count ?? "…")}</dd>
         </dl>
         <p className="small muted">
           The code hash identifies the exact program deployed on NEAR testnet; compare it with the one shown on{" "}
@@ -188,7 +231,7 @@ export function Transparency() {
           and with a build of the published source. The public verifier (Python, standard library only) recomputes the
           table hash and replays any pack from public data:
         </p>
-        <pre className="code">{`python3 -m memaster_verifier table --rpc testnet --contract ${CONTRACT_ID} --series ${SERIES_ID}
+        <pre className="code">{`python3 -m memaster_verifier table --rpc testnet --contract ${CONTRACT_ID} --series ${seriesId}
 python3 -m memaster_verifier pack --rpc testnet --contract ${CONTRACT_ID} \\
     --tx-hash <your buy_pack transaction> --sender <your account>`}</pre>
       </section>
