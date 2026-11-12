@@ -1,7 +1,7 @@
 # Front Memaster : ce qui reste à faire (pour Hugo)
 
 État au 12/11/2026, branche `fix/front-revue` (depuis `feat/front`, avec `feat/demo` fusionnée). La branche est sur
-GitHub ; les commits de la nuit listés plus bas ne sont pas encore poussés. Le front vise **`app3`** (contrat v3, deux
+GitHub jusqu'à `956e125` ; les commits suivants (depuis `6540de8`, liste plus bas) ne sont pas encore poussés. Le front vise **`app3`** (contrat v3, deux
 séries).
 
 ## Ce qui est fait
