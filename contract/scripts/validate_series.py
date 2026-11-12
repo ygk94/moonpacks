@@ -24,9 +24,13 @@ Contrôles (code de sortie 1 s'il y a une erreur) :
 5. **Mythiques « ? »** : avec `--secrets`, chaque préimage est révélable (longueurs, montant > 0, sel
    de 32 octets, sels distincts) et redonne l'engagement et le `content_hash` de la table.
 6. **Aucun secret dans les fichiers publics** (dossier de sortie, `--scan`, fichiers suivis par git
-   avec `--git`) : sel, `card_id` et titre engagés, média engagé, et, dans le texte, un vrai nom ou
-   ticker (`--mythiques`) sur la même ligne qu'un mot « mythique ». Les messages ne citent jamais le
-   secret trouvé (seulement le fichier, la ligne et le numéro de mythique).
+   avec `--git`) : sel, `card_id` et titre engagés, média engagé ; avec `--mythiques`, un vrai nom,
+   ticker, id CoinGecko ou adresse sur la même ligne qu'un mot « mythique » (ou dans un objet JSON
+   de mythique), un n° v1 de mythique (« n° X ») à côté de ce mot, et toute empreinte courte
+   (≥ 10 hex, sha256/sha1/md5) d'un de ces mots, qu'une force brute retrouverait. Les messages ne
+   citent jamais le secret trouvé (seulement le fichier, la ligne et le numéro de mythique).
+
+    python3 scripts/validate_series.py --git     # contrôle anti-fuite seul, sur tout le dépôt
 """
 
 from __future__ import annotations
@@ -536,8 +540,14 @@ def check_preimages(t: dict, secrets: list[dict], res: Result) -> None:
             res.warn(f"{what} : son card_id est aussi celui d'une carte visible")
 
 
+NAME_KEYS = ("nom", "ticker", "coingecko_id", "adresse")
+RE_V1 = re.compile(r"^v1 n° ?(\d+)$")
+FP_LEN = 10  # 40 bits : une empreinte plus courte ne désigne plus rien, plus longue se force encore
+
+
 def load_names(path: str) -> list[tuple[int, list[str]]]:
-    """Vrais noms et tickers (docs/data/secrets/mythiques.json, formats de build_series.py)."""
+    """Vrais noms, tickers, ids CoinGecko et adresses (docs/data/secrets/mythiques.json, formats de
+    build_series.py)."""
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
     if isinstance(data, dict) and "mythiques" in data:
@@ -549,9 +559,34 @@ def load_names(path: str) -> list[tuple[int, list[str]]]:
     out = []
     for j, e in enumerate(items):
         e = e.get("secret", e) if isinstance(e, dict) else {}
-        words = [e[k] for k in ("nom", "ticker") if isinstance(e.get(k), str) and len(e[k]) >= 2]
+        words = [e[k] for k in NAME_KEYS if isinstance(e.get(k), str) and len(e[k]) >= 2]
         out.append((j, words))
     return out
+
+
+def load_v1_numbers(path: str) -> list[tuple[int, str]]:
+    """N° v1 des mythiques (`origines` « v1 n° X » du fichier secret)."""
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    items = data.get("mythiques", []) if isinstance(data, dict) else data
+    out = []
+    for j, e in enumerate(items):
+        for o in (e.get("origines") or []) if isinstance(e, dict) else []:
+            m = RE_V1.match(str(o).strip())
+            if m:
+                out.append((j, m.group(1)))
+    return out
+
+
+def fingerprints(names) -> list[tuple[int, str]]:
+    """Préfixes hex (FP_LEN) des sha256, sha1 et md5 de chaque mot secret, sous plusieurs casses."""
+    out = set()
+    for j, ws in names or []:
+        for w in ws:
+            for v in {w, w.upper(), w.lower(), re.sub(r"[\s$]", "", w).upper()}:
+                for algo in ("sha256", "sha1", "md5"):
+                    out.add((j, hashlib.new(algo, v.encode("utf-8")).hexdigest()[:FP_LEN]))
+    return sorted(out)
 
 
 def _files(paths: list[str]) -> list[str]:
@@ -570,7 +605,8 @@ def git_files() -> list[str]:
     return [os.path.join(REPO, x) for x in r.stdout.decode().split("\0") if x]
 
 
-def scan_leaks(files: list[str], secrets: list[dict], names, res: Result, rel=REPO, public_media=()) -> None:
+def scan_leaks(files: list[str], secrets: list[dict], names, res: Result, rel=REPO, public_media=(),
+               v1_numbers=()) -> None:
     """Secrets exacts (sel, card_id et titre engagés en chaîne JSON, média) partout ; vrai nom ou
     ticker sur une ligne qui parle de mythique. Aucun secret n'est recopié dans les messages.
     `public_media` : médias publics par construction (le visuel « ? » commun à toutes les mythiques,
@@ -588,6 +624,8 @@ def scan_leaks(files: list[str], secrets: list[dict], names, res: Result, rel=RE
             if isinstance(c.get(k), str) and c[k] and c[k] not in public_media:
                 exact.append((j, k, c[k].encode("utf-8")))
     pats = [(j, re.compile(r"(?<![A-Za-z0-9])" + re.escape(w) + r"(?![A-Za-z0-9])", re.I)) for j, ws in (names or []) for w in ws]
+    nums = [(j, re.compile(r"(?:\bn°|\bN°|\bnum[ée]ros?|\bno\.)\s*" + n + r"(?!\d)", re.I)) for j, n in v1_numbers]
+    fps = fingerprints(names)
     for f in files:
         try:
             with open(f, "rb") as fh:
@@ -604,6 +642,11 @@ def scan_leaks(files: list[str], secrets: list[dict], names, res: Result, rel=RE
             text = data.decode("utf-8")
         except UnicodeDecodeError:
             continue
+        low = text.lower()
+        for j, fp in fps:
+            if fp in low:
+                res.err(f"FUITE : empreinte courte d'un secret de la mythique {j} dans {name}")
+                break
         docs = _json_docs(text)
         if docs is not None:
             for j in _json_leaks(docs, pats):
@@ -615,6 +658,10 @@ def scan_leaks(files: list[str], secrets: list[dict], names, res: Result, rel=RE
             for j, p in pats:
                 if p.search(line):
                     res.err(f"FUITE : nom ou ticker de la mythique {j} associé à « mythique » dans {name}:{n}")
+                    break
+            for j, p in nums:
+                if p.search(line):
+                    res.err(f"FUITE : n° v1 de la mythique {j} associé à « mythique » dans {name}:{n}")
                     break
 
 
@@ -674,6 +721,15 @@ def _json_leaks(docs, pats) -> set:
 def validate(path, secrets_path=None, names_path=None, scan=(), git=False, max_rush_mean=0.8, max_normal_mean=1.0) -> tuple[Result, dict]:
     res = Result()
     public = []
+    if path is None:
+        names = load_names(names_path) if names_path and os.path.exists(names_path) else []
+        v1 = load_v1_numbers(names_path) if names else []
+        if not names:
+            res.warn("fichier des vrais noms absent : seuls les secrets exacts de --secrets sont cherchés")
+        files = _files(list(scan)) + (git_files() if git else [])
+        secrets = load_secrets(secrets_path) if secrets_path else []
+        scan_leaks(sorted(set(files)), secrets, names, res, v1_numbers=v1)
+        return res, {"files_scanned": len(set(files))}
     if os.path.isdir(path):
         table = check_out_dir(path, res)
         public.append(path)
@@ -691,6 +747,7 @@ def validate(path, secrets_path=None, names_path=None, scan=(), git=False, max_r
     if secrets_path:
         check_preimages(table, secrets, res)
     names = load_names(names_path) if names_path and os.path.exists(names_path) else []
+    v1 = load_v1_numbers(names_path) if names else []
     files = _files(public + list(scan)) + (git_files() if git else [])
     # Visuel « ? » commun (build_series.py --media-base / mythic_media) : public par construction,
     # écrit dans le manifeste et identique pour toutes les mythiques.
@@ -699,7 +756,7 @@ def validate(path, secrets_path=None, names_path=None, scan=(), git=False, max_r
     if manifest and os.path.exists(manifest):
         with open(manifest, encoding="utf-8") as f:
             shared.append(json.load(f).get("mythic_media"))
-    scan_leaks(sorted(set(files)), secrets, names, res, public_media=shared)
+    scan_leaks(sorted(set(files)), secrets, names, res, public_media=shared, v1_numbers=v1)
     summary["table_hash"] = core.table_hash(table).hex()
     summary["cards"] = len(table.get("cards", []))
     summary["files_scanned"] = len(set(files))
@@ -708,7 +765,8 @@ def validate(path, secrets_path=None, names_path=None, scan=(), git=False, max_r
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("path", help="dossier de build_series.py (scripts/out/<slug>) ou table.json")
+    ap.add_argument("path", nargs="?", help="dossier de build_series.py (scripts/out/<slug>) ou table.json ; "
+                    "sans lui, seul le contrôle anti-fuite tourne (--git ou --scan)")
     ap.add_argument("--secrets", help="préimages des mythiques (scripts/secrets/<slug>.json)")
     ap.add_argument("--mythiques", default=os.path.join(REPO, "docs", "data", "secrets", "mythiques.json"),
                     help="vrais noms des mythiques (ignoré s'il n'existe pas)")
@@ -718,6 +776,8 @@ def main(argv=None) -> int:
     ap.add_argument("--max-normal-mean", type=float, default=1.0)
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
+    if a.path is None and not (a.git or a.scan):
+        ap.error("donner une table, ou --git / --scan pour le seul contrôle anti-fuite")
     res, summary = validate(a.path, a.secrets, a.mythiques, a.scan, a.git, a.max_rush_mean, a.max_normal_mean)
     if a.json:
         print(json.dumps({"ok": res.ok, "errors": res.errors, "warnings": res.warnings, "info": res.info,
