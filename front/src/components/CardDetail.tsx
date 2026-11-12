@@ -6,6 +6,7 @@ import { estimateTokens, type TokenEstimate } from "../lib/backing";
 import { waitBurnOutcome } from "../lib/burn";
 import { listingDepositNote } from "../lib/market";
 import { burnStorageRefund } from "../lib/pack";
+import { readUntil } from "../lib/poll";
 import { loadCatalog, STATE_LABEL, type CatalogEntry } from "../lib/catalog";
 import { formatNearExact, formatQty, formatUsd, parseNear, RARITY_LABEL, yoctoToNumber } from "../lib/format";
 import { coinUsd, nearUsd } from "../lib/prices";
@@ -44,6 +45,11 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
   }, []);
 
   const reload = () => getCard(tokenId).then(setCard, () => setCard(null));
+  // Après une mise en vente ou un retrait : relecture jusqu'à voir le nouvel état (nœud RPC en retard).
+  const reloadUntil = async (listed: boolean) => {
+    const c = await readUntil(() => getCard(tokenId), (x) => !!x?.listing === listed);
+    if (c !== undefined) setCard(c);
+  };
   useEffect(() => {
     reload();
     nearUsd().then(setUsd);
@@ -121,8 +127,8 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
       const cfg = await getConfig();
       await call("list", { token_id: card.token_id, price }, { deposit: cfg.listing_deposit, gas: "30000000000000" });
       setListPrice("");
+      await reloadUntil(true);
       onChanged?.();
-      await reload();
     } catch (e) {
       setError(e instanceof Error && e.message === "Invalid amount" ? "Enter a price in NEAR, e.g. 0.5" : humanError(e));
     } finally {
@@ -135,8 +141,8 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
     setBusy(true);
     try {
       await call("delist", { token_id: card.token_id }, { gas: "30000000000000" });
+      await reloadUntil(false);
       onChanged?.();
-      await reload();
     } catch (e) {
       setError(humanError(e));
     } finally {
