@@ -115,13 +115,45 @@ problème. Lancer le technique en sous-agents (simulation, contrat Rust NFT…),
 - `contract/` (NEP-171/177/178/181/199, tirage sur reçus chaînés, mythiques scellés, marché, burn abstrait),
   `verifier/`, `sim/`, `art/`, `docs/faisabilite.md` (faisable hors burn, MetaMask viable via near-connect).
 
+## 11 et 12/11 : réglages de jeu, front, contrat v3, testnet
+
+**Décisions de Hugo.**
+- Valeur d'un pack aléatoire, de 20 % à 200 % du prix en jetons, moyenne de 75 % sur l'ensemble des packs.
+- Gold pack : aucune garantie, aucun compteur affiché. La chance va de 1 sur 50 000 à 1 sur 25 000 en 1 000 packs.
+  Contenu : 2 rares ou mieux, 2 épiques ou mieux, 1 légendaire, avec 1 % de chance d'être mythique.
+- Mythique très rare dans les packs classiques (1 pour 10⁶). Les 3 cartes mythiques ne portent aucune information :
+  « ? » en nom, en image et en description.
+- Catalogue de démo sans drapeaux ni politiciens. Oracle : GeckoTerminal et DexScreener, GMGN en appoint seulement.
+- Front : site web et app iOS, site en anglais, prix en NEAR et en dollars, quantité de jetons affichée sans
+  pourcentage, burn sans choix de chaîne, notre propre marché avec « Trending », cartes sombres à cadre métallique.
+  Consignes : `docs/consignes-front.md` et `docs/front/CONSIGNE.md` (pour Enzo).
+
+**Résultats.**
+- Enzo a écrit le front web (`feat/front`). Relecture, corrections et adaptation à la v3 sur `fix/front-revue`.
+- Contrat v3 : stockage rendu à l'ouverture et au burn, remboursement d'un pack bloqué, retrait des recettes borné par
+  les engagements, codes d'erreur (`contract/ERRORS.md`), relance réservée à l'acheteur.
+- Relecture complète : fuzz contrat/vérificateur (10 000 cas, accord au bit près), validateur de série
+  (`contract/scripts/validate_series.py`), script de déploiement durci.
+- Séries de démo : pack d'entrée à 0,0552 NEAR (0,20 $) et pack standard à 0,1381 NEAR (0,50 $), au cours du 11/11.
+  Visuels anglais prêts pour IPFS (CID calculé, pas encore envoyé).
+- Testnet v3 : `app3.memaster-demo-j7xg7z.testnet`, 41 packs, tous VÉRIFIÉS (`docs/testnet.md`).
+- Noms des mythiques retirés de tous les fichiers suivis. Un test bloque leur retour. L'historique git les contient
+  encore.
+
+**Limite découverte.** NEAR Intents ne couvre qu'une vingtaine de memecoins : 11 brûlables au mieux, aucune rare
+(`docs/series-demo.md`). Les séries de démo ont 9 brûlables, dont 3 communes d'appoint sur NEAR.
+
 ## Questions ouvertes
 
 1. Nom du projet.
-2. Trancher les 101 « À décider » et les drapeaux du catalogue v2.
+2. ~~Trancher les drapeaux~~ : exclus de la démo (11/11). Les 101 « À décider » restent hors démo.
 3. Créditer la carte en NEAR si l'achat des jetons échoue ? Recommandation : oui.
 4. ~~Vérifier la couverture des memecoins sur NEAR Intents~~ : fait le 11/11 (`intents-couverture.md`). À revérifier avant chaque série.
-5. Tester MetaMask (adaptateur near-connect) sur testnet en premier.
+5. Tester MetaMask (adaptateur near-connect) sur testnet avec le front, puis sur iPhone.
+9. Pile de l'app iOS : React Native (Expo) ou Swift.
+10. Hébergement des visuels (Pinata ou web3.storage) et de l'indexeur ; `projectId` WalletConnect.
+11. Plus de brûlables, surtout en rare : autre source d'actifs qu'Intents, surclassement manuel, ou démo à ~10 brûlables.
+12. Avant de rendre le dépôt public : réécrire l'historique (noms des mythiques) et traiter la déduction par absence.
 6. Après le script d'images : compléter chaînes et adresses dans le catalogue.
 7. Générer les visuels originaux (d'abord les 248 cartes à ayant droit).
 8. Avis juridique avant tout mainnet.
