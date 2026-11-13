@@ -1,4 +1,4 @@
-# Front Memaster : ce qui reste à faire (pour Hugo)
+# Front Moonpacks : ce qui reste à faire (pour Hugo)
 
 État au 12/11/2026, branche `fix/front-revue` (depuis `feat/front`, avec `feat/demo` fusionnée). La branche est sur
 GitHub jusqu'à `956e125` ; les commits suivants (depuis `6540de8`, liste plus bas) ne sont pas encore poussés. Le front vise **`app3`** (contrat v3, deux
@@ -26,22 +26,30 @@ cd front && npm install && npm run dev      # http://127.0.0.1:5173
 cd front && npm run indexer                 # facultatif, second terminal
 ```
 
+## Décisions d'Enzo du 13/11
+
+- Nom : **Moonpacks**.
+- **Site web seulement**, iOS mis de côté.
+- Hébergement sur **Vercel**, donc pas de WalletConnect.
+- Les **101 jetons « À décider » sont retirés** du site pour l'instant : `prepare-assets` ne prend plus que la
+  section `catalogue`. Les séries de `app3` ne les contenaient déjà pas.
+
 ## 1. Décisions à prendre
 
 | # | Sujet | Situation | Ce qu'il faut trancher |
 |---|---|---|---|
-| 1 | **Nom du projet** | « Memaster », provisoire, partout dans le front | Le nom, puis le logo, les visuels de packs et le domaine |
-| 2 | **Pile iOS** | Rien n'est commencé dans `mobile/` | React Native (Expo) : code partagé avec le web, near-connect réutilisable. Ou Swift : animations natives, mais near-connect est en JavaScript ; compromis possible, une `WKWebView` pour la connexion et la signature |
+| 1 | **Nom du projet** | **Moonpacks** (Enzo, 13/11). Le site l'affiche ; le contrat garde « Memaster » on-chain, remplacé à l'affichage | Vérifier le domaine et les homonymes crypto |
+| 2 | **Pile iOS** | **Mise de côté** (Enzo, 13/11) : site web seulement | Rien pour l'instant |
 | 3 | **Prix des packs** | Contrat v3 (`app3`) : deux séries ouvertes, « Memaster Entry » (0,0552 NEAR) et « Memaster Standard » (0,1381 NEAR), environ 0,20 $ et 0,50 $ au cours du déploiement. La boutique, la page des taux (sélecteur de série, `#/rates?series=1`) et le gold rush (un panneau par série) les montrent toutes les deux | Le prix est fixé en NEAR : le prix en dollars bougera |
 | 4 | **Quantité de jetons d'une carte brûlable** | L'adossement (`amount`) est une **valeur en yoctoNEAR**, pas une quantité de jetons (`docs/mecaniques-spec.md`). Le front estime `amount × cours NEAR / cours du coin`. Pour un coin presque sans valeur, ça donne des nombres énormes (« 25,800T SHIBDOGE ») | Comment le redeemer achète les jetons, et où le front lit la vraie quantité |
 | 5 | **Dépôt de stockage** | Le contrat exige **0,01605 NEAR** par pack en plus du prix (1 605 o prépayés, pire cas) : 0,07125 NEAR joints en série 0, 0,15415 en série 1. **Contrat v3 : l'excédent est rendu à l'ouverture** (0,00567 NEAR au premier pack d'un compte, 0,00999 ensuite : mesuré sur les packs 41 à 45 de la nuit) ; la boutique le dit et le récapitulatif affiche le montant rendu | Rien, sauf si le dépôt joint doit baisser |
 | 6 | **Dépôt rendu au burn ?** | **Contrat v3 : oui, en partie.** Le burn rend le stockage libéré (`card_redeemed.storage_refund`, environ 16 o pour un burn ordinaire) ; l'emplacement du pack reste écrit (`docs/mecaniques-spec.md`, 12.2). Le front affiche le montant rendu après le burn, sans promesse avant | Corriger la consigne (« rendu au burn » → « l'excédent est rendu à l'ouverture, le stockage libéré au burn ») |
 | 7 | **Source des cours** | NEAR/USD : CoinGecko. Cours d'un coin : DexScreener par adresse, sinon CoinGecko par identifiant. Appels directs depuis le navigateur, sans clé, avec un cache de 5 min (mémoire et `localStorage`), des ids regroupés par appel et un recul après un 429 (dernière valeur connue affichée) | Valider, ou passer par un service maison si la démo publique attire du monde |
-| 8 | **MetaMask sur iOS / WalletConnect** | near-connect affiche MetaMask (« Ethereum Wallets ») en premier. WalletConnect est branché, inactif tant que `VITE_WALLETCONNECT_PROJECT_ID` est vide | Créer un `projectId` WalletConnect (gratuit, cloud.reown.com) |
+| 8 | **WalletConnect** | **Pas nécessaire** (Enzo, 13/11) : démo sur ordinateur, MetaMask en extension ou wallet NEAR natif. Le code reste inactif sans `projectId` | Rien |
 | 9 | **Mention « simulation »** | Rien n'est affiché sur les parties simulées (redeemer et jetons factices sur testnet) | Le texte et l'endroit (hors périmètre pour l'instant, consigne § 7) |
 | 10 | **Mentions légales** | Page en place ; l'éditeur et le contact sont « à compléter » | Les informations d'éditeur |
 | 11 | **Contrat visé** | **`app3.…` est la cible** du front, de l'indexeur et des parcours e2e (v3, deux séries). `VITE_CONTRACT_ID` (et `INDEXER_CONTRACT_ID`) changent de contrat ; `app2` reste pris en charge | Rien |
-| 12 | **Push, PR, déploiement public** | Rien n'est poussé (consigne § 9) | Ton accord |
+| 12 | **Push, PR, déploiement public** | Branches poussées. **Déploiement sur Vercel décidé** (Enzo, 13/11) : build statique `front/dist`, `npm run deploy` | Fusions vers `main` à faire ensemble |
 
 ## 2. Tests qui demandent un wallet
 
@@ -98,7 +106,6 @@ passe. Sans ce fichier, le contrôle se limite à la structure.
 
 | Sujet | Détail |
 |---|---|
-| **App iOS** | Tout est à faire, après la décision 2 |
 | **Images des NFT dans les wallets** | Les métadonnées on-chain pointent vers `ipfs://TODO/<carte>.svg` (`media_template` de `build_series.py`). Les wallets et explorateurs montreront une image cassée. Il faut héberger les visuels (version anglaise : `--langue en`) et mettre la bonne URL dans la série |
 | **Hébergement de l'indexeur** | Il tourne en local (SQLite). Pour une démo publique, il faut l'héberger quelque part et définir `VITE_INDEXER_URL` |
 | **Pack `stuck`** | Contrat v3 : « Refund » appelle `refund_stuck_pack` (prix et stockage non utilisé rendus à l'acheteur), puis le pack s'affiche `refunded`. `retry_reveal` n'est proposé qu'à l'acheteur. Sur `app2`, message de contact |

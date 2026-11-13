@@ -43,6 +43,9 @@ const fiches = {};
 for (const c of brut) {
   // Mythiques : jamais publiées, même anonymes (le front les affiche toutes en « ? »).
   if (c.rarete === "mythique" || String(c.id).startsWith("mythique")) continue;
+  // Les 101 jetons « À décider » (politiques, obscènes, personnes réelles, arnaques, cas douteux) restent hors du
+  // site tant qu'ils ne sont pas tranchés (décision du 13/11). Les séries de app3 ne les contiennent pas.
+  if (c.section !== "catalogue") continue;
   fiches[c.id] = {
     no: c.numero,
     ticker: propre(c.ticker) ?? "TBD",
@@ -80,7 +83,7 @@ if (existsSync(tampon) && readFileSync(tampon, "utf8") === attendu) {
   mkdirSync(sortieCartes, { recursive: true });
   const r = spawnSync(
     "python3",
-    ["-m", "memaster_art", "--catalogue", catalogue, "--inclure-a-decider", "--langue", "en", "--out", sortieCartes],
+    ["-m", "memaster_art", "--catalogue", catalogue, "--langue", "en", "--out", sortieCartes],
     { cwd: art, stdio: ["ignore", "pipe", "inherit"], encoding: "utf8" },
   );
   if (r.status !== 0) {

@@ -46,11 +46,11 @@ PREFIXES = (
 RARETES = {"commune": "common", "rare": "rare", "épique": "epic", "légendaire": "legendary", "mythique": "mythic"}
 
 DESC = (
-    "Memaster card. Ticker cited as factual data; abstract generative visual. "
+    "Moonpacks card. Ticker cited as factual data; abstract generative visual. "
     "Not affiliated with the projects, creators or rights holders mentioned."
 )
 DESC_DOS = (
-    "Sealed back of a Memaster mythic card, identical for every mythic. "
+    "Sealed back of a Moonpacks mythic card, identical for every mythic. "
     "Not affiliated with the projects, creators or rights holders mentioned."
 )
 
@@ -86,7 +86,7 @@ def _noeud(m: re.Match) -> str:
 def _titre(m: re.Match) -> str:
     t = m.group(1)
     if t == "Memaster · carte mythique scellée":
-        return "<title>Memaster · sealed mythic card</title>"
+        return "<title>Moonpacks · sealed mythic card</title>"
     parties = t.rsplit(" · ", 1)
     if len(parties) == 2 and parties[1] in RARETES:
         # « TICKER · Nom (précision française) » : la précision part, comme sous le ticker de la carte.

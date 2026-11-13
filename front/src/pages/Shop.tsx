@@ -1,6 +1,7 @@
 // Boutique : packs en vente (prix en NEAR et en dollars), dépôt de stockage, lien vers les taux, gold rush.
 // Rien d'autre ne pousse à l'achat : pas de minuteur inventé, pas de compteur de pitié, pas d'achat en un clic.
 
+import { seriesName } from "../lib/brand";
 import { useEffect, useState } from "react";
 import { ConnectButton } from "../components/Header";
 import { PackArt } from "../components/PackArt";
@@ -87,7 +88,7 @@ function PackOffer({
     <article className="offer">
       <PackArt seed={series.series_id * 31 + 11} />
       <div className="offer__body">
-        <h2>{series.name}</h2>
+        <h2>{seriesName(series.name)}</h2>
         <p className="muted">{series.cards_per_pack} cards · at least one burnable</p>
         <div className="offer__price">
           <span className="offer__near">{formatNearExact(series.price)} NEAR</span>
@@ -162,7 +163,7 @@ export function RushPanel({ accountId, series, multi }: { accountId: string | nu
     };
   }, [accountId, series.series_id]);
 
-  return <RushView rush={rush} name={multi ? series.name : null} now={now} fetchedAt={fetchedAt} />;
+  return <RushView rush={rush} name={multi ? seriesName(series.name) : null} now={now} fetchedAt={fetchedAt} />;
 }
 
 /** Rendu d'un état de rush (séparé pour les tests). */

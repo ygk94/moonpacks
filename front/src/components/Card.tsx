@@ -70,7 +70,7 @@ export function CardBack({ size = "md", glow }: { size?: "sm" | "md" | "lg"; glo
         <div className="card-back__pattern" />
         <div className="card-back__logo">
           <span>M</span>
-          <small>MEMASTER</small>
+          <small>MOONPACKS</small>
         </div>
       </div>
     </div>

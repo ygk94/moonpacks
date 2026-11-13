@@ -53,7 +53,7 @@ export function VerifyPanel({ packId }: { packId: number }) {
       } else {
         note = history
           ? "This pack is not indexed yet. Try again in a minute for the exact-card check."
-          : "Exact-card check needs the series history: start the indexer, or use the command-line verifier.";
+          : "The exact-card check needs the full series history: use the command-line verifier below.";
       }
       setResult({ quick, full, note });
     } catch (e) {

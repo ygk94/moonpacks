@@ -13,7 +13,8 @@
     "test": "vitest run && node scripts/check-mythics.mjs",
     "check:mythics": "node scripts/check-mythics.mjs",
     "smoke": "node scripts/smoke-readonly.mjs",
-    "e2e": "node scripts/e2e.mjs"
+    "e2e": "node scripts/e2e.mjs",
+    "deploy": "npm run build && npx --yes vercel@65.15.0 deploy dist --prod"
   },
   "dependencies": {
     "@hot-labs/near-connect": "0.12.0",

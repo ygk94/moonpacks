@@ -49,7 +49,7 @@ export function PackArt({ variant = "standard", seed = 7, label = "5 CARDS", cla
         </div>
         <div className="pack__foil" />
         <div className="pack__brand">
-          <span className="pack__logo">MEMASTER</span>
+          <span className="pack__logo">MOONPACKS</span>
           <span className="pack__sub">{variant === "gold" ? "GOLD" : "MEMECOIN BOOSTER"}</span>
         </div>
         <div className="pack__count">{label}</div>

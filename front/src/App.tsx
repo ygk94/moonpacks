@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { DemoBanner, Header } from "./components/Header";
+import { BRAND } from "./lib/brand";
 import { useRoute } from "./lib/router";
 import type { OpeningRequest } from "./pages/Opening";
 import { Shop } from "./pages/Shop";
@@ -47,7 +48,7 @@ export function App() {
         <Suspense fallback={<p className="muted">Loading…</p>}>{page}</Suspense>
       </main>
       <footer className="footer">
-        <span>Memaster · NEAR testnet demo</span>
+        <span>{BRAND} · NEAR testnet demo</span>
         <a href="#/rates">Drop rates</a>
         <a href="#/legal">Legal notice</a>
       </footer>

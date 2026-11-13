@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BRAND } from "../lib/brand";
 import { shortAccount } from "../lib/format";
 import { navigate, useRoute } from "../lib/router";
 import { humanError } from "../near/errors";
@@ -30,8 +31,8 @@ export function Header() {
   return (
     <header className="header">
       <a className="header__logo" href="#/shop">
-        <span className="header__mark">M</span>
-        <span>MEMASTER</span>
+        <span className="header__mark">🌙</span>
+        <span>{BRAND.toUpperCase()}</span>
       </a>
       <nav className="header__nav">
         {LINKS.map(([href, label]) => (

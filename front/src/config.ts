@@ -19,5 +19,5 @@ export const EXPLORER = NETWORK === "testnet" ? "https://testnet.nearblocks.io" 
 
 if (NETWORK !== "testnet") {
   // Mainnet : jamais sans avis juridique (consigne front, section 7).
-  throw new Error("Memaster front is a testnet-only demo.");
+  throw new Error("This front is a testnet-only demo.");
 }

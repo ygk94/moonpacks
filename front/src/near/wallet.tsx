@@ -43,7 +43,7 @@ const walletConnect = WALLETCONNECT_PROJECT_ID
       m.default.init({
         projectId: WALLETCONNECT_PROJECT_ID,
         metadata: {
-          name: "Memaster (testnet demo)",
+          name: "Moonpacks (testnet demo)",
           description: "Memecoin booster packs on NEAR testnet",
           url: window.location.origin,
           icons: [`${window.location.origin}/cards/dos-mythique.svg`],

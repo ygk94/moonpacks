@@ -1,4 +1,4 @@
-# Front Memaster (web)
+# Front Moonpacks (web)
 
 Démo **testnet seulement**. Cahier des charges : `docs/front/CONSIGNE.md`.
 
@@ -16,8 +16,10 @@ puis lance Vite :
 
 - `public/catalog.json` : fiche publique de chaque carte (ticker, nom, chaîne, état), tirée de
   `docs/data/catalogue-v2.json`. Les mythiques sont exclues.
-- `public/cards/*.svg` : visuels générés par `art/` en anglais (`--langue en`), « à décider » compris (le contrat
-  en a 1 646), plus le dos « ? » commun aux mythiques. Ils ne sont régénérés que si le catalogue ou `art/` change.
+- `public/cards/*.svg` : visuels générés par `art/` en anglais (`--langue en`), plus le dos « ? » commun aux
+  mythiques. Ils ne sont régénérés que si le catalogue ou `art/` change. Les 101 jetons « À décider » sont exclus du
+  catalogue public et des visuels pour l'instant (décision du 13/11). `app3` ne les contient pas ; sur `app2`, ces
+  cartes s'affichent sans visuel.
 
 Ces fichiers sont ignorés par git. Autres commandes : `npm run build` (vérification des types et build de prod dans
 `dist/`, suivi du contrôle anti-fuite des mythiques), `npm run typecheck`, `npm test` (vitest, puis le même
@@ -46,6 +48,18 @@ Pagination : `/v0/account` est lu en ordre croissant, par pages de 100 (`resume_
 qu'après une page pleine et entièrement lue, et le dédoublonnage par hash couvre la relecture de la dernière page.
 `/history?series_id=0` renvoie les événements utiles au rejeu complet d'une série (achats, tirages, burns,
 résurrections), dans l'ordre d'exécution.
+
+## Mise en ligne (Vercel)
+
+```sh
+cd front && npm run deploy
+```
+
+Le script fait le build de production (contrôles compris), puis `vercel deploy dist --prod`. Il faut être connecté à
+Vercel une fois (`npx vercel login`). Le site est statique (routeur par hash, aucune réécriture d'URL) ;
+`public/vercel.json` règle la mise en cache des visuels et des fichiers JS et CSS. L'indexeur n'est pas déployé :
+`VITE_INDEXER_URL` est vide en production, donc « Trending » se rabat sur les annonces du contrat, et le rejeu
+complet renvoie au vérificateur en ligne de commande. Pas de WalletConnect : la démo se joue sur ordinateur.
 
 ## Configuration
 

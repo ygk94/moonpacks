@@ -1,4 +1,4 @@
-# Plan Memaster
+# Plan Moonpacks (ex-Memaster)
 
 Établi le 11/11/2026, à partir de toute la recherche de `docs/` et du relevé NEAR Intents (`intents-couverture.md`).
 Le but est d'arriver à une démo honnête pour le NEAR Hackathon (tracks NFTs et memecoins), sans vente au public.
@@ -8,14 +8,23 @@ les nombres (la phase 2), puis seulement le code. Un test qui échoue en phase 1
 
 **Légende.** `[ ]` à faire, `[x]` fait, **Hugo** = décision humaine.
 
+**Périmètre au 13/11 (Enzo).**
+- **Site web seulement.** L'app iOS est mise de côté pour l'instant, et `mobile/` n'est pas créé.
+- **Nom : Moonpacks.** Le site l'affiche. Le contrat et ses séries portent encore « Memaster », écrit on-chain, et le
+  front le remplace à l'affichage. Le dépôt, les paquets Python et les variables gardent leur nom.
+- **Hébergement : Vercel.** Le site est un build statique (`front/dist`). Pas de WalletConnect : la démo se joue sur
+  ordinateur, avec MetaMask en extension ou un wallet NEAR natif. Le code WalletConnect reste inactif sans
+  `projectId`.
+- **Les 101 jetons « À décider » sont retirés pour l'instant**, du site comme des séries (`app3` ne les a pas).
+
 ---
 
 ## Phase 0 : décisions de l'équipe
 
 | # | Décision | Recommandation | État |
 |---|---|---|---|
-| 0.1 | Nom du projet | À trouver avant les visuels et le front | [ ] **Hugo** |
-| 0.2 | Que faire des 101 jetons « À décider » du catalogue v2 (cannabis coins, Verge, Skibidi, homonymes, pics douteux) et des cartes à drapeau (politique, personne réelle, obscène, arnaque avérée) | Exclure « À décider » de la démo ; trancher les drapeaux un par un | [ ] **Hugo** |
+| 0.1 | Nom du projet | **Moonpacks** (13/11). Reste à vérifier le domaine et les homonymes crypto | [x] |
+| 0.2 | Que faire des 101 jetons « À décider » du catalogue v2 (cannabis coins, Verge, Skibidi, homonymes, pics douteux) et des cartes à drapeau (politique, personne réelle, obscène, arnaque avérée) | **Retirés pour l'instant** (13/11) : hors du site et des séries de démo. Les trancher un par un avant de les remettre | [x] pour la démo |
 | 0.3 | Si l'achat des jetons échoue après le tirage | La carte reste adossée en NEAR, jamais de remboursement | [ ] **Hugo** |
 | 0.4 | Prix du booster et part d'adossement β | 10 NEAR (environ 36 $), β = 60 %, après simulation (phase 2) | [ ] **Hugo** |
 | 0.5 | Mécanique de burn : quelles cartes, financement des jetons | Reportée (décision du 11/11). Le retrait des jetons vers les exchanges n'est pas notre sujet | [ ] **Hugo**, plus tard |
@@ -95,21 +104,32 @@ burn via un `redeemer` abstrait en attendant la décision 0.5, vérificateur pub
 - [x] **5.1 Générateur d'art original et abstrait** (`art/`, régénération sur le v2 en cours), à partir de l'adresse, du ticker et de la rareté. Aucun logo,
   personnage ni ressemblance. Il couvre les 786 cartes, en commençant par les 13 brûlables et les 233 de la liste A.
 - [x] **5.2 Cadres de rareté**, et un style « cimetière » pour les coins morts.
-- [ ] **5.3 Métadonnées NEP-177.** `reference` et `reference_hash` (IPFS ou Arweave), avec la mention de non-affiliation.
+- [ ] **5.3 Métadonnées NEP-177.** Aujourd'hui, `media` vaut `ipfs://TODO/<carte>.svg` : image cassée dans les wallets.
+  Pour la démo, servir les visuels anglais (`--langue en`) par le site sur Vercel, `media` en `https://…/cards/<carte>.svg`
+  avec `media_hash`, puis redéployer une série. IPFS ou Arweave (permanence) plus tard. `reference` et
+  `reference_hash`, avec la mention de non-affiliation.
 - [ ] **5.4 Changer l'image d'une carte** sans toucher aux jetons bloqués (`nft_metadata_update`).
 
 ## Phase 6 : front (web)
 
-- [ ] **6.1 Connexion** near-connect : MetaMask (`0x…`) et wallets NEAR.
-- [ ] **6.2 Achat et ouverture animée** du booster. Les taux, l'espérance et « la plupart des boosters valent moins que
-  leur prix » sont affichés avant l'achat.
-- [ ] **6.3 Collection**, cimetière, détail d'une carte (quantité de jetons, jamais de « valeur garantie »).
-- [ ] **6.4 Marché intégré.**
-- [ ] **6.5 Burn.** Choix de la destination (NEAR ou chaîne d'origine), adresse Solana lue par la session multichaîne de
-  MetaMask, validation du format, confirmation, et suivi de la livraison.
-- [ ] **6.6 Page transparence** (soldes `intents.near` comparés aux engagements, jeton par jeton) et **page de
-  vérification des tirages** (hash de la table et du code, tirages recalculés, fréquences observées).
-- [ ] **6.7 Bandeau** « démo, testnet ou accès fermé », avec les mentions légales.
+Le site est dans `front/` (branche `fix/front-revue`). Le détail est dans `front/README.md` et
+`docs/front/RESTE-A-FAIRE.md`. Il suit `docs/front/CONSIGNE.md`, qui a remplacé certains points ci-dessous : pas
+d'espérance ni de pourcentage affichés, pas de choix de chaîne au burn.
+
+- [x] **6.1 Connexion** near-connect : MetaMask (`0x…`) en tête, puis les wallets NEAR. Reste un essai avec un vrai
+  MetaMask (compte `0x…` alimenté, setup NEP-518).
+- [x] **6.2 Achat et ouverture animée** du booster, avec les taux accessibles avant l'achat, pour les deux séries de
+  `app3`. Testé de bout en bout (`npm run e2e`).
+- [x] **6.3 Collection** (les coins morts sont des cartes comme les autres) et détail d'une carte : quantité de jetons
+  estimée, jamais de « valeur garantie ».
+- [x] **6.4 Marché intégré**, avec « Trending » et les dernières ventes via l'indexeur.
+- [x] **6.5 Burn** en deux temps, suivi jusqu'à son issue, stockage rendu. Sans choix de chaîne (consigne). La vraie
+  livraison des jetons attend la phase 4.
+- [x] **6.6 Page transparence** : taux, hash de la table et du code, vérification d'un pack dans le navigateur (rejeu
+  complet avec l'historique). Les soldes `intents.near` comparés aux engagements attendent la phase 4.
+- [x] **6.7 Bandeau** « Demo · NEAR testnet » permanent, avec les mentions légales (éditeur à compléter).
+- [ ] **6.8 Mise en ligne sur Vercel** (`cd front && npm run deploy`). L'indexeur n'est pas hébergé : « Trending » se
+  rabat sur les annonces, et le rejeu complet sur le vérificateur en ligne de commande.
 
 ## Phase 7 : démo et soumission
 
@@ -128,10 +148,13 @@ burn via un `redeemer` abstrait en attendant la décision 0.5, vérificateur pub
 
 ---
 
-## Prochaines actions proposées (12/11)
+## Prochaines actions proposées (13/11)
 
-1. Hugo : nom du projet, pile iOS, compte IPFS, `projectId` WalletConnect, nombre de brûlables visé.
-2. Tests avec un vrai wallet (MetaMask, iPhone) sur `app3`, avec Enzo.
-3. Fusionner `fix/front-revue` dans `feat/front` avec Enzo, puis `feat/demo` et `feat/front` dans `main`.
-4. Burn réel (phase 4, relais Intents) : la quantité de jetons d'une carte remplacera la valeur en NEAR.
-5. Avant tout public : historique git, avis juridique.
+1. Mettre le site en ligne sur Vercel (6.8), puis vérifier le domaine `moonpacks`.
+2. Visuels des NFT servis par le site (5.3), puis une série redéployée avec les bons `media`.
+3. Tests avec un vrai MetaMask sur `app3` (ordinateur), avec Enzo.
+4. Fusionner `fix/front-revue` dans `feat/front` avec Enzo, puis `feat/demo` et `feat/front` dans `main`.
+5. Hugo : nombre de brûlables visé, mention « simulation », éditeur des mentions légales.
+6. Burn réel (phase 4, relais Intents) : la quantité de jetons d'une carte remplacera la valeur en NEAR.
+7. Soumission (phase 7) : vidéo, README public, pitch.
+8. Avant tout public : historique git, avis juridique.

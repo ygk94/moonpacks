@@ -50,11 +50,13 @@ describe("series shown on the rates page", () => {
 
   it("renders one tab per series with its price, the current one selected", () => {
     const html = renderToStaticMarkup(<SeriesPicker list={[series(0), series(1)]} current={1} onPick={() => {}} />);
-    expect(html).toContain("Memaster Entry");
-    expect(html).toContain("Memaster Standard");
+    // Nom on-chain « Memaster … » affiché sous la marque du site.
+    expect(html).toContain("Moonpacks Entry");
+    expect(html).toContain("Moonpacks Standard");
+    expect(html).not.toContain("Memaster");
     expect(html).toContain("0.0552 NEAR");
     expect(html).toContain("0.1381 NEAR");
-    expect(html).toMatch(/aria-selected="true" class="active">Memaster Standard/);
+    expect(html).toMatch(/aria-selected="true" class="active">Moonpacks Standard/);
     // Une seule série : pas de sélecteur.
     expect(renderToStaticMarkup(<SeriesPicker list={[series(0)]} current={0} onPick={() => {}} />)).toBe("");
   });

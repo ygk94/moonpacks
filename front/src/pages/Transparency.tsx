@@ -1,6 +1,7 @@
 // Transparence : taux de drop publiés on-chain (`get_rates`, paginé), hash de la table, hash du code du contrat,
 // et comment vérifier soi-même un tirage avec verifier/.
 
+import { seriesName } from "../lib/brand";
 import { useMemo, useState } from "react";
 import { Card } from "../components/Card";
 import { CONTRACT_ID, EXPLORER, SERIES_ID } from "../config";
@@ -41,7 +42,7 @@ export function SeriesPicker({ list, current, onPick }: { list: SeriesView[]; cu
           className={s.series_id === current ? "active" : ""}
           onClick={() => onPick(s.series_id)}
         >
-          {s.name} <small className="muted">· {formatNearExact(s.price)} NEAR</small>
+          {seriesName(s.name)} <small className="muted">· {formatNearExact(s.price)} NEAR</small>
         </button>
       ))}
     </div>
