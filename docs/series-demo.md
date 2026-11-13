@@ -1,8 +1,9 @@
 # Séries de démo « entrée » et « standard » (12/11/2026)
 
-Branche `feat/series-demo`. **Testnet seulement, rien n'est déployé** : les deux séries attendent la nouvelle version du
-contrat. Les paramètres sont générés, les tables construites et vérifiées hors ligne, et les visuels prêts pour IPFS
-(CID calculé, rien n'est envoyé).
+Branche `feat/series-demo`. **Testnet seulement.** Les deux séries sont **déployées et ouvertes depuis le 12/11 sur
+le contrat v3 `app3.memaster-demo-j7xg7z.testnet`** : série 0 « entrée », série 1 « standard », avec les hash de
+ce document (section « Déploiement », mesures dans `docs/testnet.md`). Les visuels sont prêts pour IPFS : le CID est
+calculé, mais rien n'est encore envoyé, donc les URL `ipfs://` des cartes ne se résolvent pas encore.
 
 ## Composition
 
@@ -167,7 +168,22 @@ W3S_TOKEN=…  python3 -I scripts/ipfs_media.py upload --car scripts/out/ipfs-de
 python3 -I scripts/ipfs_media.py upload --car scripts/out/ipfs-demo-en.car --dry-run                     # n'envoie rien
 ```
 
-## Déploiement (après la nouvelle version du contrat)
+## Déploiement sur `app3` (12/11, fait)
+
+| Série | id | `table_hash` on-chain | Dépôt requis | Packs achetés (test) | Coût net moyen |
+|---|---:|---|---:|---:|---:|
+| Memaster Entry | 0 | `2064056b…5a313a40` (= tableau ci-dessus) | 0,07125 NEAR | 21 | 0,0649 NEAR |
+| Memaster Standard | 1 | `382c5a38…eaf4310f` (= tableau ci-dessus) | 0,15415 NEAR | 20 | 0,1474 NEAR |
+
+Construction avec `--sels scripts/secrets/serie-v2.json` (aucun sel neuf) et `--media-base ipfs://bafybeif…5viuia/`,
+au prix figé de ce document. `validate_series.py` donne OK avant chaque ouverture, une fois corrigé un faux positif sur
+le visuel « ? » commun (`docs/testnet.md`). Le chargement prend 9 transactions et 224,7 Tgas par série, 30,5 Tgas au
+plus par lot avec les URL IPFS. Sur 41 packs, la dernière carte est toujours une des 3 communes d'appoint : NearKat
+19, Black Dragon 11, Jambo 11, et ni Cash Cat ni légendaire. L'appoint fait donc ce qu'on attendait de lui. Pour
+recharger les séries ailleurs, il y a `scripts/deploy_testnet.sh` avec `SERIES_ID`, `CATALOGUE`, `SELS` et
+`MEDIA_BASE` (commande dans `docs/testnet.md`).
+
+### Procédure (référence)
 
 1. Régénérer les SVG, le dossier et le CID (ci-dessus). Si le CID change, relancer `series_demo.py --media-base
    ipfs://<CID>` (avec le même `--near-usd` et la même `--cours-source`, ou un cours du jour) puis reconstruire.

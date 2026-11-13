@@ -24,6 +24,11 @@
 #                        ex. ../sim/resultats/serie5/tables-valeur.json)
 #   SERIES_OUT           dossier des arguments générés (défaut scripts/out/<slug>) ; à changer pour
 #                        un second contrat, afin de ne pas écraser la table du premier
+#   SERIES_ID            identifiant de la série à charger (défaut 0) : relancer le script avec
+#                        SERIES_ID=1 et d'autres SERIES_PARAMS / SERIES_OUT pour une 2e série
+#   CATALOGUE            catalogue passé à build_series.py --catalogue (optionnel, ex. ../docs/data/catalogue-demo.json)
+#   SELS                 build_series.py --sels (sels existants, ex. scripts/secrets/serie-v2.json ; optionnel)
+#   MEDIA_BASE           build_series.py --media-base (ex. ipfs://<CID>/ ; optionnel)
 #   SKIP_BUILD=1         ne pas reconstruire les wasm
 #   SKIP_CONTROL=1       ne pas créer la série de contrôle sans mécanique
 set -euo pipefail
@@ -198,14 +203,21 @@ if [ "$(echo "$CFG" | jget 'd["price_oracle_id"]')" != "$ORACLE_ID" ]; then
   call "$ROOT_ID" accept_price_oracle '{}' 30 0
 fi
 
-# 5. Série v2 à mécaniques (par lots, dépôts du manifeste)
+# 5. Série à mécaniques n° SERIES_ID (par lots, dépôts du manifeste)
+SERIES_ID=${SERIES_ID:-0}
 SLUG=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['slug'])" "$SERIES_PARAMS")
 OUT=${SERIES_OUT:-$CONTRACT_DIR/scripts/out/$SLUG}
-BUILD_ARGS=(--series-id 0 --out "$OUT")
+BUILD_ARGS=(--series-id "$SERIES_ID" --out "$OUT")
 [ -n "${TABLES_VALEUR:-}" ] && BUILD_ARGS+=(--tables-valeur "$TABLES_VALEUR")
+[ -n "${CATALOGUE:-}" ] && BUILD_ARGS+=(--catalogue "$CATALOGUE")
+[ -n "${SELS:-}" ] && BUILD_ARGS+=(--sels "$SELS")
+[ -n "${MEDIA_BASE:-}" ] && BUILD_ARGS+=(--media-base "$MEDIA_BASE")
 NSER=$(view "$CONTRACT_ID" get_series_count)
-if [ "$NSER" = 0 ]; then
-  log "Série $SLUG : build_series.py"
+if [ "$NSER" -lt "$SERIES_ID" ]; then
+  echo "Série $SERIES_ID demandée, mais seulement $NSER série(s) sur le contrat : charger d'abord les précédentes" >&2; exit 1
+fi
+if [ "$NSER" = "$SERIES_ID" ]; then
+  log "Série $SLUG (id $SERIES_ID) : build_series.py"
   python3 "$HERE/build_series.py" "$SERIES_PARAMS" "${BUILD_ARGS[@]}"
   python3 "$HERE/validate_series.py" "$OUT" --secrets "$HERE/secrets/$SLUG.json"
   for f in $(python3 -c "import json,sys; print(' '.join(json.load(open(sys.argv[1]))['calls']))" "$OUT/manifest.json"); do
@@ -217,24 +229,27 @@ if [ "$NSER" = 0 ]; then
   done
 fi
 EXPECTED_HASH=$(cat "$OUT/table_hash.txt")
-if [ "$(view "$CONTRACT_ID" get_series '{"series_id":0}' | jget 'd["status"]')" = draft ]; then
+if [ "$(view "$CONTRACT_ID" get_series "{\"series_id\":$SERIES_ID}" | jget 'd["status"]')" = draft ]; then
   # L'ouverture fige la table pour toujours : le brouillon chargé doit être exactement la table
   # locale (nombre de cartes, puis hash recalculé depuis l'en-tête et les pages lus sur la chaîne).
   # Une reprise après un chargement interrompu s'arrête ici au lieu d'ouvrir une table tronquée.
   WANT=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['cards'])" "$OUT/manifest.json")
-  HAVE=$(view "$CONTRACT_ID" get_series '{"series_id":0}' | jget 'd["card_count"]')
+  HAVE=$(view "$CONTRACT_ID" get_series "{\"series_id\":$SERIES_ID}" | jget 'd["card_count"]')
   if [ "$HAVE" != "$WANT" ]; then
     echo "Brouillon incomplet : $HAVE cartes sur la chaîne, $WANT attendues. Pas d'ouverture." >&2
     echo "Compléter avec append_series_cards (lots manquants de $OUT) ou delete_draft, puis relancer." >&2
     exit 1
   fi
+  # La table locale est revalidée juste avant l'ouverture (y compris à la reprise, sans rebuild).
+  python3 "$HERE/validate_series.py" "$OUT" --secrets "$HERE/secrets/$SLUG.json" \
+    || { echo "Table locale refusée par validate_series.py : pas d'ouverture" >&2; exit 1; }
   (cd "$CONTRACT_DIR/../verifier" && python3 -m memaster_verifier table --rpc "$RPC_URL" --contract "$CONTRACT_ID" \
-    --series 0 --draft --expected-hash "$EXPECTED_HASH") \
+    --series "$SERIES_ID" --draft --expected-hash "$EXPECTED_HASH") \
     || { echo "Brouillon on-chain ≠ table locale (hash) : pas d'ouverture" >&2; exit 1; }
-  log "open_series(0)"
+  log "open_series($SERIES_ID)"
   call "$ROOT_ID" open_series "@$OUT/open_series.json" 300 0
 fi
-ONCHAIN_HASH=$(view "$CONTRACT_ID" get_series_table_hash '{"series_id":0}' | jget 'd["stored"]')
+ONCHAIN_HASH=$(view "$CONTRACT_ID" get_series_table_hash "{\"series_id\":$SERIES_ID}" | jget 'd["stored"]')
 echo "Hash attendu : $EXPECTED_HASH"
 echo "Hash on-chain : $ONCHAIN_HASH"
 [ "$ONCHAIN_HASH" = "$EXPECTED_HASH" ] || { echo "Hash on-chain ≠ hash attendu" >&2; exit 1; }
@@ -259,7 +274,7 @@ if [ "${SKIP_CONTROL:-0}" != 1 ]; then
 fi
 
 log "État"
-for s in 0 1; do view "$CONTRACT_ID" get_series "{\"series_id\":$s}" | python3 -c "
+for s in $(seq 0 $(( $(view "$CONTRACT_ID" get_series_count) - 1 ))); do view "$CONTRACT_ID" get_series "{\"series_id\":$s}" | python3 -c "
 import json,sys; d=json.load(sys.stdin)
 if d: print({k: d[k] for k in ('series_id','status','name','table_hash','required_deposit','min_gas','storage_per_pack','packs_sold','card_count')})"; done
 echo "Explorer : https://testnet.nearblocks.io/address/$CONTRACT_ID"

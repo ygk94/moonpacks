@@ -160,7 +160,7 @@ class SandboxVectors(unittest.TestCase):
         bad = copy.deepcopy(ev["content"])
         bad["backing"]["amount"] = "778"
         self.assertFalse(verify.verify_mythic(ev["card_id"], ev["sel"], bad, m["commitment"], m["content_hash"], "t").ok)
-        self.assertFalse(verify.verify_mythic("pepe-mythic2", ev["sel"], ev["content"], m["commitment"], m["content_hash"], "t").ok)
+        self.assertFalse(verify.verify_mythic("zorb-mythic2", ev["sel"], ev["content"], m["commitment"], m["content_hash"], "t").ok)
         # La vue get_mythic_commitments publie la même préimage.
         r = s["mythic_commitments"][0]["revealed"]
         self.assertEqual((r["card_id"], r["sel"], r["content"]), (ev["card_id"], ev["sel"], ev["content"]))

@@ -42,7 +42,7 @@ Chaque test est petit, isolé, et se fait avant d'écrire le vrai contrat.
 ## Phase 2 : économie et catalogue
 
 - [x] **2.0 Catalogue v2** (11/11) : 100 % mèmes, surtout des anciens pump → mort, toutes chaînes. 1 649 cartes
-  (mythique 3 scellés « ? » = DOGE, SHIB, PEPE ; légendaire 21 ; épique 235 ; rare 230 ; commune 1 160) et
+  (mythique 3 scellés « ? » ; légendaire 21 ; épique 235 ; rare 230 ; commune 1 160) et
   101 « À décider ». Script relançable `docs/recherche-v2/consolider.py`, surclassements manuels dans
   `docs/recherche-v2/surclassements.md`. La disponibilité sur NEAR Intents ne filtre plus le catalogue.
 
@@ -128,9 +128,10 @@ burn via un `redeemer` abstrait en attendant la décision 0.5, vérificateur pub
 
 ---
 
-## Prochaines actions proposées
+## Prochaines actions proposées (12/11)
 
-1. Hugo tranche la phase 0 : nom, « À décider » et drapeaux du catalogue v2, prix et β (après la série 2 de la sim).
-2. Front : pas pour l'instant (consigne du 11/11).
-3. Test 1.2 (MetaMask, checklist manuelle dans `faisabilite.md`) et 1.7 (callbacks) sur testnet, quand Hugo le valide.
-4. Burn (0.5) et relais (phase 4) : plus tard.
+1. Hugo : nom du projet, pile iOS, compte IPFS, `projectId` WalletConnect, nombre de brûlables visé.
+2. Tests avec un vrai wallet (MetaMask, iPhone) sur `app3`, avec Enzo.
+3. Fusionner `fix/front-revue` dans `feat/front` avec Enzo, puis `feat/demo` et `feat/front` dans `main`.
+4. Burn réel (phase 4, relais Intents) : la quantité de jetons d'une carte remplacera la valeur en NEAR.
+5. Avant tout public : historique git, avis juridique.

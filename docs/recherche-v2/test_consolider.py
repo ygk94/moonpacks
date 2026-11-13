@@ -12,6 +12,23 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import consolider as C  # noqa: E402
 
+# Fichier secret (hors git). Sur un clone qui ne l'a pas, trois cartes v1 ordinaires jouent les mythiques :
+# le chemin de code est le même, et aucun vrai nom n'est nécessaire.
+SECRET = os.path.join(C.ROOT, "docs", "data", "secrets", "mythiques.json")
+_FICTIF = tempfile.TemporaryDirectory()
+
+
+def args_mythiques():
+    if os.path.exists(SECRET):
+        return ["--mythiques", SECRET]
+    import json
+    v1 = C.lire_v1(os.path.join(C.ROOT, "docs", "catalogue-final.md"))
+    items = [{"ticker": v1[n].ticker, "origines": ["v1 n° %s" % n]} for n in ("7", "10", "12")]
+    p = os.path.join(_FICTIF.name, "mythiques.json")
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump({"mythiques": items}, f)
+    return ["--mythiques", p]
+
 
 class TestParsing(unittest.TestCase):
     def test_montants(self):
@@ -218,7 +235,7 @@ class TestBout(unittest.TestCase):
     def test_generation(self):
         import json
         with tempfile.TemporaryDirectory() as d:
-            C.main(["--out-dir", d])
+            C.main(["--out-dir", d] + args_mythiques())
             with open(os.path.join(d, "catalogue-v2.json"), encoding="utf-8") as f:
                 data = json.load(f)
             with open(os.path.join(d, "catalogue-v2.md"), encoding="utf-8") as f:
@@ -251,7 +268,7 @@ class TestBout(unittest.TestCase):
     def test_secrets_hors_json_public(self):
         import json
         with tempfile.TemporaryDirectory() as d:
-            C.main(["--out-dir", d, "--demo"])
+            C.main(["--out-dir", d, "--demo"] + args_mythiques())
             chemin = os.path.join(d, "secrets", "mythiques.json")
             self.assertEqual(os.stat(chemin).st_mode & 0o777, 0o600)
             with open(chemin, encoding="utf-8") as f:
@@ -260,8 +277,11 @@ class TestBout(unittest.TestCase):
             for nom in ("catalogue-v2.json", "catalogue-demo.json", "catalogue-v2.md", "catalogue-demo.md"):
                 with open(os.path.join(d, nom), encoding="utf-8") as f:
                     publics[nom] = f.read()
-        # Les vrais tickers sont vérifiés par empreinte : aucun n'est écrit dans un fichier suivi.
-        self.assertEqual(sorted(C.empreinte_ticker(m["ticker"]) for m in secrets), sorted(C.MYTHIQUES_V1.values()))
+        # Les mythiques viennent du fichier secret : ni nom, ni ticker, ni empreinte dans le code suivi.
+        attendu = C.charger_mythiques_v1(args_mythiques()[1])
+        self.assertEqual(sorted(C.norm_ticker(m["ticker"]) for m in secrets),
+                         sorted(C.norm_ticker(t) for t in attendu.values()))
+        self.assertFalse(hasattr(C, "MYTHIQUES_V1") or hasattr(C, "empreinte_ticker"))
         self.assertEqual([m["id"] for m in secrets], ["mythique-m1", "mythique-m2", "mythique-m3"])
         self.assertNotIn("| (scellé) |", publics["catalogue-v2.md"])  # homonymes d'une mythique non listés
         for nom, texte in publics.items():
@@ -283,7 +303,7 @@ class TestDemo(unittest.TestCase):
     def test_demo(self):
         import json
         with tempfile.TemporaryDirectory() as d:
-            C.main(["--out-dir", d, "--demo"])
+            C.main(["--out-dir", d, "--demo"] + args_mythiques())
             with open(os.path.join(d, "catalogue-demo.json"), encoding="utf-8") as f:
                 demo = json.load(f)
             with open(os.path.join(d, "catalogue-v2.json"), encoding="utf-8") as f:

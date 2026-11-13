@@ -1,12 +1,244 @@
-# Memaster sur NEAR testnet (11/11/2026)
+# Memaster sur NEAR testnet (11 et 12/11/2026)
 
-Deux déploiements le 11/11, **testnet uniquement** (aucun mainnet, aucun fonds réel) : la version actuelle du contrat sur
-`app2.memaster-demo-j7xg7z.testnet` (section suivante), et la première version, laissée en place sur
-`app.memaster-demo-j7xg7z.testnet` (« Première version » plus bas).
+Trois déploiements, **testnet uniquement** (aucun mainnet, aucun fonds réel) : la version 3 du contrat sur
+`app3.memaster-demo-j7xg7z.testnet` (12/11, section suivante), la version 2 sur `app2.memaster-demo-j7xg7z.testnet`
+et la première version sur `app.memaster-demo-j7xg7z.testnet`. Les deux anciennes sont laissées en place, sans
+changement.
+
+## Version 3 (12/11, nuit) : `app3.memaster-demo-j7xg7z.testnet`
+
+La v3 rend le stockage prépayé non utilisé au tirage et le stockage libéré au burn. Elle permet aussi de rembourser un
+pack `stuck`, de retirer les recettes avec garde-fous (`withdraw_revenue`, `get_treasury`), et ses erreurs portent des
+codes stables (`contract/ERRORS.md`). `retry_reveal` est réservé à l'acheteur du pack. La disposition borsh change,
+d'où un **nouveau sous-compte** avec un redeemer et un oracle factices neufs, comme pour `app2`. Elle porte les deux
+séries de démo de `docs/series-demo.md`.
+
+Données : `docs/data/testnet-2026-11-12-v3/`.
+
+- `mesures-packs.json` : les 41 boosters (gaz par reçu, hauteurs, latence, variation de stockage des achats en série).
+- `events-serie0.jsonl` et `events-serie1.jsonl` : événements dans l'ordre d'exécution, burn compris.
+- `valeur-packs-serie0.json` et `valeur-packs-serie1.json` : valeur tirée, bloc `storage`, coût net, dernière carte.
+- `tests-onchain.json` : burn, `retry_reveal` par un tiers, marché, trésorerie et retraits, avec les erreurs.
+- `transactions-deploiement.json` et `indexeur.json`.
+
+Les tables publiques sont celles de `docs/data/series-demo/<slug>/table.json`, identiques octet pour octet (`cmp`).
+Elles ne sont donc pas recopiées.
+
+### Comptes
+
+| Rôle | Compte |
+|---|---|
+| Owner, compte racine | `memaster-demo-j7xg7z.testnet` (inchangé) |
+| **Contrat Memaster v3** | [`app3.memaster-demo-j7xg7z.testnet`](https://testnet.nearblocks.io/address/app3.memaster-demo-j7xg7z.testnet) (11 NEAR à la création) |
+| Redeemer factice (`mock-redeemer`, `memaster = app3`) | `redeemer3.memaster-demo-j7xg7z.testnet` |
+| Oracle factice (`mock-oracle`, `memaster = app3`, opérateur = owner) | `oracle3.memaster-demo-j7xg7z.testnet` |
+| Acheteurs | `buyer1…buyer3.memaster-demo-j7xg7z.testnet` (réutilisés, +1,2 NEAR chacun) |
+| Comptes faucet vidés vers la racine | `memaster-fund-7lwxnq.testnet`, `memaster-fund-95etc5.testnet` (9,95 NEAR chacun) |
+
+L'initialisation reprend celle d'`app2` : `new(owner_id = racine, redeemer_id = redeemer3, reveal_steps = 3,
+retry_delay_blocks = 100, oracle_delay_blocks = 30)`, puis `propose_price_oracle(oracle3)`, suivi de
+`accept_price_oracle` 30 blocs plus tard. `get_config` donne `redeemer3` et `oracle3`. Les wasm des mocks sont ceux
+d'avant (`864285ee…` et `c2b52066…`). Le script prend maintenant `SERIES_ID`, `CATALOGUE`, `SELS` et `MEDIA_BASE`.
+Il charge une série par lancement et revalide la table locale (`validate_series.py`) juste avant `open_series` :
+
+```bash
+cd contract
+R=memaster-demo-j7xg7z.testnet; CID=ipfs://bafybeifejdd5hvm44qa6qv5s3m2avywhdrydhn2rwypccttz52eu5viuia/
+COMMUN=(ROOT_ID=$R CONTRACT_ID=app3.$R REDEEMER_ID=redeemer3.$R ORACLE_ID=oracle3.$R CONTRACT_NEAR=11 SKIP_CONTROL=1
+        CATALOGUE=$PWD/../docs/data/catalogue-demo.json SELS=$PWD/scripts/secrets/serie-v2.json MEDIA_BASE=$CID)
+env "${COMMUN[@]}" SERIES_ID=0 SERIES_PARAMS=$PWD/scripts/serie-demo-entree.json \
+    SERIES_OUT=$PWD/scripts/out/app3-entree ./scripts/deploy_testnet.sh
+env "${COMMUN[@]}" SKIP_BUILD=1 SERIES_ID=1 SERIES_PARAMS=$PWD/scripts/serie-demo-standard.json \
+    SERIES_OUT=$PWD/scripts/out/app3-standard ./scripts/deploy_testnet.sh
+```
+
+`SKIP_CONTROL=1` est obligatoire ici : sinon la série de contrôle prendrait l'id 1.
+
+### Code et séries
+
+| | |
+|---|---|
+| Commit | `ec76983` (`feat/demo`, contrat v3 fusionné depuis `feat/contrat-v3`) |
+| Build | `cargo near build non-reproducible-wasm` (cargo-near 0.23.0), **595 245 octets** (+14 284 par rapport à la v2) |
+| sha256 (hex) | `24a73f0e61ee89fe4b9552130e194a3fe8a94521fb6b444d7ec340d0ed5290db` |
+| `code_hash` on-chain (base58) | `3U5bFoSiU4YY6EhQVxHiYiTs7dMoPTqAkrY9shWBnqna` (`verifier code` : VÉRIFIÉ) |
+| Série 0 « Memaster Entry » | 0,0552 NEAR, `table_hash` `2064056b…5a313a40` (= `docs/series-demo.md`), dépôt requis 0,07125 NEAR, 1 605 o prépayés |
+| Série 1 « Memaster Standard » | 0,1381 NEAR, `table_hash` `382c5a38…eaf4310f` (= `docs/series-demo.md`), dépôt requis 0,15415 NEAR, 1 605 o prépayés |
+
+Les deux séries ont 1 527 cartes et 3 engagements, avec les sels existants de `scripts/secrets/serie-v2.json`
+(`--sels`, aucun sel neuf) et les vrais noms de `docs/data/secrets/mythiques.json`. Les médias sont sur
+`--media-base ipfs://bafybeif…5viuia/`, et le prix reste figé au cours de la doc (3,62 $/NEAR, non regénéré).
+`validate_series.py` donne OK sur chaque table (0 erreur, 0 avertissement) avant l'ouverture. Le hash on-chain est
+égal au hash local, et le brouillon a été relu par pages et comparé (`table --draft`).
+
+**Correction du validateur.** Au premier passage, `validate_series.py` refusait les deux tables : « FUITE : media de
+la mythique 0, 1, 2 dans manifest.json ». C'était un faux positif. Avec `--media-base`, le contenu engagé de chaque
+mythique porte le visuel « ? » commun, `ipfs://<CID>/mythique.svg`, que le manifeste publie sous `mythic_media`. Ce
+visuel est public par construction et ne désigne aucune mythique. Le validateur ignore désormais ce seul média, lu
+dans le manifeste ; un média propre à une mythique reste une fuite
+(`verifier/tests/test_validate_series.py::test_common_mythic_media_is_not_a_leak`).
+
+| Étape | Transaction | Gaz brûlé |
+|---|---|---|
+| Déploiement + `new` | [E4PmSwXN…](https://testnet.nearblocks.io/txns/E4PmSwXNzaHR4aR2wjebzcKTQobfpV7DWqocGz7pkJxw) | 45,2 Tgas |
+| `propose_price_oracle` / `accept_price_oracle` | [GSk5TjcK…](https://testnet.nearblocks.io/txns/GSk5TjcK4DHrjLEmX1QuiwJgJnN5FcFhkKURVtjUBwCQ) / [8FpqasDm…](https://testnet.nearblocks.io/txns/8FpqasDm1PH98MUdwSoLJMPFZRefzVCYPgX45B3qQEcd) | 2,5 / 2,5 Tgas |
+| Série 0 : `create_series_batched` + 7 lots | [75hzReBi…](https://testnet.nearblocks.io/txns/75hzReBiWz1M42JuP83WwWHYdHaWaSXqRxFQMdQB1wih) … [9iFMDvFv…](https://testnet.nearblocks.io/txns/9iFMDvFv5Gn6jsVPEqaVQ7wzKFGs2wRE3HBnnKSX8t4h) | 25,2, puis 25,4 → 30,5 Tgas (24,1 pour le dernier lot) |
+| Série 0 : `open_series` | [5fcM2scQ…](https://testnet.nearblocks.io/txns/5fcM2scQXwYDWqu2sTErHJUgNegYq6iw74Tt3w6bS3on) | 8,4 Tgas |
+| Série 1 : `create_series_batched` + 7 lots | [DnWJbV1K…](https://testnet.nearblocks.io/txns/DnWJbV1K1VgUUd6jkfKpLPQRE3TAMbdJSpY4ZwhUJvpL) … [5DwL3A5f…](https://testnet.nearblocks.io/txns/5DwL3A5fuLjNByfgxUq8ufWFMZAAyxiwVLguZ7wQ18Uv) | 25,2, puis 25,4 → 30,5 Tgas (24,1 pour le dernier lot) |
+| Série 1 : `open_series` | [HrE9BVh5…](https://testnet.nearblocks.io/txns/HrE9BVh5wGKfCAfXHPpcP7Z7kDrTEQBqRcR4mjq2tKQp) | 8,4 Tgas |
+
+Chargement : 9 transactions par série, 224,6 et 224,8 Tgas en tout, 30,5 Tgas au plus. Les URL IPFS alourdissent les
+lots, ce que `docs/series-demo.md` n'avait pas mesuré : 30,5 Tgas au plus contre 28,3 pour la série v2, toujours loin
+des 300 Tgas.
+
+### Mesures (41 boosters, 160 Tgas attachés)
+
+21 boosters sont achetés sur la série 0 et 20 sur la série 1. Par série, il y a d'abord 2 tours en série (6 boosters,
+stockage du contrat lu avant et après chaque achat), puis 5 tours de 3 achats lancés en même temps. Une transaction a
+expiré avant inclusion (« Transaction has expired », série 1, rien d'exécuté) : `packs_sold` vaut 21 et 20. Les 41
+boosters sont tous révélés, sans reçu en échec ni `retry_reveal`. 10 blocs ont reçu 2 ou 3 `buy_pack`.
+
+| Mesure | **Version 3 (`app3`, séries de démo)** | Version 2 (`app2`, série v2) |
+|---|---|---|
+| Temps de bloc (10 000 blocs) | 0,591 s | 0,585 s |
+| Transaction → `buy_pack` | 1 bloc (41/41) | 1 bloc (31/31) |
+| **`buy_pack` → `pack_revealed`** | **3 blocs (41/41)**, ≈ 1,8 s | 3 blocs (31/31) |
+| Envoi → retour de near-cli | 5,2 à 7,3 s, 6,2 s en moyenne | 4,4 à 6,2 s, 5,5 s |
+| `buy_pack` | 8,02 – 8,13 Tgas | 8,24 – 8,34 Tgas |
+| `reveal_step` 1 et 2 | 2,69 – 2,74 Tgas | 2,57 – 2,62 Tgas |
+| Dernier reçu (5 cartes, valeur, remboursement) | 14,25 – 15,83 Tgas | 14,70 – 15,88 Tgas |
+| **Gaz par booster, total** | **29,4 – 31,1 Tgas** (moyenne 30,0) | 29,3 – 30,6 Tgas (moyenne 29,9) |
+| NEAR brûlés par booster | 0,00283 – 0,00300 NEAR | 0,00284 – 0,00298 NEAR |
+| Stockage, tout premier booster du contrat | 1 095 o | 1 091 o |
+| Stockage, premier booster d'un compte | 1 038 o | 1 034 o |
+| Stockage, booster suivant du même compte | **606 o** (26 boosters sur 41) | 602 o |
+| Stockage, premier booster d'un compte dans une 2e série | 694 – 702 o | (une seule série) |
+| Stockage, autres cas | 655 o (3 boosters : nouveau bloc de liste) | |
+| Stockage prépayé | 1 605 o | 1 605 o |
+| **Stockage rendu (`pack_revealed.storage.refund`)** | **0,00510 à 0,00999 NEAR**, soit 0,00999 dans le cas courant (999 o) et 0,00567 au premier achat d'un compte (567 o) | 0 (rien n'est rendu) |
+| Dépôt requis | 0,07125 (série 0) / 0,15415 NEAR (série 1) | 0,11605 NEAR (prix 0,1) |
+| **Coût net d'un booster** (dépôt − rendu + gaz) | **série 0 : 0,0641 – 0,0691, moyenne 0,0649 NEAR** ; **série 1 : 0,1470 – 0,1480, moyenne 0,1474 NEAR** | 0,1189 – 0,1190 NEAR (prix 0,1) |
+| Part du coût hors prix (stockage + gaz) | 0,0097 NEAR (série 0) et 0,0093 NEAR (série 1) en moyenne | 0,0190 NEAR |
+| wasm | 595 245 o | 580 961 o |
+
+`used_bytes`, journalisé par le contrat, est **égal** à la variation de `storage_usage` du compte du contrat sur les
+12 achats en série (1 095, 1 038, 606, 702, 694, 655 : égalité exacte à chaque fois). Le stockage prend 4 o de plus
+qu'en v2 (`Pack::storage_used`), comme en sandbox. Le gaz reste au niveau de la v2 : la moyenne gagne 0,1 Tgas et le
+maximum 0,5 Tgas, à cause de la mesure du stockage et du virement de remboursement. C'est moins que les « 30,6 à
+31,9 Tgas » prévus dans `contract/README.md`. Pour un acheteur habituel, le stockage restant à sa charge passe de
+0,01605 NEAR par booster (tout le prépayé) à 0,00606 NEAR.
+
+### Valeur tirée et brûlables
+
+| | Série 0 (21 packs, tous en mode `base`) | Série 1 (20 packs, tous en mode `base`) | Attendu |
+|---|---|---|---|
+| V moyen | **77,1 %** (médiane 55 %) | **61,0 %** (médiane 60 %) | 75 % (écart type 43,6 %, soit ± 9,5 % sur 21 packs et ± 9,7 % sur 20) |
+| V min / max | 20 % / 200 % | 20 % / 130 % | 20 % / 200 % |
+| Valeur totale | 0,894 NEAR de valeur pour 1,159 NEAR payés | 1,685 NEAR pour 2,762 NEAR payés | |
+
+L'écart de la série 1 vaut −1,4 écart type, il est donc conforme. Chaque pack a **une brûlable**, celle du dernier
+emplacement, qui reçoit toute la valeur.
+
+| Dernière carte (brûlable) | Série 0 | Série 1 | Total |
+|---|---:|---:|---:|
+| NearKat (`nearkat-nearkat`, `nep141:kat.token0.near`) | 10 | 9 | 19 |
+| Black Dragon (`black-dragon-blackdragon`, `nep141:blackdragon.tkn.near`) | 8 | 3 | 11 |
+| Jambo (`jambo-meme-cooking-jambo`, `nep141:jambo-1679.meme-cooking.near`) | 3 | 8 | 11 |
+| Cash Cat (épique) ou une légendaire | 0 | 0 | 0 |
+
+**Les 3 communes d'appoint se partagent le dernier emplacement**, alors que SHIBDOGE l'avait sur tous les packs
+d'`app2`. SHIBDOGE n'est plus dans la table. Le partage est proche du tiers attendu (19 / 11 / 11 sur 41). Il n'y a
+ni épique ni légendaire en dernière carte, ce qui colle aux 1,7 % et 0,2 % de la simulation. Dans la série 1, 3 tirages
+visaient une rare au dernier emplacement ; aucune rare n'étant brûlable, ils sont retombés sur une commune brûlable
+(« retombées dues aux plafonds : 3 » dans `stats`).
+
+Il n'y a eu **ni gold pack, ni mythique, ni gold rush** (attendu ≈ 8·10⁻⁴ gold pack et 4·10⁻⁵ mythique sur
+41 boosters). `get_pity(buyer1, série 0)` donne `n = 7`, `p_ppb = 20 140` et `guaranteed_in = null`.
+
+### Tests des nouvelles fonctions sur la chaîne
+
+| Test | Transaction | Résultat | Gaz |
+|---|---|---|---|
+| **Burn** du token 4 (pack 0, Black Dragon, part de valeur 0,07728 NEAR) par buyer1 | [Eryt1E5P…](https://testnet.nearblocks.io/txns/Eryt1E5PkR2MNyQR3z5WQRCbuA2jtq1jhTZ3aWMUMuZG) | `redeem_started`, `nft_burn`, puis **`card_redeemed`** avec `amount = 77280000000000000000000` (la part de valeur), `burn_seq = 1`, **`freed_bytes = 16`, `storage_refund = 0,00016 NEAR`** | 16,9 Tgas : `redeem` 5,8, redeemer 1,24, `on_redeem_complete` 8,42, plus 5 remboursements |
+| **`retry_reveal` par un tiers** (buyer2 sur le pack 0 de buyer1) | [EkN5d87w…](https://testnet.nearblocks.io/txns/EkN5d87wVgNcm9eLJj6bGUSpBxA5gSDKt9iU69R5YH7k) | **Refusé** : `E_ALREADY_REVEALED` | 2,3 Tgas |
+| Mise en vente : buyer2, token 10 (commune), 0,02 NEAR, 0,005 NEAR de dépôt d'annonce | [5qCzLXeL…](https://testnet.nearblocks.io/txns/5qCzLXeL9D9M2g84R7iDnDuojN52RtefSHqTDcaLUN7D) | `card_listed` | 2,9 Tgas |
+| Achat par buyer3 (`expected_price` = 0,02 NEAR) | [DX5TQhWb…](https://testnet.nearblocks.io/txns/DX5TQhWbDzW3R1VZXgR6yniUDzSgb17AyNRGWtPvKfSh) | `nft_transfer` (memo `market`), `card_sold` ; aucune redevance, puisque les séries de démo n'en ont pas | 7,7 Tgas |
+| **Retrait** de 0,1 NEAR par l'owner (1 yocto) | [C2jujv8c…](https://testnet.nearblocks.io/txns/C2jujv8c2KhkiUYctnqxfdy2dvu9hKSrTvAnnTWMvTNU) | `revenue_withdrawn` (`withdrawable_before` 5,458 NEAR, `withdrawn_total` 0,1) | 3,3 Tgas |
+| **Retrait au-dessus du plafond** (retirable + 1 NEAR) | [G4sB9z2w…](https://testnet.nearblocks.io/txns/G4sB9z2w26Rdk1ERmuLvDJB5E1rrFz1N2Rd9MfccuwGj) | **Refusé** : `E_WITHDRAW_LIMIT: Retrait refusé : 6358263… yoctoNEAR demandés, 5358263… retirables (engagements 14381120…)` | 2,5 Tgas |
+
+`get_treasury` après les achats et avant le burn :
+
+| | NEAR |
+|---|---:|
+| Solde | 19,840 |
+| Stockage occupé (1 087 999 o) | 10,880 |
+| `value_reserved` (parts des 41 brûlables vivantes) | 2,579 |
+| Réserve minimale | 1,000 |
+| `pack_escrow`, dépôts d'annonces | 0 |
+| **Engagements** | **14,459** |
+| **Retirable** | **5,380** |
+| `revenue` (prix encaissés) | 3,921 |
+
+Après le burn, `value_reserved` baisse exactement de la part de la carte brûlée (2,57906 → 2,50178 NEAR). Après le
+retrait, `withdrawn` vaut 0,1 NEAR et le retirable 5,358 NEAR. Le retirable dépasse les recettes : la formule compte
+aussi l'excédent du solde initial du contrat (11 NEAR à la création, au-delà du stockage), ce qui est voulu
+(spécification, 12.4).
+
+Trois points à noter :
+
+- **`E_NOT_PACK_OWNER` n'est pas observable sur testnet avec le wasm de production.** `retry_reveal` vérifie dans
+  l'ordre : pack `pending`, aucune carte écrite, `retry_delay_blocks` écoulés, puis l'acheteur. Un tiers est donc
+  refusé, mais par `E_ALREADY_REVEALED` sur un pack révélé, ou par `E_RETRY_TOO_EARLY` pendant les 3 blocs d'un tirage.
+  Il faudrait un pack en attente depuis 100 blocs, c'est-à-dire un dernier reçu en échec, que seule la feature
+  `test-hooks` sait provoquer. Ce cas reste couvert par la sandbox. Aucun pack `stuck` n'a été provoqué et
+  `refund_stuck_pack` n'a pas été appelé.
+- **`on_redeem_complete` brûle 8,42 Tgas**, contre 4,27 Tgas au plus en sandbox v3 et 3,65 sur `app`. Ça reste sous
+  son budget de 20 Tgas, mais l'écart est à comprendre. Hypothèse non vérifiée : la mesure des octets libérés sur
+  une table de 1 527 cartes avec la rareté pilotée par les burns, et des comptes de 35 caractères.
+- Le burn ne libère que 16 o : deux entrées de 8 o, sans vider la liste du compte, ce qui correspond à la
+  spécification 12.2.
+
+### Vérification publique
+
+```bash
+cd verifier
+C=app3.memaster-demo-j7xg7z.testnet; D=../docs/data/testnet-2026-11-12-v3; T=../docs/data/series-demo
+python3 -m memaster_verifier table --rpc testnet --contract $C --series 0 --expected-hash 2064056b…   # VÉRIFIÉ
+python3 -m memaster_verifier table --rpc testnet --contract $C --series 1 --expected-hash 382c5a38…   # VÉRIFIÉ
+python3 -m memaster_verifier code  --rpc testnet --contract $C --wasm ../contract/target/near/memaster.wasm  # VÉRIFIÉ
+python3 -m memaster_verifier pack  --event $D/events-serie0.jsonl --table $T/serie-demo-entree/table.json    # 42/42
+python3 -m memaster_verifier pack  --event $D/events-serie1.jsonl --table $T/serie-demo-standard/table.json  # 40/40
+python3 -m memaster_verifier stats --events $D/events-serie0.jsonl --table $T/serie-demo-entree/table.json --replay   # rejeu 42/42, χ² p = 0,42
+python3 -m memaster_verifier stats --events $D/events-serie1.jsonl --table $T/serie-demo-standard/table.json --replay # rejeu 40/40, χ² p = 0,51
+```
+
+**Tout est VÉRIFIÉ** : les deux tables (8 pages chacune), le code, et les 41 tirages des deux séries, valeur, pitié et
+**bloc `storage`** compris. Pour chaque booster, `refund = (1 605 − used_bytes) × 10¹⁹`, 41 fois sur 41. Le burn
+arrive après tous les achats, donc aucun tirage n'en dépend (`burn_seq = 0` partout).
+
+### Indexeur du front
+
+Lancé depuis `front-revue/front` avec `VITE_CONTRACT_ID=app3.memaster-demo-j7xg7z.testnet INDEXER_PORT=8797
+INDEXER_DB=<scratchpad> npm run indexer` : un port et une base à part, et rien n'est écrit dans ce worktree. Il a lu
+**69 transactions sur 69** (`/status`). `/history?series_id=0` est complet : 21 `pack_bought`, 21 `pack_revealed`
+(packs 0 à 20) et le `card_redeemed`. `/history?series_id=1` aussi : 20 et 20 (packs 21 à 40). `/sales` donne la vente
+du token 10. Le résultat est dans `indexeur.json`.
+
+### Problèmes rencontrés
+
+1. **Fonds** : la racine avait 12 NEAR, alors qu'il en fallait environ 25 (contrat 11, mocks 3, séries 7 joints,
+   acheteurs 3,6). Deux comptes faucet ont été créés et vidés vers la racine, sans refus.
+2. **Faux positif du validateur** sur le visuel « ? » commun (voir « Code et séries ») : corrigé et testé.
+3. **Script de déploiement limité à la série 0** : il prend maintenant `SERIES_ID` et transmet `--catalogue`,
+   `--sels` et `--media-base` à `build_series.py`.
+4. **1 transaction expirée** (série 1, 2e tour parallèle). Elle n'a pas été exécutée, donc pas de double achat.
+5. **Limites de débit de fastnear** : `measure_testnet.py analyze` a pris plusieurs minutes (429 répétés), parce
+   qu'un autre indexeur interrogeait le même contrat en même temps. Pas d'erreur au final.
+6. Build reproductible toujours pas fait (même raison qu'avant : `package.repository` serait publié).
 
 ## Version 2 (11/11, soir) : `app2.memaster-demo-j7xg7z.testnet`
 
-La version actuelle apporte quatre changements : un gold pack ultra rare sans garantie (pitié en ppb, de 1/50 000 à
+La version 2 apporte quatre changements : un gold pack ultra rare sans garantie (pitié en ppb, de 1/50 000 à
 1/25 000), une mythique à 1 sur 10⁶ (poids 5 sur 2·10⁷), une valeur aléatoire par pack (moyenne 75 %) et des mythiques
 anonymes « ? ». Son état n'est pas compatible avec celui de la première version, d'où un **nouveau sous-compte** au lieu
 d'une migration. L'ancien contrat, son redeemer et son oracle restent en place, sans changement.

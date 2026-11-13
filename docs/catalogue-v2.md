@@ -9,7 +9,7 @@
 - `docs/catalogue-final.md` (v1) ; `docs/recherche-v2/r5-audit-catalogue.md` (audit, doublons, candidats C1/C2) ; `docs/data/coingecko-meme-2026-11-11.csv` (état des jetons rapprochés).
 - `docs/recherche-v2/r1-2013-2018.md` : 125 nouveaux jetons lus, 16 corrections.
 - `docs/recherche-v2/r2-2019-2022.md` : 155 nouveaux jetons lus, 0 corrections.
-- `docs/recherche-v2/r3-2023-2026.md` : 185 nouveaux jetons lus, 152 corrections.
+- `docs/recherche-v2/r3-2023-2026.md` : 185 nouveaux jetons lus, 151 corrections.
 - `docs/recherche-v2/r4-autres-chaines.md` : 265 nouveaux jetons lus, 11 corrections.
 
 ## Règles appliquées

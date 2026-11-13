@@ -11,7 +11,7 @@ Depuis `art/` :
 python3 -m memaster_art --catalogue ../docs/catalogue-final.md --out out/ [--limit N] [--planche]
 python3 -m unittest discover -s tests                     # tests
 python3 -m memaster_art.exemples --catalogue ../docs/catalogue-final.md --dest exemples --png
-python3 outils/rendre_png.py out/0001-doge.svg --dest /tmp/png   # relecture en PNG
+python3 outils/rendre_png.py out/0010-bonk.svg --dest /tmp/png   # relecture en PNG
 ```
 
 Catalogue v2 (JSON, détecté par l'extension) :
@@ -29,11 +29,11 @@ Options :
   coin ne changent pas. Le front s'en sert (`front/scripts/prepare-assets.mjs`) ; les métadonnées JSON restent en français.
 - `--planche` : planches HTML de contact, 50 cartes par page (`planche-01.html`, …), à ouvrir dans un navigateur.
 - `--base-url https://…/` : préfixe des champs `media` et `reference`. Vide par défaut : chemins relatifs.
-- `--mythiques 1,2,3` : passe ces N° en mythique (règle v2). On peut aussi donner un ticker, mais il vise toutes
+- `--mythiques 12,40` : passe ces N° en mythique (règle v2). On peut aussi donner un ticker, mais il vise toutes
   les cartes qui le portent (homonymes compris). Un catalogue v2 dont la
   colonne Rareté vaut déjà « mythique » n'a pas besoin de cette option.
 
-`out/` est ignoré par git (`art/.gitignore`). `exemples/` est versionné : 11 cartes et le dos scellé, en SVG,
+`out/` est ignoré par git (`art/.gitignore`). `exemples/v2/` est versionné ; `exemples/` (v1) se régénère : 9 cartes, plus 2 mythiques scellées et le dos si le fichier secret est là, en SVG,
 PNG et JSON, plus une planche.
 
 ## Catalogue v2 (`docs/data/catalogue-v2.json`)
@@ -59,9 +59,9 @@ PNG et JSON, plus une planche.
 
 | Fichier | Contenu |
 |---|---|
-| `0001-doge.svg` | Visuel, 500 × 700 (5:7), 4 à 15 Ko |
-| `0001-doge.json` | Métadonnées NEP-177 : `title`, `description`, `media`, `media_hash`, `extra`, `reference`, `reference_hash` |
-| `0001-doge.ref.json` | JSON hors chaîne pointé par `reference` |
+| `0010-bonk.svg` | Visuel, 500 × 700 (5:7), 4 à 15 Ko |
+| `0010-bonk.json` | Métadonnées NEP-177 : `title`, `description`, `media`, `media_hash`, `extra`, `reference`, `reference_hash` |
+| `0010-bonk.ref.json` | JSON hors chaîne pointé par `reference` |
 | `dos-mythique.svg` / `.json` | Dos scellé « ? », commun à toutes les mythiques (s'il y en a) |
 
 `media_hash` et `reference_hash` sont le sha256 du fichier, en base64. `extra` est une chaîne JSON, comme le veut

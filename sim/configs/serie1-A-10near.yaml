@@ -20,7 +20,7 @@ raretes:
   epique:     {poids: 3.5, part_brulable: 0.35, effectif: 80,  brulables: 1, revente: 0.5,  plafond: 100}
   legendaire: {poids: 10,  part_brulable: 0.50, effectif: 45,  brulables: 5, revente: 2.0,  plafond: 280}
   mythique:   {poids: 180, part_brulable: 1.00, effectif: 3,   brulables: 3, revente: 0,    plafond: 1500,
-               multiplicateur: {valeurs: [1], probas: [1]}}   # DOGE, SHIB, PEPE : valeur fixe, secrètes
+               multiplicateur: {valeurs: [1], probas: [1]}}   # 3 mythiques : valeur fixe, secrètes
 
 emplacements:
   tables:

@@ -12,7 +12,7 @@ Lire `README.md` et `docs/catalogue-final.md` (catalogue actuel, 786 cartes + 77
 - **Rareté v2 :**
   | Rareté | Règle |
   |---|---|
-  | mythique | réservé à DOGE, SHIB, PEPE. Ne pas en proposer d'autre |
+  | mythique | réservé aux 3 mythiques scellées (liste hors git). Ne pas en proposer d'autre |
   | légendaire | prime de fou : pic ≥ 1 Md$ de capitalisation, **ou** histoire légendaire (×1 000 et plus, millionnaires connus, épisode culte), quel que soit l'état actuel |
   | épique | pic de 100 M$ à 1 Md$, ou histoire marquante |
   | rare | pic de 10 à 100 M$ |

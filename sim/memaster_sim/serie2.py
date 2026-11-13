@@ -84,7 +84,7 @@ def construire_config(total: int, prix: int, cartes: list[dict] | None = None,
     for r in ["commune", "rare", "epique", "legendaire"]:
         raretes[r] = {"poids": b["poids"][r], "part_brulable": round(rep[r] / eff[r], 6), "effectif": eff[r],
                       "brulables": rep[r], "revente": b["revente"][r], "plafond": PLAFONDS[r]}
-    # mythique à valeur fixe : poids très grand, la valeur est le plafond (DOGE, SHIB, PEPE, scellés)
+    # mythique à valeur fixe : poids très grand, la valeur est le plafond (3 mythiques scellées)
     raretes["mythique"] = {"poids": 100000, "part_brulable": 1.0, "effectif": eff["mythique"],
                            "brulables": rep["mythique"], "revente": 0, "plafond": b["valeur_mythique"],
                            "multiplicateur": {"valeurs": [1], "probas": [1]}}

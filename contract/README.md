@@ -3,12 +3,13 @@
 Contrat unique pour les cartes NFT, les boosters, le tirage, les mythiques secrètes, le marché intégré, le burn et les
 mécaniques de série (pitié et gold pack à planchers, rareté pilotée par les burns, gold rush, résurrection, valeur
 aléatoire par pack : `docs/mecaniques-spec.md`).
-Phase 3 de `docs/plan.md`. **Déployé sur testnet le 11/11/2026, jamais sur mainnet** : version actuelle (gold pack
-ultra rare sans garantie, mythique 1 sur 10⁶, valeur aléatoire par pack, mythiques anonymes) sur
-`app2.memaster-demo-j7xg7z.testnet` ; première version, sans valeur aléatoire, laissée sur
+Phase 3 de `docs/plan.md`. **Déployé sur testnet, jamais sur mainnet.** La version 3 est sur
+`app3.memaster-demo-j7xg7z.testnet` (12/11), avec les deux séries de démo. La version 2 (gold pack ultra rare sans
+garantie, mythique 1 sur 10⁶, valeur aléatoire par pack, mythiques anonymes) reste sur
+`app2.memaster-demo-j7xg7z.testnet`, et la première version, sans valeur aléatoire, sur
 `app.memaster-demo-j7xg7z.testnet`. Mesures dans `docs/testnet.md`.
 
-**Version 3 (12/11, branche `feat/contrat-v3`, non déployée)** : stockage prépayé non utilisé rendu au tirage,
+**Version 3 (12/11, déployée sur `app3` le 12/11)** : stockage prépayé non utilisé rendu au tirage,
 stockage libéré rendu au burn, remboursement d'un pack `stuck`, retrait des recettes avec garde-fous
 (`withdraw_revenue`, `get_treasury`), codes d'erreur stables (`ERRORS.md`). Détail dans `docs/mecaniques-spec.md`,
 section 12. **La disposition borsh change** (`Pack::storage_used`, compteurs de l'état racine, statut `refunded`) :
@@ -44,7 +45,7 @@ déployer sur un nouveau compte, comme `app2`.
 | `src/tests_v3.rs` | Tests unitaires de la v3 (stockage rendu, pack `stuck` remboursé, retrait, codes d'erreur) |
 | `ERRORS.md` | Codes d'erreur stables : code, texte français, proposition anglaise, qui peut la provoquer |
 | `scripts/build_series.py` | Arguments des appels de série à partir du catalogue v2, vrais noms des mythiques lus dans `docs/data/secrets/mythiques.json`, tables de valeur (`--tables-valeur`) (voir « Série v2 ») |
-| `scripts/validate_series.py` | Validateur à lancer avant `open_series` : règles du contrat réécrites hors ligne (en accord avec `validate_table` sur des tables mutées au hasard, `tests_fuzz.rs`), lots du dossier de sortie, valeur moyenne (rush ≤ 80 %, normale ≤ 100 %), préimages des mythiques révélables, aucun secret dans les fichiers publics (`--git` : fichiers suivis). Appelé aussi par `build_series.py` |
+| `scripts/validate_series.py` | Validateur à lancer avant `open_series` : règles du contrat réécrites hors ligne (en accord avec `validate_table` sur des tables mutées au hasard, `tests_fuzz.rs`), lots du dossier de sortie, valeur moyenne (rush ≤ 80 %, normale ≤ 100 %), préimages des mythiques révélables, aucun secret dans les fichiers publics (`--git` : fichiers suivis ; `validate_series.py --git` sans table : contrôle anti-fuite seul, nom, ticker, id, adresse ou n° v1 relié à « mythique », empreintes courtes ; testé par `verifier/tests/test_validate_series.py`). Appelé aussi par `build_series.py` |
 
 ### Séries et table figée
 
@@ -262,7 +263,7 @@ cd contract
 rustup target add wasm32-unknown-unknown        # requis par cargo-near (wasm32v1-none ne suffit pas)
 cargo install cargo-near --locked               # 0.23.0
 
-cargo near build non-reproducible-wasm          # → target/near/memaster.wasm (595 094 octets ; v2 : 580 961)
+cargo near build non-reproducible-wasm          # → target/near/memaster.wasm (595 245 octets au commit `ec76983` ; v2 : 580 961)
 (cd mock-redeemer && cargo near build non-reproducible-wasm)
 (cd mock-oracle && cargo near build non-reproducible-wasm)
 
@@ -426,14 +427,15 @@ Mesures (sandbox, 1 646 cartes visibles + 3 engagements, table de 275 Ko) :
 | Booster v2, stockage minimal, toutes les mécaniques | 29,5 Tgas au plus en tout, `buy_pack` 8,0 Tgas, dernier reçu 15,5 Tgas ; stockage 964 o au plus, 1 597 o prépayés (848 o sans mécanique) |
 | Booster v2, gold pack à planchers et table de valeur (22 boosters dont un gold) | 29,6 Tgas au plus en tout, `buy_pack` 8,1 Tgas, dernier reçu **15,4 Tgas** ; **stockage 971 o au plus, 1 605 o prépayés** |
 | Booster v2, gold pack ultra rare (pitié en ppb, garantie de test `n_max = 20` pour mesurer un gold), mythique 5 / 2·10⁷, valeur 75 % (22 boosters dont un gold, 11/11) | 29,9 Tgas au plus en tout, `buy_pack` 8,1 Tgas, dernier reçu **15,7 Tgas** ; **stockage 971 o au plus, 1 605 o prépayés** |
-| **Testnet** (`app2`, 31 boosters de la série v2 actuelle, aucun gold, 11/11) | 29,3 – 30,6 Tgas en tout (moyenne 29,9), `buy_pack` 8,2 – 8,3 Tgas, dernier reçu 14,7 – 15,9 Tgas ; stockage 1 034 o au premier achat d'un compte (1 091 o pour le tout premier booster), 602 o ensuite, 1 605 o prépayés |
+| **Testnet v3** (`app3`, 41 boosters des séries de démo, 1 527 cartes, aucun gold, 12/11) | 29,4 – 31,1 Tgas en tout (moyenne 30,0), `buy_pack` 8,0 – 8,1 Tgas, dernier reçu 14,3 – 15,8 Tgas ; stockage 1 038 o au premier achat d'un compte (1 095 o pour le tout premier), 606 o ensuite, 1 605 o prépayés, **le reste est rendu** (0,00567 à 0,00999 NEAR) |
+| **Testnet** (`app2`, 31 boosters de la série v2, aucun gold, 11/11) | 29,3 – 30,6 Tgas en tout (moyenne 29,9), `buy_pack` 8,2 – 8,3 Tgas, dernier reçu 14,7 – 15,9 Tgas ; stockage 1 034 o au premier achat d'un compte (1 091 o pour le tout premier booster), 602 o ensuite, 1 605 o prépayés |
 | Taille maximale (2 000 cartes aux chaînes maximales) | lot de 188 Ko, `append_series_cards` 88 Tgas au plus, `open_series` 10,7 Tgas, 1,66 Mo de stockage (16,6 NEAR payés par l'owner) ; booster de 10 cartes : `buy_pack` 9 Tgas, dernier reçu 61 Tgas (avant) ; avec le stockage minimal et toutes les mécaniques : `buy_pack` 10,3 Tgas, dernier reçu 24,3 Tgas au plus, stockage 1 254 o au premier achat ; raretés épuisées en cascade (`worst_case_cascade_with_burns_fits`) : dernier reçu 49,1 Tgas au plus ; avec gold pack de 10 emplacements et table de valeur : dernier reçu 23,3 Tgas au plus (normal et gold), stockage 1 266 o au premier achat, 2 025 o prépayés, cascade 48,4 Tgas |
 
 ### Séries de démo « entrée » et « standard » (`docs/series-demo.md`)
 
 Deux séries sur le catalogue de démo complet (1 527 cartes visibles + 3 engagements), mêmes mécaniques que
 `serie-exemple.json`, tables de valeur de `sim/resultats/serie5/tables-valeur.json`, 9 brûlables reliées à de vrais
-actifs NEAR Intents par adresse de contrat. Rien n'est déployé.
+actifs NEAR Intents par adresse de contrat. Déployées sur `app3.memaster-demo-j7xg7z.testnet` (séries 0 et 1, 12/11).
 
 | Fichier | Rôle |
 |---|---|
@@ -545,10 +547,17 @@ L'adossement fixe d'une table sans valeur et celui des mythiques, qui ne sont pa
 | `redeem` réussi, total / `on_redeem_complete` au plus | 8,19 / 3,96 Tgas | 8,96 / 4,27 Tgas (budget 20) |
 | Pack `Stuck` remboursé | impossible | 3,4 Tgas |
 | `withdraw_revenue` | (n'existait pas) | 3,0 Tgas |
-| wasm | 580 961 o | 595 094 o (+14 133) |
+| wasm | 580 961 o | 595 094 o (+14 133) ; 595 245 o pour le build déployé sur `app3` |
 
-Sur testnet, la v2 mesure 29,3 – 30,6 Tgas par booster (moyenne 29,9) et 602 à 1 091 o : la v3 devrait donner
-environ 30,6 – 31,9 Tgas, avec environ 567 à 999 o de stockage rendus par pack (à mesurer au redéploiement).
+**Mesuré sur testnet** (`app3`, 41 boosters des séries de démo, 12/11, `docs/testnet.md`) : 29,4 – 31,1 Tgas par
+booster (moyenne 30,0, contre 29,9 pour la v2), `buy_pack` 8,0 – 8,1 Tgas, dernier reçu 14,3 – 15,8 Tgas. Stockage :
+1 095 o pour le tout premier booster, 1 038 o au premier achat d'un compte, puis 606 o (694 – 702 o au premier achat
+d'un compte dans une 2e série). `used_bytes` est égal à la variation de `storage_usage` du contrat. **Montant rendu :
+0,00999 NEAR dans le cas courant (999 o), 0,00567 NEAR au premier achat d'un compte**, 0,0051 au plus bas. Coût net
+d'un booster à 0,0552 NEAR : 0,0649 NEAR en moyenne, pour 0,07125 NEAR joints. Burn : `card_redeemed.freed_bytes =
+16`, 0,00016 NEAR rendus, mais `on_redeem_complete` brûle **8,42 Tgas** sur testnet contre 4,27 en sandbox, sous son
+budget de 20 Tgas ; l'écart est à expliquer. `withdraw_revenue` : 3,3 Tgas, refusé au-delà du retirable
+(`E_WITHDRAW_LIMIT`). Le prévisionnel « 30,6 – 31,9 Tgas » était donc pessimiste.
 
 ## Revue de sécurité du 11/11/2026 : corrections
 

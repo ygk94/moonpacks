@@ -1,0 +1,262 @@
+[
+ {
+  "step": "Création de app3.memaster-demo-j7xg7z.testnet (11 NEAR), essai 1",
+  "series": null,
+  "tx": "2SPSmT72UiHtNYefaCPdRs8nPYboRs7TcSz1DJRm9ktv",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 8.57,
+  "near_burnt": 0.0071149895375,
+  "height": 277284469
+ },
+ {
+  "step": "Création de redeemer3.memaster-demo-j7xg7z.testnet (1.5 NEAR), essai 1",
+  "series": null,
+  "tx": "EMXzw1gtfExAAUxRygsAxwJkSMKVVhLnhR5NhSdbFZMB",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 8.57,
+  "near_burnt": 0.0071149895375,
+  "height": 277284481
+ },
+ {
+  "step": "Création de oracle3.memaster-demo-j7xg7z.testnet (1.5 NEAR), essai 1",
+  "series": null,
+  "tx": "3krs5MBC7Yt481m1qzZ4wUNCgDGpyQ15yGe5YTWjgsa1",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 8.57,
+  "near_burnt": 0.0071149895375,
+  "height": 277284493
+ },
+ {
+  "step": "Déploiement de app3.memaster-demo-j7xg7z.testnet",
+  "series": null,
+  "tx": "E4PmSwXNzaHR4aR2wjebzcKTQobfpV7DWqocGz7pkJxw",
+  "signer": "app3.memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 45.19,
+  "near_burnt": 0.004496813125024201,
+  "height": 277284505
+ },
+ {
+  "step": "Déploiement de redeemer3.memaster-demo-j7xg7z.testnet",
+  "series": null,
+  "tx": "47kG99jZnutaPBzR9h16p7Roq1K9nhLbHvqCWpm7t9tR",
+  "signer": "redeemer3.memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 10.0,
+  "near_burnt": 0.0009777565348472001,
+  "height": 277284511
+ },
+ {
+  "step": "Déploiement de oracle3.memaster-demo-j7xg7z.testnet",
+  "series": null,
+  "tx": "G97N59puyTx4Pmt9oKvKSKt4kMCSiW7NBdKLN8HNyF96",
+  "signer": "oracle3.memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 10.42,
+  "near_burnt": 0.0010197828498382,
+  "height": 277284517
+ },
+ {
+  "step": "propose_price_oracle(oracle3.memaster-demo-j7xg7z.testnet)",
+  "series": null,
+  "tx": "GSk5TjcK4DHrjLEmX1QuiwJgJnN5FcFhkKURVtjUBwCQ",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 2.5,
+  "near_burnt": 0.0002275417818877,
+  "height": 277284526
+ },
+ {
+  "step": "Attente du bloc 277284557 pour accept_price_oracle",
+  "series": null,
+  "tx": "8FpqasDm1PH98MUdwSoLJMPFZRefzVCYPgX45B3qQEcd",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 2.49,
+  "near_burnt": 0.0002263620069232,
+  "height": 277284568
+ },
+ {
+  "step": "create_series_batched (create_series_batched.json, dépôt 508000000000000000000000 yocto)",
+  "series": 0,
+  "tx": "75hzReBiWz1M42JuP83WwWHYdHaWaSXqRxFQMdQB1wih",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 25.19,
+  "near_burnt": 0.002474257835131,
+  "height": 277284575
+ },
+ {
+  "step": "append_series_cards (append_series_cards.01.json, dépôt 455000000000000000000000 yocto)",
+  "series": 0,
+  "tx": "HaYk3VtCraWVc5jdzj3KaLWh9Ka5voikKss6Yun7aSwK",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 25.36,
+  "near_burnt": 0.002491775209805,
+  "height": 277284582
+ },
+ {
+  "step": "append_series_cards (append_series_cards.02.json, dépôt 452000000000000000000000 yocto)",
+  "series": 0,
+  "tx": "ArS5BR4TA72UwrEhXaohvUBMUSCAnUyt8qhXopkhtF37",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 26.27,
+  "near_burnt": 0.0025827056212713,
+  "height": 277284589
+ },
+ {
+  "step": "append_series_cards (append_series_cards.03.json, dépôt 451000000000000000000000 yocto)",
+  "series": 0,
+  "tx": "3vrpfZJqLBg37bz4dHXY6x1DuPqcdyJ59jcTun6wyFB8",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 27.21,
+  "near_burnt": 0.0026762707349974,
+  "height": 277284598
+ },
+ {
+  "step": "append_series_cards (append_series_cards.04.json, dépôt 451000000000000000000000 yocto)",
+  "series": 0,
+  "tx": "Ebck5ufVbq4gLBPauh6JUgzLfroT2FdFEBG2DmG7khUK",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 28.19,
+  "near_burnt": 0.0027742936195217,
+  "height": 277284605
+ },
+ {
+  "step": "append_series_cards (append_series_cards.05.json, dépôt 455000000000000000000000 yocto)",
+  "series": 0,
+  "tx": "7AhqNxBpoHLrHJ5kTxCvU8KkN4qYXpfhwSKME3uZNTjC",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 29.36,
+  "near_burnt": 0.0028911054402245002,
+  "height": 277284612
+ },
+ {
+  "step": "append_series_cards (append_series_cards.06.json, dépôt 460000000000000000000000 yocto)",
+  "series": 0,
+  "tx": "2uwAX3HERr3ygwxq1ktE8NrCWSQQ2JVD6bWKmdZ4BvCc",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 30.51,
+  "near_burnt": 0.0030065291512634,
+  "height": 277284620
+ },
+ {
+  "step": "append_series_cards (append_series_cards.07.json, dépôt 289000000000000000000000 yocto)",
+  "series": 0,
+  "tx": "9iFMDvFv5Gn6jsVPEqaVQ7wzKFGs2wRE3HBnnKSX8t4h",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 24.05,
+  "near_burnt": 0.002360537504238,
+  "height": 277284627
+ },
+ {
+  "step": "open_series(0)",
+  "series": 0,
+  "tx": "5fcM2scQXwYDWqu2sTErHJUgNegYq6iw74Tt3w6bS3on",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 8.42,
+  "near_burnt": 0.0008193426051882,
+  "height": 277284638
+ },
+ {
+  "step": "create_series_batched (create_series_batched.json, dépôt 508000000000000000000000 yocto)",
+  "series": 1,
+  "tx": "DnWJbV1K1VgUUd6jkfKpLPQRE3TAMbdJSpY4ZwhUJvpL",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 25.24,
+  "near_burnt": 0.0024790104018163,
+  "height": 277284667
+ },
+ {
+  "step": "append_series_cards (append_series_cards.01.json, dépôt 455000000000000000000000 yocto)",
+  "series": 1,
+  "tx": "FQNNCY8eyxbh9uFXR2CsY3nDsiCKp1jhJYw578wqru9w",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 25.39,
+  "near_burnt": 0.0024946927742417,
+  "height": 277284674
+ },
+ {
+  "step": "append_series_cards (append_series_cards.02.json, dépôt 452000000000000000000000 yocto)",
+  "series": 1,
+  "tx": "8VFq6xG1oDbasUnAvH1jZy3fDeQaXUJqwhvpmQLEAsRM",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 26.3,
+  "near_burnt": 0.0025855232208539997,
+  "height": 277284681
+ },
+ {
+  "step": "append_series_cards (append_series_cards.03.json, dépôt 451000000000000000000000 yocto)",
+  "series": 1,
+  "tx": "kfxxmBzceitsWfmQako5nBHb9V6pALKL9KK4yAkctQ5",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 27.24,
+  "near_burnt": 0.0026791260990805,
+  "height": 277284689
+ },
+ {
+  "step": "append_series_cards (append_series_cards.04.json, dépôt 451000000000000000000000 yocto)",
+  "series": 1,
+  "tx": "HmqAtbz9Pm4277XByF5vcQBXhmwVSKnforaka3QpdMbb",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 28.22,
+  "near_burnt": 0.002777204272808,
+  "height": 277284697
+ },
+ {
+  "step": "append_series_cards (append_series_cards.05.json, dépôt 455000000000000000000000 yocto)",
+  "series": 1,
+  "tx": "4p3rd8msDnWXme6hbfAdimJtnFBTGzkyffRnGss79TdN",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 29.39,
+  "near_burnt": 0.0028939215588464,
+  "height": 277284704
+ },
+ {
+  "step": "append_series_cards (append_series_cards.06.json, dépôt 460000000000000000000000 yocto)",
+  "series": 1,
+  "tx": "EjnmB67z6RhCdpBXKi4Cb55XNxnW98wTTbRfrEPQkPsY",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 30.54,
+  "near_burnt": 0.0030092822799203,
+  "height": 277284713
+ },
+ {
+  "step": "append_series_cards (append_series_cards.07.json, dépôt 289000000000000000000000 yocto)",
+  "series": 1,
+  "tx": "5DwL3A5fuLjNByfgxUq8ufWFMZAAyxiwVLguZ7wQ18Uv",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 24.07,
+  "near_burnt": 0.0023628472558944,
+  "height": 277284721
+ },
+ {
+  "step": "open_series(1)",
+  "series": 1,
+  "tx": "HrE9BVh5wGKfCAfXHPpcP7Z7kDrTEQBqRcR4mjq2tKQp",
+  "signer": "memaster-demo-j7xg7z.testnet",
+  "status": "ok",
+  "gas_tgas": 8.42,
+  "near_burnt": 0.0008198943067098,
+  "height": 277284732
+ }
+]
