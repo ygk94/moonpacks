@@ -55,7 +55,7 @@ résurrections), dans l'ordre d'exécution.
 cd front && npm run deploy
 ```
 
-Le script fait le build de production (contrôles compris), puis `vercel deploy dist --prod`. Il faut être connecté à
+Le script fait le build de production (contrôles compris), puis `scripts/deploy.mjs` (copie de `dist/` dans `.deploy/moonpacks/`, puis `vercel deploy --prod`). Il faut être connecté à
 Vercel une fois (`npx vercel login`). Le site est statique (routeur par hash, aucune réécriture d'URL) ;
 `public/vercel.json` règle la mise en cache des visuels et des fichiers JS et CSS. L'indexeur n'est pas déployé :
 `VITE_INDEXER_URL` est vide en production, donc « Trending » se rabat sur les annonces du contrat, et le rejeu

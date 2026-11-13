@@ -108,7 +108,7 @@ export function Transparency() {
       {list.data && <SeriesPicker list={list.data} current={seriesId} onPick={pick} />}
 
       <section className="panel">
-        <h2>Chance per card slot{current && list.data && list.data.length > 1 ? ` · ${current.name}` : ""}</h2>
+        <h2>Chance per card slot{current && list.data && list.data.length > 1 ? ` · ${seriesName(current.name)}` : ""}</h2>
         {rates.loading && <p className="muted">Reading the rates from the contract…</p>}
         {rates.error != null && <p className="error">Could not read the rates.</p>}
         {rates.data && !rates.loading && (
@@ -218,7 +218,7 @@ export function Transparency() {
           <dd className="mono break">{account.data?.code_hash ?? "…"}</dd>
           <dt>
             Series {seriesId}
-            {current ? ` (${current.name})` : ""} table hash
+            {current ? ` (${seriesName(current.name)})` : ""} table hash
           </dt>
           <dd className="mono break">{hash.loading ? "…" : (hash.data?.stored ?? "…")}</dd>
           <dt>Cards in the table</dt>

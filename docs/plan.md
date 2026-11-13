@@ -128,7 +128,8 @@ d'espérance ni de pourcentage affichés, pas de choix de chaîne au burn.
 - [x] **6.6 Page transparence** : taux, hash de la table et du code, vérification d'un pack dans le navigateur (rejeu
   complet avec l'historique). Les soldes `intents.near` comparés aux engagements attendent la phase 4.
 - [x] **6.7 Bandeau** « Demo · NEAR testnet » permanent, avec les mentions légales (éditeur à compléter).
-- [ ] **6.8 Mise en ligne sur Vercel** (`cd front && npm run deploy`). L'indexeur n'est pas hébergé : « Trending » se
+- [x] **6.8 Mise en ligne sur Vercel** le 13/11 : https://moonpacks-ochre.vercel.app (compte Vercel d'Enzo, projet
+  `moonpacks`). Pour mettre à jour : `cd front && npm run deploy`. L'indexeur n'est pas hébergé : « Trending » se
   rabat sur les annonces, et le rejeu complet sur le vérificateur en ligne de commande.
 
 ## Phase 7 : démo et soumission
@@ -150,7 +151,7 @@ d'espérance ni de pourcentage affichés, pas de choix de chaîne au burn.
 
 ## Prochaines actions proposées (13/11)
 
-1. Mettre le site en ligne sur Vercel (6.8), puis vérifier le domaine `moonpacks`.
+1. Site en ligne (6.8). Reste à vérifier un domaine `moonpacks` et les homonymes crypto.
 2. Visuels des NFT servis par le site (5.3), puis une série redéployée avec les bons `media`.
 3. Tests avec un vrai MetaMask sur `app3` (ordinateur), avec Enzo.
 4. Fusionner `fix/front-revue` dans `feat/front` avec Enzo, puis `feat/demo` et `feat/front` dans `main`.

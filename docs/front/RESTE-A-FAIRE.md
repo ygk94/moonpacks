@@ -49,7 +49,7 @@ cd front && npm run indexer                 # facultatif, second terminal
 | 9 | **Mention « simulation »** | Rien n'est affiché sur les parties simulées (redeemer et jetons factices sur testnet) | Le texte et l'endroit (hors périmètre pour l'instant, consigne § 7) |
 | 10 | **Mentions légales** | Page en place ; l'éditeur et le contact sont « à compléter » | Les informations d'éditeur |
 | 11 | **Contrat visé** | **`app3.…` est la cible** du front, de l'indexeur et des parcours e2e (v3, deux séries). `VITE_CONTRACT_ID` (et `INDEXER_CONTRACT_ID`) changent de contrat ; `app2` reste pris en charge | Rien |
-| 12 | **Push, PR, déploiement public** | Branches poussées. **Déploiement sur Vercel décidé** (Enzo, 13/11) : build statique `front/dist`, `npm run deploy` | Fusions vers `main` à faire ensemble |
+| 12 | **Push, PR, déploiement public** | Branches poussées. **En ligne sur Vercel** depuis le 13/11 : https://moonpacks-ochre.vercel.app (build statique, `npm run deploy`) | Fusions vers `main` à faire ensemble |
 
 ## 2. Tests qui demandent un wallet
 
