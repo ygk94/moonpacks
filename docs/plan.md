@@ -154,7 +154,7 @@ d'espérance ni de pourcentage affichés, pas de choix de chaîne au burn.
 1. Site en ligne (6.8). Reste à vérifier un domaine `moonpacks` et les homonymes crypto.
 2. Visuels des NFT servis par le site (5.3), puis une série redéployée avec les bons `media`.
 3. Tests avec un vrai MetaMask sur `app3` (ordinateur), avec Enzo.
-4. Fusionner `fix/front-revue` dans `feat/front` avec Enzo, puis `feat/demo` et `feat/front` dans `main`.
+4. ~~Fusionner les branches dans `main`~~ : fait le 13/11 (`fix/front-revue`, qui contenait toutes les autres, avec l'accord de Hugo). La CI publie le site sur Vercel à chaque push sur `main`.
 5. Hugo : nombre de brûlables visé, mention « simulation », éditeur des mentions légales.
 6. Burn réel (phase 4, relais Intents) : la quantité de jetons d'une carte remplacera la valeur en NEAR.
 7. Soumission (phase 7) : vidéo, README public, pitch.
