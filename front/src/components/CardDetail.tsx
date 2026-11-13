@@ -97,7 +97,8 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
         setBurn({
           kind: "done",
           text:
-            `Card burned. ${est?.qty != null ? `About ${formatQty(est.qty)} ${est.ticker}` : "The tokens"} were sent to your account.` +
+            `Card burned. Token delivery is simulated on this testnet demo: no real ${est?.ticker ?? "tokens"} were sent` +
+            `${est?.qty != null ? ` (about ${formatQty(est.qty)} ${est.ticker} at current prices)` : ""}.` +
             (storage != null && storage > 0n ? ` The freed storage deposit (${formatNearExact(storage)} NEAR) was returned too.` : ""),
         });
       } else if (findEvent(events, "redeem_failed")) {
@@ -106,7 +107,8 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
         // Événements absents de la réponse du wallet : on relit la carte jusqu'à l'issue du burn
         // (sinon l'écran restait sur « Burn in progress… » sans jamais se mettre à jour).
         const outcome = await waitBurnOutcome(() => getCard(card.token_id));
-        if (outcome === "burned") setBurn({ kind: "done", text: "Card burned. The tokens were sent to your account." });
+        if (outcome === "burned")
+          setBurn({ kind: "done", text: "Card burned. Token delivery is simulated on this testnet demo: no real tokens were sent." });
         else if (outcome === "restored")
           setBurn({ kind: "failed", text: "The token delivery failed, so your card was restored. You can try again later." });
         else setBurn({ kind: "failed", text: "The burn is still in progress. Check your collection again in a minute." });
@@ -181,7 +183,9 @@ export function CardDetail({ tokenId, onChanged }: { tokenId: string; onChanged?
             <span className="locked__qty">
               {est?.qty != null ? `≈ ${formatQty(est.qty)} ${est.ticker}` : `${entry?.ticker ?? "Tokens"} · amount pending price`}
             </span>
-            <small className="muted">Estimated from public prices at the time you burn. Not a guaranteed value.</small>
+            <small className="muted">
+              Estimated from public prices. Not a guaranteed value. Testnet demo: burning does not deliver real tokens.
+            </small>
           </div>
         )}
 
@@ -244,15 +248,15 @@ function BurnBox({
   if (state.kind === "pending")
     return (
       <div className="burnbox burnbox--pending">
-        <span className="spinner" /> Burning… waiting for the token delivery.
+        <span className="spinner" /> Burning… waiting for the (simulated) token delivery.
       </div>
     );
   if (state.kind === "confirm")
     return (
       <div className="burnbox burnbox--confirm">
         <p>
-          <strong>Burning destroys this card.</strong> You receive the {ticker ?? "coin"} tokens locked in it, directly in
-          your account. This cannot be undone.
+          <strong>Burning destroys this card.</strong> In the full product you receive the {ticker ?? "coin"} tokens
+          locked in it. On this testnet demo the delivery is simulated: no real tokens are sent. This cannot be undone.
         </p>
         <div className="row">
           <button className="btn btn--danger" onClick={onBurn}>

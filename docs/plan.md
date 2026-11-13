@@ -15,7 +15,10 @@ les nombres (la phase 2), puis seulement le code. Un test qui échoue en phase 1
 - **Hébergement : Vercel.** Le site est un build statique (`front/dist`). Pas de WalletConnect : la démo se joue sur
   ordinateur, avec MetaMask en extension ou un wallet NEAR natif. Le code WalletConnect reste inactif sans
   `projectId`.
-- **Les 101 jetons « À décider » sont retirés pour l'instant**, du site comme des séries (`app3` ne les a pas).
+- **Les 101 jetons « À décider » sont retirés définitivement** (Enzo, 13/11) : ils ne reviendront pas, ni sur le site
+  ni dans les séries (`app3` ne les a pas).
+- **Simulation affichée** (13/11) : bandeau « Token delivery simulated » sur toutes les pages, et mention au burn, dans
+  le détail d'une carte, dans le récapitulatif d'ouverture et dans les mentions légales.
 
 ---
 
@@ -23,8 +26,8 @@ les nombres (la phase 2), puis seulement le code. Un test qui échoue en phase 1
 
 | # | Décision | Recommandation | État |
 |---|---|---|---|
-| 0.1 | Nom du projet | **Moonpacks** (13/11). Reste à vérifier le domaine et les homonymes crypto | [x] |
-| 0.2 | Que faire des 101 jetons « À décider » du catalogue v2 (cannabis coins, Verge, Skibidi, homonymes, pics douteux) et des cartes à drapeau (politique, personne réelle, obscène, arnaque avérée) | **Retirés pour l'instant** (13/11) : hors du site et des séries de démo. Les trancher un par un avant de les remettre | [x] pour la démo |
+| 0.1 | Nom du projet | **Moonpacks**, validé par Enzo (13/11) | [x] |
+| 0.2 | Que faire des 101 jetons « À décider » du catalogue v2 (cannabis coins, Verge, Skibidi, homonymes, pics douteux) et des cartes à drapeau (politique, personne réelle, obscène, arnaque avérée) | **Retirés définitivement** (Enzo, 13/11) : ni sur le site ni dans les séries | [x] |
 | 0.3 | Si l'achat des jetons échoue après le tirage | La carte reste adossée en NEAR, jamais de remboursement | [ ] **Hugo** |
 | 0.4 | Prix du booster et part d'adossement β | 10 NEAR (environ 36 $), β = 60 %, après simulation (phase 2) | [ ] **Hugo** |
 | 0.5 | Mécanique de burn : quelles cartes, financement des jetons | Reportée (décision du 11/11). Le retrait des jetons vers les exchanges n'est pas notre sujet | [ ] **Hugo**, plus tard |
@@ -104,10 +107,12 @@ burn via un `redeemer` abstrait en attendant la décision 0.5, vérificateur pub
 - [x] **5.1 Générateur d'art original et abstrait** (`art/`, régénération sur le v2 en cours), à partir de l'adresse, du ticker et de la rareté. Aucun logo,
   personnage ni ressemblance. Il couvre les 786 cartes, en commençant par les 13 brûlables et les 233 de la liste A.
 - [x] **5.2 Cadres de rareté**, et un style « cimetière » pour les coins morts.
-- [ ] **5.3 Métadonnées NEP-177.** Aujourd'hui, `media` vaut `ipfs://TODO/<carte>.svg` : image cassée dans les wallets.
-  Pour la démo, servir les visuels anglais (`--langue en`) par le site sur Vercel, `media` en `https://…/cards/<carte>.svg`
-  avec `media_hash`, puis redéployer une série. IPFS ou Arweave (permanence) plus tard. `reference` et
-  `reference_hash`, avec la mention de non-affiliation.
+- [ ] **5.3 Métadonnées NEP-177.** Sur `app3`, `media` vaut `ipfs://bafybeif…5viuia/<carte>.svg`, mais ce CID a été
+  calculé en local et **jamais envoyé** (docs/historique-echanges.md) : personne ne l'héberge, donc l'image est cassée dans
+  les wallets et sur nearblocks. Le plus simple : envoyer le CAR déjà préparé (`contract/scripts/ipfs_media.py upload`,
+  Pinata gratuit), et les adresses déjà écrites dans le contrat fonctionnent, sans redéploiement. Sinon, une nouvelle
+  série avec `--media-base https://moonpacks-ochre.vercel.app/cards`, en profitant pour la nommer « Moonpacks » on-chain.
+  `reference` et `reference_hash` plus tard.
 - [ ] **5.4 Changer l'image d'une carte** sans toucher aux jetons bloqués (`nft_metadata_update`).
 
 ## Phase 6 : front (web)
@@ -127,7 +132,9 @@ d'espérance ni de pourcentage affichés, pas de choix de chaîne au burn.
   livraison des jetons attend la phase 4.
 - [x] **6.6 Page transparence** : taux, hash de la table et du code, vérification d'un pack dans le navigateur (rejeu
   complet avec l'historique). Les soldes `intents.near` comparés aux engagements attendent la phase 4.
-- [x] **6.7 Bandeau** « Demo · NEAR testnet » permanent, avec les mentions légales (éditeur à compléter).
+- [x] **6.7 Bandeau** « Demo · NEAR testnet · Token delivery simulated » permanent (version courte sur mobile), et
+  mentions légales complètes : éditeur, hébergeur, simulation, données personnelles. L'adresse de contact est facultative
+  (`VITE_CONTACT_EMAIL`).
 - [x] **6.8 Mise en ligne sur Vercel** le 13/11 : https://moonpacks-ochre.vercel.app (compte Vercel d'Enzo, projet
   `moonpacks`). Pour mettre à jour : `cd front && npm run deploy`. L'indexeur n'est pas hébergé : « Trending » se
   rabat sur les annonces, et le rejeu complet sur le vérificateur en ligne de commande.
@@ -151,11 +158,11 @@ d'espérance ni de pourcentage affichés, pas de choix de chaîne au burn.
 
 ## Prochaines actions proposées (13/11)
 
-1. Site en ligne (6.8). Reste à vérifier un domaine `moonpacks` et les homonymes crypto.
-2. Visuels des NFT servis par le site (5.3), puis une série redéployée avec les bons `media`.
+1. Site en ligne (6.8), simulation affichée, mentions légales faites.
+2. Images des NFT (5.3) : envoyer sur IPFS le dossier déjà préparé (Hugo), sans redéployer.
 3. Tests avec un vrai MetaMask sur `app3` (ordinateur), avec Enzo.
 4. ~~Fusionner les branches dans `main`~~ : fait le 13/11 (`fix/front-revue`, qui contenait toutes les autres, avec l'accord de Hugo). La CI publie le site sur Vercel à chaque push sur `main`.
-5. Hugo : nombre de brûlables visé, mention « simulation », éditeur des mentions légales.
+5. Hugo : nombre de brûlables visé ; images des NFT (5.3, envoi du CAR sur IPFS).
 6. Burn réel (phase 4, relais Intents) : la quantité de jetons d'une carte remplacera la valeur en NEAR.
 7. Soumission (phase 7) : vidéo, README public, pitch.
 8. Avant tout public : historique git, avis juridique.

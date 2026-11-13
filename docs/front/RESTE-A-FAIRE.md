@@ -31,7 +31,7 @@ cd front && npm run indexer                 # facultatif, second terminal
 - Nom : **Moonpacks**.
 - **Site web seulement**, iOS mis de côté.
 - Hébergement sur **Vercel**, donc pas de WalletConnect.
-- Les **101 jetons « À décider » sont retirés** du site pour l'instant : `prepare-assets` ne prend plus que la
+- Les **101 jetons « À décider » sont retirés définitivement** : `prepare-assets` ne prend plus que la
   section `catalogue`. Les séries de `app3` ne les contenaient déjà pas.
 
 ## 1. Décisions à prendre
@@ -46,8 +46,8 @@ cd front && npm run indexer                 # facultatif, second terminal
 | 6 | **Dépôt rendu au burn ?** | **Contrat v3 : oui, en partie.** Le burn rend le stockage libéré (`card_redeemed.storage_refund`, environ 16 o pour un burn ordinaire) ; l'emplacement du pack reste écrit (`docs/mecaniques-spec.md`, 12.2). Le front affiche le montant rendu après le burn, sans promesse avant | Corriger la consigne (« rendu au burn » → « l'excédent est rendu à l'ouverture, le stockage libéré au burn ») |
 | 7 | **Source des cours** | NEAR/USD : CoinGecko. Cours d'un coin : DexScreener par adresse, sinon CoinGecko par identifiant. Appels directs depuis le navigateur, sans clé, avec un cache de 5 min (mémoire et `localStorage`), des ids regroupés par appel et un recul après un 429 (dernière valeur connue affichée) | Valider, ou passer par un service maison si la démo publique attire du monde |
 | 8 | **WalletConnect** | **Pas nécessaire** (Enzo, 13/11) : démo sur ordinateur, MetaMask en extension ou wallet NEAR natif. Le code reste inactif sans `projectId` | Rien |
-| 9 | **Mention « simulation »** | Rien n'est affiché sur les parties simulées (redeemer et jetons factices sur testnet) | Le texte et l'endroit (hors périmètre pour l'instant, consigne § 7) |
-| 10 | **Mentions légales** | Page en place ; l'éditeur et le contact sont « à compléter » | Les informations d'éditeur |
+| 9 | **Mention « simulation »** | **Faite** (13/11) : bandeau sur toutes les pages, mentions au burn, dans le détail d'une carte, dans le récapitulatif et dans les mentions légales | Rien |
+| 10 | **Mentions légales** | **Faites** (13/11) : éditeur (projet étudiant), hébergeur Vercel, simulation, données personnelles | Une adresse de contact, si vous voulez (`VITE_CONTACT_EMAIL`) |
 | 11 | **Contrat visé** | **`app3.…` est la cible** du front, de l'indexeur et des parcours e2e (v3, deux séries). `VITE_CONTRACT_ID` (et `INDEXER_CONTRACT_ID`) changent de contrat ; `app2` reste pris en charge | Rien |
 | 12 | **Push, PR, déploiement public** | Branches poussées. **En ligne sur Vercel** depuis le 13/11 : https://moonpacks-ochre.vercel.app (build statique, `npm run deploy`) | Fusions vers `main` à faire ensemble |
 
@@ -106,7 +106,7 @@ passe. Sans ce fichier, le contrôle se limite à la structure.
 
 | Sujet | Détail |
 |---|---|
-| **Images des NFT dans les wallets** | Les métadonnées on-chain pointent vers `ipfs://TODO/<carte>.svg` (`media_template` de `build_series.py`). Les wallets et explorateurs montreront une image cassée. Il faut héberger les visuels (version anglaise : `--langue en`) et mettre la bonne URL dans la série |
+| **Images des NFT dans les wallets** | Sur `app3`, `media` = `ipfs://bafybeif…5viuia/<carte>.svg`, CID **calculé mais jamais envoyé** : images cassées. Envoyer le CAR (`contract/scripts/ipfs_media.py upload`) suffit, sans redéploiement |
 | **Hébergement de l'indexeur** | Il tourne en local (SQLite). Pour une démo publique, il faut l'héberger quelque part et définir `VITE_INDEXER_URL` |
 | **Pack `stuck`** | Contrat v3 : « Refund » appelle `refund_stuck_pack` (prix et stockage non utilisé rendus à l'acheteur), puis le pack s'affiche `refunded`. `retry_reveal` n'est proposé qu'à l'acheteur. Sur `app2`, message de contact |
 | **Messages d'erreur du contrat** | Contrat v3 : traduits par code `E_…` (`front/src/near/errors.ts`, textes anglais de `contract/ERRORS.md`) ; un test échoue si un code n'est pas traduit. Repli sur l'ancien texte français pour `app2` |

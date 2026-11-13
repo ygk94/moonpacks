@@ -17,9 +17,17 @@ const LINKS = [
 export function DemoBanner() {
   return (
     <div className="demo-banner" role="note">
-      <span>Demo · NEAR testnet</span>
+      {/* Le burn passe par un redeemer factice sur testnet : aucun vrai jeton n'est livré. Version courte sur mobile. */}
+      <span className="demo-banner__long">Demo · NEAR testnet</span>
+      <span className="demo-banner__short">Testnet demo</span>
       <span className="demo-banner__sep">·</span>
-      <a href="#/legal">Legal notice</a>
+      <span className="demo-banner__long">Token delivery simulated</span>
+      <span className="demo-banner__short">Simulated burns</span>
+      <span className="demo-banner__sep">·</span>
+      <a href="#/legal">
+        <span className="demo-banner__long">Legal notice</span>
+        <span className="demo-banner__short">Legal</span>
+      </a>
     </div>
   );
 }

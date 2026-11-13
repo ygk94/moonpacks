@@ -622,8 +622,8 @@ function Summary({
       </div>
       {cards.some((c) => c.burnable) && (
         <p className="muted small">
-          Burn a burnable card from your collection to receive its tokens. The token amount shown is estimated from
-          public market prices.
+          A burnable card can be burned from your collection for its tokens. The amount shown is an estimate from public
+          market prices, and on this testnet demo the token delivery is simulated: no real tokens are sent.
         </p>
       )}
       {storageRefund != null && storageRefund > 0n && (

@@ -15,6 +15,9 @@ export const INDEXER_URL: string = (env.VITE_INDEXER_URL ?? (env.DEV ? "http://1
 // WalletConnect : vide = désactivé (voir src/near/wallet.tsx).
 export const WALLETCONNECT_PROJECT_ID: string = env.VITE_WALLETCONNECT_PROJECT_ID ?? "";
 
+// Adresse de contact affichée dans les mentions légales (vide : non affichée).
+export const CONTACT_EMAIL: string = env.VITE_CONTACT_EMAIL ?? "";
+
 export const EXPLORER = NETWORK === "testnet" ? "https://testnet.nearblocks.io" : "https://nearblocks.io";
 
 if (NETWORK !== "testnet") {
