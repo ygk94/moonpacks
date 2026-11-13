@@ -629,3 +629,4 @@ h1, h2, h3 { letter-spacing: -0.03em; }
 .empty-state strong { font-size: 1.15rem; }
 .empty-state p { color: var(--muted); margin: 0 0 0.8rem; }
 .empty-state .btn { text-decoration: none; }
+.pack-offer__blurb { margin: -0.3rem 0 0; color: var(--muted); font-size: 0.9rem; }

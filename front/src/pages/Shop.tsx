@@ -9,6 +9,7 @@ import { BLOCK_TIME_S } from "../config";
 import { seriesName } from "../lib/brand";
 import { formatDuration, formatNearExact, formatUsd, yoctoToNumber } from "../lib/format";
 import { nearUsd } from "../lib/prices";
+import { packBlurb, seriesShareOdds } from "../lib/odds";
 import { rushTarget } from "../lib/series";
 import { useAsync } from "../lib/useAsync";
 import { getRushState, getSeries, getSeriesCount, isV3Contract } from "../near/contract";
@@ -24,6 +25,7 @@ export function Shop({ onBuy }: { onBuy: (s: SeriesView) => void }) {
   }, []);
   const usd = useAsync(() => nearUsd(), []);
   const v3 = useAsync(() => isV3Contract(), []);
+  const shared = useAsync(() => (series.data ? seriesShareOdds(series.data) : Promise.resolve(false)), [series.data]);
 
   return (
     <div className="page home">
@@ -46,6 +48,7 @@ export function Shop({ onBuy }: { onBuy: (s: SeriesView) => void }) {
             key={s.series_id}
             series={s}
             featured={i === series.data!.length - 1}
+            blurb={packBlurb(s, series.data!, shared.data === true)}
             usd={usd.data ?? null}
             connected={!!accountId}
             accountId={accountId}
@@ -80,6 +83,7 @@ function Step({ n, title, text }: { n: number; title: string; text: string }) {
 function PackOffer({
   series,
   featured,
+  blurb,
   usd,
   connected,
   accountId,
@@ -88,6 +92,7 @@ function PackOffer({
 }: {
   series: SeriesView;
   featured: boolean;
+  blurb: string;
   usd: number | null;
   connected: boolean;
   accountId: string | null;
@@ -110,6 +115,7 @@ function PackOffer({
             Odds
           </a>
         </div>
+        <p className="pack-offer__blurb">{blurb}</p>
         <div className="pack-offer__price">
           <strong>{formatNearExact(series.price)} NEAR</strong>
           {usd != null && <span>≈ {formatUsd(price * usd)}</span>}

@@ -68,6 +68,10 @@ export async function getListings(): Promise<[string, Listing][]> {
 }
 
 /** Taux complets : toutes les pages de `get_rates`, cartes fusionnées par rareté. */
+/** Première page des taux : sommes par rareté complètes, cartes 0 à 199 (assez pour comparer deux séries). */
+export const getRatesFirstPage = (seriesId: number) =>
+  view<RatesPage>("get_rates", { series_id: seriesId, from_index: 0, limit: 200 });
+
 export async function getAllRates(seriesId = SERIES_ID): Promise<RatesPage> {
   let page = await view<RatesPage>("get_rates", { series_id: seriesId, from_index: 0, limit: 200 });
   const merged: RatesPage = { ...page, rarities: page.rarities.map((r) => ({ ...r, cards: [...r.cards] })) };

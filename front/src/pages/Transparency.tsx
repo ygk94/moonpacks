@@ -8,6 +8,7 @@ import { CONTRACT_ID, EXPLORER, SERIES_ID } from "../config";
 import { loadCatalog } from "../lib/catalog";
 import { formatNearExact, RARITY_LABEL } from "../lib/format";
 import { navigate, useRoute } from "../lib/router";
+import { seriesShareOdds } from "../lib/odds";
 import { pickSeries, publicSeries } from "../lib/series";
 import { useAsync } from "../lib/useAsync";
 import { getAllRates, getSeries, getSeriesCount, getTableHash } from "../near/contract";
@@ -63,6 +64,9 @@ export function Transparency() {
       ? Number(param)
       : SERIES_ID;
   const current = list.data?.find((s) => s.series_id === seriesId);
+  // Packs aux mêmes cotes (app3 : Entry et Standard) : une seule table, sans sélecteur.
+  const shared = useAsync(() => (list.data ? seriesShareOdds(list.data) : Promise.resolve(true)), [list.data]);
+  const single = shared.data !== false;
   const rates = useAsync(() => getAllRates(seriesId), [seriesId]);
   const hash = useAsync(() => getTableHash(seriesId), [seriesId]);
   const account = useAsync(() => viewAccount(CONTRACT_ID), []);
@@ -104,9 +108,12 @@ export function Transparency() {
     <div className="page transparency">
       <header className="page-intro">
         <h1>Odds</h1>
-        <p>Read live from the contract, the same table that draws your cards.</p>
+        <p>
+          Read live from the contract, the same table that draws your cards.
+          {single && (list.data?.length ?? 0) > 1 ? " Every pack has the same odds." : ""}
+        </p>
       </header>
-      {list.data && <SeriesPicker list={list.data} current={seriesId} onPick={pick} />}
+      {list.data && !single && <SeriesPicker list={list.data} current={seriesId} onPick={pick} />}
 
       <section className="odds">
         {rates.loading && <p className="muted">Reading the odds from the contract…</p>}
