@@ -205,3 +205,7 @@ pour n'en lancer qu'une partie. Coût d'un passage complet : environ 0,23 NEAR s
 - **Pas encore testé** : MetaMask réel (compte `0x…`, transaction de setup) et wallet NEAR natif, ouverture sur un vrai
   iPhone, pack réellement bloqué (`stuck`) débloqué depuis l'interface. Le wallet de test couvre la signature, pas
   l'intégration de near-connect avec un vrai wallet.
+
+## CI
+
+`.github/workflows/ci.yml` lance à chaque push et pull request : tests et build du front, tests de `art/`, du vérificateur et de la simulation, tests unitaires du contrat (`cargo test --lib`). Les tests sandbox du contrat restent manuels. La mise en ligne sur Vercel part de `main`, ou à la demande (Actions > CI > Run workflow, case « deploy »), avec les secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` et `VERCEL_PROJECT_ID`.

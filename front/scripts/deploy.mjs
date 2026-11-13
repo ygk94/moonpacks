@@ -4,6 +4,7 @@
 // publié, et le lien vers le projet (`.vercel/`) y reste d'un déploiement à l'autre (Vite vide `dist/` à chaque
 // build). Le site est déjà construit : Vercel ne fait que le servir (aucune commande de build côté Vercel).
 // Usage : npm run deploy (production) ; node scripts/deploy.mjs --preview (adresse de prévisualisation).
+// En CI (.github/workflows/ci.yml) : mêmes commandes, avec les secrets VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID.
 
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
@@ -23,7 +24,9 @@ for (const f of readdirSync(target)) if (f !== ".vercel") rmSync(join(target, f)
 cpSync(dist, target, { recursive: true });
 
 const prod = !process.argv.includes("--preview");
-const r = spawnSync("npx", ["--yes", "vercel@65.15.0", "deploy", target, "--yes", ...(prod ? ["--prod"] : [])], {
+// En CI : jeton dans VERCEL_TOKEN, projet désigné par VERCEL_ORG_ID et VERCEL_PROJECT_ID (pas de dossier .vercel).
+const token = process.env.VERCEL_TOKEN ? ["--token", process.env.VERCEL_TOKEN] : [];
+const r = spawnSync("npx", ["--yes", "vercel@65.15.0", "deploy", target, "--yes", ...(prod ? ["--prod"] : []), ...token], {
   stdio: "inherit",
   cwd: front,
 });
