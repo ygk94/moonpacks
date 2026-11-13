@@ -115,7 +115,7 @@ Pas de routeur ni de bibliothèque d'état : un routeur par hash suffit (`#/shop
   cours publics.
 - **Pas de compteur de pitié.** Le gold pack n'est annoncé nulle part avant la déchirure.
 - **Pas de fausse urgence** : le seul compte à rebours est celui du gold rush, calculé depuis `rush_until` et le
-  temps de bloc. L'achat d'un pack demande une confirmation et renvoie vers les taux. L'achat d'une carte sur le
+  temps de bloc. « Open pack » ouvre directement, sans étape de confirmation dans le site (refonte du 13/11) : le wallet affiche le montant à signer, et chaque pack garde un lien « Odds » vers les taux, ce qui respecte la règle « pas d'achat en un clic sans accès aux taux ». L'achat d'une carte sur le
   marché aussi : « Buy » ouvre un récapitulatif avec le prix exact en NEAR, les redevances prises sur ce prix
   (`nft_payout`, NEP-199) et la part du vendeur, puis « Confirm and buy » signe.
 - **Bandeau permanent** « Demo · NEAR testnet » avec un lien vers les mentions légales, visible aussi pendant

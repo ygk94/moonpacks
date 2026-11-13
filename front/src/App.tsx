@@ -49,7 +49,7 @@ export function App() {
       </main>
       <footer className="footer">
         <span>{BRAND} · NEAR testnet demo</span>
-        <a href="#/rates">Drop rates</a>
+        <a href="#/rates">Odds</a>
         <a href="#/legal">Legal notice</a>
       </footer>
       <AnimatePresence>

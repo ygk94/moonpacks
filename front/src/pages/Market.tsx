@@ -191,10 +191,18 @@ export function Market() {
         </section>
       )}
 
-      <h2>All listings</h2>
+      {rows.data?.length ? <h2>All listings</h2> : null}
       {rows.loading && !rows.data && <p className="muted">Loading listings…</p>}
       {rows.error != null && <p className="error">Could not load the market.</p>}
-      {rows.data && !rows.data.length && <p className="muted">No card is listed for now. List one from your collection.</p>}
+      {rows.data && !rows.data.length && (
+        <div className="empty-state">
+          <strong>No card for sale yet</strong>
+          <p>Open a pack, then list a card from your collection.</p>
+          <a className="btn btn--primary" href="#/shop">
+            Open a pack
+          </a>
+        </div>
+      )}
       <div className="grid">
         {rows.data?.map((r) => {
           const mine = r.listing.seller_id === accountId;

@@ -58,10 +58,12 @@ export function Collection({ onReplay }: { onReplay: (packId: number) => void })
 
   if (!accountId)
     return (
-      <div className="page empty">
-        <h1>My collection</h1>
-        <p className="muted">Connect a wallet to see your cards.</p>
-        <ConnectButton big />
+      <div className="page">
+        <div className="empty-state">
+          <strong>Your cards live here</strong>
+          <p>Connect a wallet to see your collection.</p>
+          <ConnectButton />
+        </div>
       </div>
     );
 

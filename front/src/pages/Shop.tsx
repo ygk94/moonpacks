@@ -1,17 +1,17 @@
-// Boutique : packs en vente (prix en NEAR et en dollars), dépôt de stockage, lien vers les taux, gold rush.
-// Rien d'autre ne pousse à l'achat : pas de minuteur inventé, pas de compteur de pitié, pas d'achat en un clic.
+// Accueil et boutique : un titre court, les packs en vente, « Open pack » ouvre directement (le wallet affiche le
+// montant à signer). La consigne est tenue : prix en NEAR et en dollars, dépôt de stockage indiqué, lien vers les
+// taux sur chaque pack, gold rush réel, aucun minuteur inventé ni compteur de pitié.
 
-import { seriesName } from "../lib/brand";
 import { useEffect, useState } from "react";
 import { ConnectButton } from "../components/Header";
 import { PackArt } from "../components/PackArt";
 import { BLOCK_TIME_S } from "../config";
+import { seriesName } from "../lib/brand";
 import { formatDuration, formatNearExact, formatUsd, yoctoToNumber } from "../lib/format";
 import { nearUsd } from "../lib/prices";
-import { useAsync } from "../lib/useAsync";
-import { storageDepositNote } from "../lib/pack";
 import { rushTarget } from "../lib/series";
-import { getPackCount, getRushState, getSeries, getSeriesCount, isV3Contract } from "../near/contract";
+import { useAsync } from "../lib/useAsync";
+import { getRushState, getSeries, getSeriesCount, isV3Contract } from "../near/contract";
 import type { RushState, SeriesView } from "../near/types";
 import { useWallet } from "../near/wallet";
 
@@ -23,44 +23,55 @@ export function Shop({ onBuy }: { onBuy: (s: SeriesView) => void }) {
     return all.filter((s) => s.status === "open");
   }, []);
   const usd = useAsync(() => nearUsd(), []);
-  const packs = useAsync(() => (accountId ? getPackCount(accountId) : Promise.resolve(null)), [accountId]);
   const v3 = useAsync(() => isV3Contract(), []);
 
   return (
-    <div className="page shop">
-      <section className="hero">
-        <div className="hero__text">
-          <h1>Memecoin booster packs</h1>
-          <p>
-            Each pack holds 5 NFT cards of memecoins from every chain. Some cards are <strong>burnable</strong>: burn
-            one and you receive the memecoin's tokens, locked when the pack was opened.
-          </p>
-          <a className="link" href="#/rates">
-            Drop rates →
-          </a>
-        </div>
+    <div className="page home">
+      <section className="home__hero">
+        <h1>
+          Rip a pack.
+          <br />
+          <span className="home__accent">Catch the moon.</span>
+        </h1>
+        <p className="home__lead">
+          Booster packs of memecoin cards from every chain. Pull a burnable card and burn it for the coin's tokens.
+        </p>
       </section>
 
-      {/* Un gold rush par série (contrat v3 : entrée et standard), chacun avec son propre avancement. */}
-      {series.data?.map((s) => (
-        <RushPanel key={s.series_id} accountId={accountId} series={s} multi={series.data!.length > 1} />
-      ))}
-
-      {series.loading && !series.data && <p className="muted">Loading packs…</p>}
+      {series.loading && !series.data && <div className="home__packs home__packs--loading" aria-busy />}
       {series.error != null && <p className="error">Could not load the packs. Please refresh.</p>}
-      <div className="shop__grid">
-        {series.data?.map((s) => (
+      <div className="home__packs">
+        {series.data?.map((s, i) => (
           <PackOffer
             key={s.series_id}
             series={s}
+            featured={i === series.data!.length - 1}
             usd={usd.data ?? null}
-            firstPack={packs.data == null ? null : packs.data === 0}
             connected={!!accountId}
+            accountId={accountId}
             storageReturned={v3.data === true}
             onBuy={() => onBuy(s)}
           />
         ))}
         {series.data && !series.data.length && <p className="muted">No pack is on sale right now.</p>}
+      </div>
+
+      <section className="steps-row" aria-label="How it works">
+        <Step n={1} title="Open" text="5 cards drawn on-chain, revealed one by one." />
+        <Step n={2} title="Collect" text="Keep them, trade them on the market." />
+        <Step n={3} title="Burn" text="Burnable cards hold tokens of their memecoin." />
+      </section>
+    </div>
+  );
+}
+
+function Step({ n, title, text }: { n: number; title: string; text: string }) {
+  return (
+    <div className="step">
+      <span className="step__n">{n}</span>
+      <div>
+        <strong>{title}</strong>
+        <p>{text}</p>
       </div>
     </div>
   );
@@ -68,77 +79,58 @@ export function Shop({ onBuy }: { onBuy: (s: SeriesView) => void }) {
 
 function PackOffer({
   series,
+  featured,
   usd,
-  firstPack,
   connected,
+  accountId,
   storageReturned,
   onBuy,
 }: {
   series: SeriesView;
+  featured: boolean;
   usd: number | null;
-  firstPack: boolean | null;
   connected: boolean;
+  accountId: string | null;
   storageReturned: boolean;
   onBuy: () => void;
 }) {
-  const [confirm, setConfirm] = useState(false);
-  const storageMax = BigInt(series.required_deposit) - BigInt(series.price);
+  const storage = BigInt(series.required_deposit) - BigInt(series.price);
   const price = yoctoToNumber(series.price);
+  // « Memaster Entry » → « Entry » : la marque est déjà dans l'en-tête.
+  const short = seriesName(series.name).replace(/^Moonpacks\s+/i, "") || seriesName(series.name);
   return (
-    <article className="offer">
-      <PackArt seed={series.series_id * 31 + 11} />
-      <div className="offer__body">
-        <h2>{seriesName(series.name)}</h2>
-        <p className="muted">{series.cards_per_pack} cards · at least one burnable</p>
-        <div className="offer__price">
-          <span className="offer__near">{formatNearExact(series.price)} NEAR</span>
-          {usd != null && <span className="offer__usd">≈ {formatUsd(price * usd)}</span>}
+    <article className={`pack-offer${featured ? " pack-offer--featured" : ""}`}>
+      <div className="pack-offer__art">
+        <PackArt seed={series.series_id * 31 + 11} label={`${short.toUpperCase()} · 5 CARDS`} />
+      </div>
+      <div className="pack-offer__info">
+        <div className="pack-offer__head">
+          <h2>{short} pack</h2>
+          <a className="pack-offer__odds" href={`#/rates?series=${series.series_id}`}>
+            Odds
+          </a>
         </div>
-        <p className="small muted">
-          {storageDepositNote(storageMax, firstPack, storageReturned)}
-        </p>
-        {!connected ? (
-          <ConnectButton />
-        ) : confirm ? (
-          <div className="confirm">
-            <p>
-              You will pay <strong>{formatNearExact(series.price)} NEAR</strong> plus the storage deposit of{" "}
-              {formatNearExact(storageMax)} NEAR
-              {storageReturned ? " (its unused part comes back when the pack is opened)" : ""}. The cards are drawn
-              on-chain; the purchase cannot be cancelled once signed.
-            </p>
-            <div className="row">
-              <button
-                className="btn btn--primary"
-                onClick={() => {
-                  setConfirm(false);
-                  onBuy();
-                }}
-              >
-                Buy and open
-              </button>
-              <button className="btn btn--ghost" onClick={() => setConfirm(false)}>
-                Cancel
-              </button>
-            </div>
-            <a className="link small" href="#/rates">
-              Check the drop rates first
-            </a>
-          </div>
-        ) : (
-          <button className="btn btn--primary btn--big" onClick={() => setConfirm(true)}>
-            Buy pack
+        <div className="pack-offer__price">
+          <strong>{formatNearExact(series.price)} NEAR</strong>
+          {usd != null && <span>≈ {formatUsd(price * usd)}</span>}
+        </div>
+        {connected ? (
+          <button className="btn btn--primary btn--big" onClick={onBuy}>
+            Open pack
           </button>
+        ) : (
+          <ConnectButton big label="Connect to open" />
         )}
+        <p className="pack-offer__fine">
+          + {formatNearExact(storage)} NEAR storage deposit{storageReturned ? ", unused part refunded" : ""}
+        </p>
+        <RushPanel accountId={accountId} series={series} multi={false} />
       </div>
     </article>
   );
 }
 
-/**
- * Gold rush d'une série : avancement collectif réel, et pendant un rush, sa fin et les packs rush restants du compte.
- * Avec plusieurs séries, le titre nomme la série (chaque série a son propre rush).
- */
+/** Gold rush d'une série : avancement collectif réel ; pendant un rush, sa fin et les packs rush restants du compte. */
 export function RushPanel({ accountId, series, multi }: { accountId: string | null; series: SeriesView; multi: boolean }) {
   const [rush, setRush] = useState<RushState | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -166,33 +158,26 @@ export function RushPanel({ accountId, series, multi }: { accountId: string | nu
   return <RushView rush={rush} name={multi ? seriesName(series.name) : null} now={now} fetchedAt={fetchedAt} />;
 }
 
-/** Rendu d'un état de rush (séparé pour les tests). */
+/** Rendu compact d'un état de rush (séparé pour les tests). */
 export function RushView({ rush, name, now, fetchedAt }: { rush: RushState | null; name: string | null; now: number; fetchedAt: number }) {
   const suffix = name ? ` · ${name}` : "";
   if (!rush?.enabled || !rush.params || rush.height == null) return null;
   const p = rush.params;
-  const elapsedBlocks = (now - fetchedAt) / 1000 / BLOCK_TIME_S;
-  const height = rush.height + elapsedBlocks;
+  const height = rush.height + (now - fetchedAt) / 1000 / BLOCK_TIME_S;
 
   if (rush.active && rush.rush_until != null) {
     const left = (rush.rush_until - height) * BLOCK_TIME_S;
     return (
-      <section className="rush rush--active">
-        <div className="rush__title">⚡ Gold rush in progress{suffix}</div>
-        <p>Drop rates are improved for everyone until the rush ends.</p>
-        <div className="rush__stats">
-          <div>
-            <span className="rush__big">{formatDuration(left)}</span>
-            <small>left (estimated from block time)</small>
-          </div>
-          {rush.account && (
-            <div>
-              <span className="rush__big">{rush.account.remaining}</span>
-              <small>rush packs left for you (max {p.max_per_account})</small>
-            </div>
-          )}
+      <div className="rush-mini rush-mini--active">
+        <div className="rush-mini__top">
+          <span>⚡ Gold rush in progress{suffix}</span>
+          <strong>{formatDuration(left)}</strong>
         </div>
-      </section>
+        <small>
+          Better odds for everyone until it ends
+          {rush.account ? ` · ${rush.account.remaining} rush packs left for you (max ${p.max_per_account})` : ""}.
+        </small>
+      </div>
     );
   }
 
@@ -200,24 +185,20 @@ export function RushView({ rush, name, now, fetchedAt }: { rush: RushState | nul
   const target = rushTarget(rush);
   const pct = Math.min(100, (window / target) * 100);
   const paused = rush.pause_until != null && height <= rush.pause_until;
-  const windowLabel = formatDuration(p.window_blocks * BLOCK_TIME_S);
-
   return (
-    <section className="rush">
-      <div className="rush__title">Gold rush{suffix}</div>
-      <p>
-        When the community opens enough packs in a short time, drop rates improve for everyone for about{" "}
-        {formatDuration(p.duration_blocks * BLOCK_TIME_S)}.
-      </p>
+    <div className="rush-mini" title={`When the community opens ${target} packs within ${formatDuration(p.window_blocks * BLOCK_TIME_S)}, odds improve for everyone for about ${formatDuration(p.duration_blocks * BLOCK_TIME_S)}.`}>
+      <div className="rush-mini__top">
+        <span>Gold rush{suffix}</span>
+        <small>
+          {window} / {target} packs opened in the last {formatDuration(p.window_blocks * BLOCK_TIME_S)}
+        </small>
+      </div>
       <div className="progress" aria-label={`${window} of ${target} packs`}>
         <div className="progress__bar" style={{ width: `${pct}%` }} />
       </div>
-      <p className="small muted">
-        {window} / {target} packs opened in the last {windowLabel}
-        {paused && rush.pause_until != null
-          ? ` · next rush possible in ${formatDuration((rush.pause_until - height) * BLOCK_TIME_S)}`
-          : ""}
-      </p>
-    </section>
+      {paused && rush.pause_until != null && (
+        <small>Next rush possible in {formatDuration((rush.pause_until - height) * BLOCK_TIME_S)}</small>
+      )}
+    </div>
   );
 }

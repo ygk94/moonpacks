@@ -10,7 +10,7 @@ const LINKS = [
   ["/shop", "Shop"],
   ["/collection", "Collection"],
   ["/market", "Market"],
-  ["/rates", "Drop rates"],
+  ["/rates", "Odds"],
 ] as const;
 
 /** Bandeau permanent (consigne, règle 8). */
@@ -87,7 +87,7 @@ export function Header() {
   );
 }
 
-export function ConnectButton({ big }: { big?: boolean }) {
+export function ConnectButton({ big, label = "Connect wallet" }: { big?: boolean; label?: string }) {
   const { options, connect, ready } = useWallet();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -109,7 +109,7 @@ export function ConnectButton({ big }: { big?: boolean }) {
   return (
     <>
       <button className={`btn btn--primary${big ? " btn--big" : ""}`} onClick={() => setOpen(true)} disabled={!ready}>
-        Connect wallet
+        {label}
       </button>
       <Modal open={open} onClose={() => setOpen(false)}>
         <h2>Connect wallet</h2>

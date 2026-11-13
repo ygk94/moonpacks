@@ -98,58 +98,51 @@ export function Transparency() {
   const shown = rows.slice(page * PAGE, page * PAGE + PAGE);
   const gold = rates.data?.rarities.find((r) => r.gold_slot_ppb)?.gold_slot_ppb?.length ?? 0;
 
+  const totalCards = rates.data ? rates.data.rarities.reduce((n, r) => n + r.cards.length, 0) : null;
+
   return (
     <div className="page transparency">
-      <h1>Drop rates &amp; transparency</h1>
-      <p className="muted">
-        Every rate below is read directly from the contract. The cards are drawn on-chain from a table whose hash was
-        frozen when the series opened, so anyone can check that the published rates are the ones used.
-      </p>
+      <header className="page-intro">
+        <h1>Odds</h1>
+        <p>Read live from the contract, the same table that draws your cards.</p>
+      </header>
       {list.data && <SeriesPicker list={list.data} current={seriesId} onPick={pick} />}
 
-      <section className="panel">
-        <h2>Chance per card slot{current && list.data && list.data.length > 1 ? ` · ${seriesName(current.name)}` : ""}</h2>
-        {rates.loading && <p className="muted">Reading the rates from the contract…</p>}
-        {rates.error != null && <p className="error">Could not read the rates.</p>}
-        {rates.data && !rates.loading && (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Rarity</th>
-                <th>Chance</th>
-                <th>During a gold rush</th>
-                <th>Cards</th>
-                <th>Burnable</th>
-              </tr>
-            </thead>
-            <tbody>
-              {RARITIES.slice()
-                .reverse()
-                .map((r) => {
-                  const x = rates.data!.rarities.find((y) => y.rarity === r)!;
-                  return (
-                    <tr key={r}>
-                      <td className={`rarity-text-${r}`}>{RARITY_LABEL[r]}</td>
-                      <td>
-                        {pctFromPpb(x.rarity_ppb)} <small className="muted">({oneIn(x.rarity_ppb)})</small>
-                      </td>
-                      <td>{x.rush_rarity_ppb != null ? pctFromPpb(x.rush_rarity_ppb) : "—"}</td>
-                      <td>{x.cards.length}</td>
-                      <td>{x.cards.filter((c) => c.burnable).length}</td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        )}
-        <p className="small muted">
-          A pack has 5 slots. The last slot always holds a burnable card. Mythic cards stay sealed: they all show as “?”.
-          {gold > 0 && " Gold packs are very rare special packs with better odds on every slot and no common card."}
+      <section className="odds">
+        {rates.loading && <p className="muted">Reading the odds from the contract…</p>}
+        {rates.error != null && <p className="error">Could not read the odds.</p>}
+        {rates.data &&
+          !rates.loading &&
+          RARITIES.map((r) => {
+              const x = rates.data!.rarities.find((y) => y.rarity === r)!;
+              const burnable = x.cards.filter((c) => c.burnable).length;
+              // Barre en échelle logarithmique : de 1 sur 10⁸ (vide) à 1 sur 1 (pleine).
+              const width = x.rarity_ppb ? Math.max(4, Math.min(100, ((Math.log10(x.rarity_ppb) + 1) / 10) * 100)) : 0;
+              return (
+                <div key={r} className={`odds__row rarity-${r}`}>
+                  <span className={`odds__name rarity-text-${r}`}>{RARITY_LABEL[r]}</span>
+                  <div className="odds__bar">
+                    <div style={{ width: `${width}%` }} />
+                  </div>
+                  <span className="odds__value">
+                    <strong>{oneIn(x.rarity_ppb)}</strong>
+                    <small>{pctFromPpb(x.rarity_ppb)}</small>
+                  </span>
+                  <span className="odds__meta">
+                    {r === "mythic" ? "sealed “?”" : `${x.cards.length} cards${burnable ? ` · ${burnable} burnable` : ""}`}
+                    {x.rush_rarity_ppb != null && x.rush_rarity_ppb !== x.rarity_ppb ? ` · rush ${oneIn(x.rush_rarity_ppb)}` : ""}
+                  </span>
+                </div>
+              );
+            })}
+        <p className="odds__note">
+          Odds per card. A pack has 5 cards and the last one is always burnable.
+          {gold > 0 && " Gold packs are rare special packs with no common card."}
         </p>
       </section>
 
-      <section className="panel">
-        <h2>Every card</h2>
+      <details className="fold">
+        <summary>Browse every card{totalCards != null ? ` (${totalCards})` : ""}</summary>
         <div className="filters">
           <input
             className="search"
@@ -182,7 +175,7 @@ export function Transparency() {
                 <small className="muted">{c.name}</small>
               </div>
               <span className={`rarity-text-${c.rarity}`}>{RARITY_LABEL[c.rarity]}</span>
-              <span title={`${c.ppb} parts per billion per slot`}>{oneIn(c.ppb)}</span>
+              <span title={`${c.ppb} parts per billion per card`}>{oneIn(c.ppb)}</span>
               <span>{c.burnable ? "🔥 Burnable" : ""}</span>
               <span className="muted small">
                 {c.minted} drawn{c.cap != null ? ` / ${c.cap} max` : ""}
@@ -203,10 +196,10 @@ export function Transparency() {
             </button>
           </div>
         )}
-      </section>
+      </details>
 
-      <section className="panel">
-        <h2>Verify it yourself</h2>
+      <details className="fold">
+        <summary>Verify it yourself</summary>
         <dl className="facts facts--wide">
           <dt>Contract</dt>
           <dd>
@@ -225,17 +218,14 @@ export function Transparency() {
           <dd>{hash.loading ? "…" : (hash.data?.card_count ?? "…")}</dd>
         </dl>
         <p className="small muted">
-          The code hash identifies the exact program deployed on NEAR testnet; compare it with the one shown on{" "}
-          <a className="link" href={`${EXPLORER}/address/${CONTRACT_ID}`} target="_blank" rel="noreferrer">
-            nearblocks
-          </a>{" "}
-          and with a build of the published source. The public verifier (Python, standard library only) recomputes the
-          table hash and replays any pack from public data:
+          The table hash was frozen when the series opened. The public verifier (Python, standard library only)
+          recomputes it and replays any pack from public data. Each pack can also be checked in your browser with
+          “Verify this pack”.
         </p>
         <pre className="code">{`python3 -m memaster_verifier table --rpc testnet --contract ${CONTRACT_ID} --series ${seriesId}
 python3 -m memaster_verifier pack --rpc testnet --contract ${CONTRACT_ID} \\
     --tx-hash <your buy_pack transaction> --sender <your account>`}</pre>
-      </section>
+      </details>
     </div>
   );
 }
