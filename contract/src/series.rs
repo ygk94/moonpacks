@@ -63,6 +63,7 @@ fn validate_header(table: &SeriesTable) {
     let bps: u32 = table.royalties.iter().map(|r| r.bps as u32).sum();
     require!(bps <= MAX_ROYALTY_BPS, "E_ROYALTIES: Redevances > 50 %");
     crate::mechanics::validate_mechanics(table);
+    crate::mechanics::validate_kinds_header(table);
 }
 
 /// Contrôles carte par carte, et unicité des `card_id` dans `cards`.
@@ -100,6 +101,7 @@ fn validate_coverage(header: &SeriesTable, cards: &[DrawCard]) {
         "E_NO_UNLIMITED_COMMON: Il faut au moins une commune sans plafond et de poids non nul"
     );
     crate::mechanics::validate_resurrectable(header, cards);
+    crate::mechanics::validate_kinds_cards(header, cards);
 }
 
 /// Validation complète d'une table (à la création non partielle, et toujours à l'ouverture).
@@ -444,7 +446,9 @@ impl Contract {
         let s = self.series_ref(series_id);
         // Un gold pack peut avoir plus d'emplacements qu'un pack normal.
         let gold_slots = s.table.mechanics.as_ref().and_then(|m| m.gold.as_ref()).map(|g| g.slots.len() as u64);
-        let n = (s.table.cards_per_pack as u64).max(gold_slots.unwrap_or(0));
+        // Un type de pack (pack thématique) peut aussi en avoir plus.
+        let kind_max = s.table.kinds.iter().flatten().map(|k| k.cards_per_pack as u64).max();
+        let n = (s.table.cards_per_pack as u64).max(gold_slots.unwrap_or(0)).max(kind_max.unwrap_or(0));
         let mut bytes = PACK_RECORD_BYTES
             + self.config.reveal_steps as u64 * SEED_RECORD_BYTES
             + n * PER_CARD_BYTES

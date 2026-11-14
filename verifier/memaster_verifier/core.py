@@ -380,6 +380,53 @@ def split_value(total: int, slots: list, mult: dict) -> list:
     return out
 
 
+# ------------------------------------------------------------------ types de packs
+
+
+def kind_table(table: dict, kind) -> dict:
+    """Table vue par un pack d'un type (``SeriesTable.kinds[kind]``), comme ``draw::draw_pack_mech``
+    avec ``kind`` : poids à 0 hors de ``pool``, mythiques exclues si ``mythics`` est faux (poids de
+    rareté mythique à 0, aucune mythique tirable), ``cards_per_pack`` et prix du type, ni gold pack ni
+    pitié, table de valeur seulement si ``value``, règles par emplacement dans ``_kind_slots``.
+    ``kind`` ``None`` : la table telle quelle (pack de base). Le hash se calcule toujours sur la
+    table d'origine."""
+    if kind is None:
+        return table
+    k = table["kinds"][int(kind)]
+    pool = set(k["pool"])
+    cards = [c if not pool or i in pool else {**c, "weight": 0} for i, c in enumerate(table["cards"])]
+
+    def no_myth(w):
+        return w if k["mythics"] else {**w, "mythic": 0}
+
+    m = dict(table.get("mechanics") or {})
+    m["gold"] = None
+    m["pity"] = None
+    if not k["value"]:
+        m["value"] = None
+    if m.get("rush"):
+        m["rush"] = {**m["rush"], "weights": no_myth(m["rush"]["weights"])}
+    return {
+        **table,
+        "price": k["price"],
+        "cards_per_pack": k["cards_per_pack"],
+        "rarity_weights": no_myth(table["rarity_weights"]),
+        "cards": cards,
+        # Mythiques gardées (mêmes compteurs) mais de poids 0 : jamais tirables, comme la liste vide côté Rust.
+        "mythics": table["mythics"] if k["mythics"] else [{**mc, "weight": 0} for mc in table["mythics"]],
+        "mechanics": m if table.get("mechanics") is not None else None,
+        "_kind_slots": k.get("slots"),
+        "_kind_mythics": k["mythics"],
+    }
+
+
+def kind_slot_weights(table: dict, weights: dict, rule: dict) -> dict:
+    """Poids d'un emplacement à règle d'un type de pack : ceux de la règle, ou ceux du pack tronqués
+    sous le plancher ; mythique à 0 si le type exclut les mythiques."""
+    w = gold_slot_weights(weights, rule)
+    return w if table.get("_kind_mythics", True) else {**w, "mythic": 0}
+
+
 def draw_pack_mech(table, minted, mythic_minted, acc, mode: str, burn=None, backed=None):
     """Tous les emplacements comme ``finalize_pack`` : gold pack (un emplacement par plancher),
     sinon ``cards_per_pack`` emplacements dont le dernier parmi les brûlables si la série a une
@@ -391,6 +438,7 @@ def draw_pack_mech(table, minted, mythic_minted, acc, mode: str, burn=None, back
     value = m.get("value")
     gold = m.get("gold") if mode == "gold" else None
     weights = mode_weights(table, mode)
+    rules = table.get("_kind_slots")
     n = len(gold["slots"]) if gold else table["cards_per_pack"]
     out, slots = [], []
     for slot in range(n):
@@ -398,6 +446,10 @@ def draw_pack_mech(table, minted, mythic_minted, acc, mode: str, burn=None, back
             gs = gold["slots"][slot]
             d = draw_slot_rule(table, minted, mythic_minted, acc, slot, gold_slot_weights(table["rarity_weights"], gs),
                                gs["floor"], gs["burnable"], backed, burn)
+        elif rules is not None:
+            rule = rules[slot]
+            d = draw_slot_rule(table, minted, mythic_minted, acc, slot, kind_slot_weights(table, weights, rule),
+                               rule["floor"], rule["burnable"], backed, burn)
         elif value and slot == n - 1:
             d = draw_slot_rule(table, minted, mythic_minted, acc, slot, weights, "common", True, backed, burn)
         else:
@@ -420,6 +472,8 @@ def slot_rules(table: dict, mode: str) -> list:
         return [(gold_slot_weights(table["rarity_weights"], s), s["floor"], s["burnable"], True) for s in gold["slots"]]
     w = mode_weights(table, mode)
     n = table["cards_per_pack"]
+    if table.get("_kind_slots") is not None:
+        return [(kind_slot_weights(table, w, s), s["floor"], s["burnable"], True) for s in table["_kind_slots"]]
     last = bool(m.get("value"))
     return [(w, "common", last and i == n - 1, last and i == n - 1) for i in range(n)]
 

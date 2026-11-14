@@ -120,7 +120,8 @@ impl Contract {
         let v = crate::mechanics::value_params(&s.table)?;
         let slots: Vec<(Rarity, bool)> =
             pack.draws.iter().enumerate().map(|(i, d)| (d.final_rarity, pv.mask & (1u16 << i) != 0)).collect();
-        draw::split_value(draw::value_total(s.table.price.0, pv.bps), &slots, &v.multipliers)[slot]
+        let price = draw::kind_price(&s.table, draw::pack_kind(&s.table, pack.kind));
+        draw::split_value(draw::value_total(price, pv.bps), &slots, &v.multipliers)[slot]
     }
 
     /// Métadonnées NEP-177 reconstruites depuis la table.

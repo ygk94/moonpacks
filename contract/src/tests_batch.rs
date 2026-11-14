@@ -70,6 +70,7 @@ fn big_table(n: usize) -> SeriesTable {
         })
         .collect();
     SeriesTable {
+        kinds: None,
         name: "Grosse série".into(),
         price: U128(NEAR / 10),
         cards_per_pack: 10,
@@ -102,7 +103,7 @@ fn load_batched(c: &mut Contract, t: &SeriesTable, lot: usize) -> u32 {
 fn buy_and_reveal(c: &mut Contract, series_id: u32, seed_byte: u8, height: u64) -> Vec<DrawRecord> {
     let dep = c.get_series(series_id).required_deposit.0;
     set(alice(), dep, height);
-    let pack_id = c.buy_pack(series_id).0 as u64;
+    let pack_id = c.buy_pack(series_id, None).0 as u64;
     for step in 1..=3u8 {
         set_seed(contract_id(), height + step as u64, [seed_byte.wrapping_add(step); 32]);
         c.reveal_step(pack_id, 0, step);

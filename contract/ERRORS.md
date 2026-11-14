@@ -37,6 +37,7 @@ arguments (`Failed to deserialize input from JSON`), `The contract is not initia
 | `E_PRICE_TOO_HIGH` | Prix trop élevé : {} yoctoNEAR au plus | Price too high: {} yoctoNEAR at most. | public | market.rs |
 | `E_AMOUNT_TOO_LARGE` | Montant trop élevé pour le calcul des redevances | Amount too large for the royalty computation. | public | nft.rs |
 | `E_UNKNOWN_PACK` | Pack inconnu | Unknown pack. | public | nft.rs, pack.rs |
+| `E_UNKNOWN_KIND` | Type de pack inconnu dans cette série | Unknown pack type in this series. | public | pack.rs, views.rs |
 | `E_UNKNOWN_SERIES` | Série inconnue | Unknown series. | public | lib.rs, pack.rs, series.rs |
 | `E_SERIES_NOT_OPEN` | Série non ouverte | This series is not open. | owner, oracle | mechanics.rs, series.rs |
 | `E_UNKNOWN_CARD` | Carte inconnue | Unknown card. | public | market.rs, nft.rs, redeem.rs |
@@ -97,6 +98,7 @@ arguments (`Failed to deserialize input from JSON`), `The contract is not initia
 | `E_BACKING_AMOUNT` | amount doit être > 0 | amount must be > 0. | owner, oracle | series.rs |
 | `E_PRICE` | Le prix doit être > 0 | The price must be > 0. | owner | series.rs |
 | `E_CARDS_PER_PACK` | cards_per_pack hors bornes | cards_per_pack out of bounds. | owner | series.rs |
+| `E_KINDS` | kinds : types de packs invalides (taille, nom, prix, cartes, règles, brûlable garantie) | Invalid pack types in the series (size, name, price, cards, slot rules or guaranteed burnable). | owner | mechanics.rs |
 | `E_TOO_MANY_MYTHICS` | Trop de mythiques | Too many mythics. | owner | series.rs |
 | `E_WEIGHTS_ZERO` | Poids de rareté nuls | Rarity weights are all zero. | owner | series.rs |
 | `E_WEIGHTS_ZERO` | {what} : poids nuls | {what}: weights are all zero. | owner | mechanics.rs |

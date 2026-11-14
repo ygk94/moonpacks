@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SeriesView } from "../near/types";
 import type { CatalogEntry } from "./catalog";
-import { cardsOf, PACK_TYPES, regularSeries, seriesFor } from "./packTypes";
+import { cardsOf, offerFor, PACK_TYPES, regularSeries, seriesFor } from "./packTypes";
 
 const e = (name: string, ticker: string, extra: Partial<CatalogEntry> = {}): CatalogEntry => ({
   no: "1", name, ticker, chain: null, state: "dead", address: null, coingecko: null, era: null, ...extra,
@@ -39,5 +39,19 @@ describe("themed packs", () => {
     expect(seriesFor(type("og-2"), [series("Memaster OG 2", 2)])).toBeDefined();
     expect(seriesFor(type("og-2"), [series("Memaster OG 2", 5)])).toBeUndefined();
     expect(regularSeries([series("Memaster Entry"), series("Moonpacks Dog")]).map((s) => s.name)).toEqual(["Memaster Entry"]);
+  });
+
+  it("a themed pack can also be a pack type of an open series (shared counters)", () => {
+    const base = {
+      ...series("Memaster Entry"),
+      kinds: [{ kind: 0, name: "Dog", price: "7", required_deposit: "9", cards_per_pack: 8, card_count: 291, mythics: false, value: false, slots: null }],
+    } as SeriesView;
+    const o = offerFor(type("dog"), [base]);
+    expect(o?.series.name).toBe("Memaster Entry");
+    expect(o?.kind?.kind).toBe(0);
+    expect(o?.price).toBe("7");
+    expect(offerFor(type("cat"), [base])).toBeUndefined();
+    // Une série dédiée garde la priorité.
+    expect(offerFor(type("dog"), [base, series("Moonpacks Dog", 8)])?.kind).toBeNull();
   });
 });

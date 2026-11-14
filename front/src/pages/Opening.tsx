@@ -25,7 +25,9 @@ import { useWallet } from "../near/wallet";
 import { VerifyPanel } from "../verify/VerifyPanel";
 
 /** `count` : nombre de packs de 5 cartes achetés d'un coup (10 cartes = 2 packs, 20 = 4), ouverts ensemble. */
-export type OpeningRequest = { kind: "buy"; series: SeriesView; count?: number } | { kind: "replay"; packId: number };
+export type OpeningRequest =
+  | { kind: "buy"; series: SeriesView; count?: number; packKind?: number }
+  | { kind: "replay"; packId: number };
 
 type Phase = "signing" | "sealing" | "drawing" | "tearing" | "revealing" | "done" | "error" | "stuck" | "refunded";
 
@@ -89,7 +91,10 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
     const s = request.series;
     const gas = BigInt(s.min_gas) > BigInt(MAX_GAS) ? s.min_gas : MAX_GAS;
     const count = Math.max(1, request.count ?? 1);
-    const buy = { method: "buy_pack", args: { series_id: s.series_id }, opts: { deposit: s.required_deposit, gas } };
+    // Type de pack (pack thématique) : son dépôt, et `kind` dans l'appel ; sinon le pack de base.
+    const pk = request.packKind != null ? s.kinds?.find((k) => k.kind === request.packKind) : undefined;
+    const args = pk ? { series_id: s.series_id, kind: pk.kind } : { series_id: s.series_id };
+    const buy = { method: "buy_pack", args, opts: { deposit: pk ? pk.required_deposit : s.required_deposit, gas } };
     callMany(Array.from({ length: count }, () => buy))
       .then(({ outcomes, failed, firstError }) => {
         const ids: number[] = [];
@@ -212,7 +217,11 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
   const mode: PackMode = goldAny ? "gold" : (pack?.mode ?? "base");
   const gold = mode === "gold" && ["tearing", "revealing", "done"].includes(phase);
   const many = packIds.length > 1 || (request.kind === "buy" && (request.count ?? 1) > 1);
-  const totalCards = (request.kind === "buy" ? (request.count ?? 1) : 1) * (request.kind === "buy" ? request.series.cards_per_pack : 5);
+  const perPack =
+    request.kind === "buy"
+      ? (request.series.kinds?.find((k) => k.kind === request.packKind)?.cards_per_pack ?? request.series.cards_per_pack)
+      : 5;
+  const totalCards = (request.kind === "buy" ? (request.count ?? 1) : 1) * perPack;
 
   return (
     <div className={`opening${gold ? " opening--gold" : ""}`}>

@@ -31,6 +31,7 @@ export interface Table {
     rush?: { weights: Weights } | null;
     value?: { normal: [number, number][]; gold: [number, number][]; rush: [number, number][] } | null;
   } | null;
+  kinds?: { name: string; cards_per_pack: number; mythics: boolean; value: boolean; slots: { floor: R; weights: Weights | null; burnable: boolean }[] | null }[] | null;
 }
 
 export interface PackInput {
@@ -41,6 +42,8 @@ export interface PackInput {
   seeds: { seed: string }[];
   draws: { slot: number; rarity_roll: string; rolled_rarity: R; final_rarity: R; kind: "visible" | "mythic"; index: number }[];
   value?: { bps: number } | null;
+  /** Type de pack (pack thématique), `null` pour le pack de base. */
+  kind?: number | null;
 }
 
 export interface Check {
@@ -146,6 +149,16 @@ function slotRules(t: Table, mode: string): { weights: Weights; floor: R; rule: 
   return Array.from({ length: t.cards_per_pack }, (_, i) => ({ weights: w, floor: "common" as R, rule: last && i === t.cards_per_pack - 1 }));
 }
 
+/** Règles des emplacements d'un pack d'un type : celles du type, sinon la règle par défaut à sa taille. */
+function kindSlotRules(t: Table, kind: NonNullable<Table["kinds"]>[number], mode: string): { weights: Weights; floor: R; rule: boolean }[] {
+  const m = t.mechanics ?? {};
+  const noMyth = (w: Weights): Weights => (kind.mythics ? w : { ...w, mythic: 0 });
+  const w = noMyth(mode === "rush" && m.rush ? m.rush.weights : t.rarity_weights);
+  if (kind.slots) return kind.slots.map((s) => ({ weights: noMyth(goldSlotWeights(w, s)), floor: s.floor, rule: true }));
+  const last = !!m.value && kind.value;
+  return Array.from({ length: kind.cards_per_pack }, (_, i) => ({ weights: w, floor: "common" as R, rule: last && i === kind.cards_per_pack - 1 }));
+}
+
 export async function verifyPack(table: Table, storedTableHash: string, pack: PackInput): Promise<Check[]> {
   const checks: Check[] = [];
   const computed = await tableHash(table);
@@ -164,7 +177,9 @@ export async function verifyPack(table: Table, storedTableHash: string, pack: Pa
   });
 
   const mode = pack.mode ?? "base";
-  const rules = slotRules(table, mode);
+  const kind = pack.kind != null ? table.kinds?.[pack.kind] : undefined;
+  if (pack.kind != null) checks.push({ label: `Themed pack: ${kind?.name ?? pack.kind}`, ok: !!kind });
+  const rules = kind ? kindSlotRules(table, kind, mode) : slotRules(table, mode);
   const rulesOk = rules.length === pack.draws.length;
   checks.push({ label: `Pack type “${mode}” has ${rules.length} slots`, ok: rulesOk });
 
@@ -187,7 +202,7 @@ export async function verifyPack(table: Table, storedTableHash: string, pack: Pa
   }
 
   const v = table.mechanics?.value;
-  if (v && pack.value) {
+  if (v && pack.value && (!kind || kind.value)) {
     const tiers = mode === "base" ? v.normal : v[mode];
     const sum = tiers.reduce((s, [, w]) => s + BigInt(w), 0n) || 1n;
     const r = (await roll(acc, 0, 3)) % sum;

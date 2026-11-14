@@ -34,6 +34,52 @@ export interface FullTable {
     resurrection?: { eligible: number[] } | null;
     value?: { normal: [number, number][]; gold: [number, number][]; rush: [number, number][]; multipliers: Weights } | null;
   } | null;
+  /** Types de packs (packs thématiques) de la série, tirés dans la même table (contract/src/types.rs, PackKind). */
+  kinds?: PackKindDef[] | null;
+  /** Vue d'un type de pack (`kindTable`) : règles par emplacement et mythiques autorisées. */
+  _kindSlots?: { floor: R; weights: Weights | null; burnable: boolean }[] | null;
+  _kindMythics?: boolean;
+}
+
+export interface PackKindDef {
+  name: string;
+  price: string;
+  cards_per_pack: number;
+  pool: number[];
+  mythics: boolean;
+  slots: { floor: R; weights: Weights | null; burnable: boolean }[] | null;
+  value: boolean;
+}
+
+/**
+ * Table vue par un pack d'un type, comme `draw::draw_pack_mech` avec `kind` (et `core.kind_table` du
+ * vérificateur Python) : poids à 0 hors du `pool`, mythiques de poids 0 si le type les exclut, taille et
+ * prix du type, ni gold pack ni pitié, valeur seulement si `value`. `kind` nul : la table telle quelle.
+ */
+export function kindTable(t: FullTable, kind: number | null | undefined): FullTable {
+  if (kind == null) return t;
+  const k = t.kinds?.[kind];
+  if (!k) throw new Error(`unknown pack type ${kind}`);
+  const pool = new Set(k.pool);
+  const noMyth = (w: Weights): Weights => (k.mythics ? w : { ...w, mythic: 0 });
+  const m = t.mechanics ? { ...t.mechanics } : null;
+  if (m) {
+    m.gold = null;
+    m.pity = null;
+    if (!k.value) m.value = null;
+    if (m.rush) m.rush = { ...m.rush, weights: noMyth(m.rush.weights) };
+  }
+  return {
+    ...t,
+    price: k.price,
+    cards_per_pack: k.cards_per_pack,
+    rarity_weights: noMyth(t.rarity_weights),
+    cards: t.cards.map((c, i) => (pool.size === 0 || pool.has(i) ? c : { ...c, weight: 0 })),
+    mythics: k.mythics ? t.mythics : t.mythics.map((mc) => ({ ...mc, weight: 0 })),
+    mechanics: m,
+    _kindSlots: k.slots,
+    _kindMythics: k.mythics,
+  };
 }
 
 export interface RushParams {
@@ -277,6 +323,7 @@ export async function drawPackMech(t: FullTable, minted: number[], mm: number[],
   const m = t.mechanics ?? {};
   const gold = mode === "gold" ? m.gold : null;
   const weights = mode === "rush" && m.rush ? m.rush.weights : t.rarity_weights;
+  const rules = t._kindSlots ?? null;
   const n = gold ? gold.slots.length : t.cards_per_pack;
   const out: Draw[] = [];
   for (let slot = 0; slot < n; slot++) {
@@ -284,6 +331,11 @@ export async function drawPackMech(t: FullTable, minted: number[], mm: number[],
     if (gold) {
       const gs = gold.slots[slot];
       d = await drawSlot(t, minted, mm, acc, slot, goldSlotWeights(t.rarity_weights, gs), { floor: gs.floor, burnableOnly: gs.burnable, ruled: true }, backed, burn);
+    } else if (rules) {
+      const rule = rules[slot];
+      let w = goldSlotWeights(weights, rule);
+      if (t._kindMythics === false) w = { ...w, mythic: 0 };
+      d = await drawSlot(t, minted, mm, acc, slot, w, { floor: rule.floor, burnableOnly: rule.burnable, ruled: true }, backed, burn);
     } else if (m.value && slot === n - 1) {
       d = await drawSlot(t, minted, mm, acc, slot, weights, { floor: "common", burnableOnly: true, ruled: true }, backed, burn);
     } else {
@@ -425,7 +477,8 @@ export async function replaySeries(t: FullTable, tableHashHex: string, events: C
         if (mech?.rush && !rushOf.has(Number(data.pack_id))) missing.push("purchase event");
         if (missing.length) checks.push({ label: `Complete history (missing: ${missing.join(", ")})`, ok: false });
         checks.push(...(await checkPack(t, tableHashHex, data, minted, mm, burn, [...backed], {
-          pityBefore: mech?.pity ? (pity.get(String(data.owner_id)) ?? 0) : null,
+          // Un type de pack n'a ni pitié ni gold pack.
+          pityBefore: mech?.pity && data.kind == null ? (pity.get(String(data.owner_id)) ?? 0) : null,
           rush: mech?.rush ? (rushOf.has(Number(data.pack_id)) ? rushOf.get(Number(data.pack_id))! : null) : null,
           burnSeq: mech?.burn ? burnSeq : null,
           resurrectSeq,
@@ -437,7 +490,7 @@ export async function replaySeries(t: FullTable, tableHashHex: string, events: C
         if (d.kind === "visible") minted[d.index] += 1;
         else mm[d.index] += 1;
       }
-      if (mech?.pity && Number.isInteger(em.pity?.after)) pity.set(String(data.owner_id), em.pity.after);
+      if (mech?.pity && data.kind == null && Number.isInteger(em.pity?.after)) pity.set(String(data.owner_id), em.pity.after);
       if (onlyPack != null && Number(data.pack_id) === onlyPack) break;
     }
   }
@@ -466,6 +519,12 @@ async function checkPack(
   }
   if (!add(`Random seeds (${(ev.seeds ?? []).length}) chain to the final draw state`, chain && hex(acc) === ev.acc)) return checks;
 
+  // Pack d'un type (pack thématique) : tirage dans la vue de la table propre à ce type.
+  if (ev.kind != null) {
+    const known = ev.kind >= 0 && ev.kind < (t.kinds?.length ?? 0);
+    if (!add(`Themed pack: ${known ? t.kinds![ev.kind].name : ev.kind}`, known)) return checks;
+    t = kindTable(t, ev.kind);
+  }
   const m = t.mechanics ?? null;
   const em = ev.mechanics ?? {};
   const rushFlag = !!em.rush;

@@ -6,7 +6,7 @@
 // accepté). Les filtres ci-dessous sont aussi ceux à utiliser pour construire la table de la série
 // (docs/front/packs-thematiques.md), afin que le site annonce exactement les cartes du pack.
 
-import type { SeriesView } from "../near/types";
+import type { PackKindView, SeriesView } from "../near/types";
 import type { CatalogEntry } from "./catalog";
 
 export type PackRowId = "families" | "chains" | "og";
@@ -64,6 +64,23 @@ const norm = (s: string) => s.toLowerCase().replace(/^(moonpacks|memaster)\s+/, 
 /** Série ouverte qui porte le nom du pack, s'il y en a une. */
 export function seriesFor(type: PackType, open: SeriesView[]): SeriesView | undefined {
   return open.find((s) => norm(s.name) === type.seriesName.toLowerCase() && s.cards_per_pack === type.cards);
+}
+
+/**
+ * Où acheter un pack thématique : une série ouverte à son nom (`seriesFor`), ou un type de pack du même nom
+ * dans une série ouverte (contrat à `kinds` : mêmes compteurs que la série, rien n'est réimprimé).
+ */
+export function offerFor(
+  type: PackType,
+  open: SeriesView[],
+): { series: SeriesView; kind: PackKindView | null; price: string; cards: number } | undefined {
+  const s = seriesFor(type, open);
+  if (s) return { series: s, kind: null, price: s.price, cards: s.cards_per_pack };
+  for (const series of open) {
+    const k = series.kinds?.find((k) => norm(k.name) === type.seriesName.toLowerCase() && k.cards_per_pack === type.cards);
+    if (k) return { series, kind: k, price: k.price, cards: k.cards_per_pack };
+  }
+  return undefined;
 }
 
 /** Séries ouvertes qui ne sont pas un pack thématique : les lignes Classic et Full Moon. */

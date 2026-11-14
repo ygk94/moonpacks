@@ -59,6 +59,7 @@ fn no_mech() -> Mechanics {
 
 fn base_table() -> SeriesTable {
     SeriesTable {
+        kinds: None,
         name: "Limites".into(),
         price: U128(NEAR / 10),
         cards_per_pack: 5,
@@ -88,7 +89,7 @@ fn buy_reveal(c: &mut Contract, n: u64) -> u64 {
     let dep = c.get_series(0).required_deposit.0;
     let h = 100 + n * 10;
     set(alice(), dep, h, [0; 32]);
-    let p = c.buy_pack(0).0 as u64;
+    let p = c.buy_pack(0, None).0 as u64;
     for step in 1..=3u8 {
         let mut seed = [0u8; 32];
         seed[..8].copy_from_slice(&n.to_le_bytes());
@@ -434,7 +435,7 @@ fn third_party_cannot_stall_a_progressing_pack() {
     c.open_series(id);
     let dep = c.get_series(0).required_deposit.0;
     set(alice(), dep, 100, [0; 32]);
-    let p = c.buy_pack(0).0 as u64;
+    let p = c.buy_pack(0, None).0 as u64;
     let carol = accounts(3);
     for step in 1..=3u8 {
         set(carol.clone(), 0, 100 + step as u64, [0; 32]);

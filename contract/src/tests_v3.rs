@@ -76,6 +76,7 @@ fn card(id: &str, rarity: Rarity, weight: u32, backing: bool) -> CardDef {
 fn table(value: bool) -> SeriesTable {
     let mult = RarityWeights { mythic: 0, legendary: 20, epic: 5, rare: 2, common: 1 };
     SeriesTable {
+        kinds: None,
         name: "V3".into(),
         price: U128(NEAR / 10),
         cards_per_pack: 5,
@@ -119,7 +120,7 @@ fn buy(c: &mut Contract, who: AccountId, height: u64) -> u64 {
     c.flush_all();
     let dep = c.get_series(0).required_deposit.0;
     set(who, dep, height);
-    c.buy_pack(0).0 as u64
+    c.buy_pack(0, None).0 as u64
 }
 
 fn reveal(c: &mut Contract, pack_id: u64, seed: u8, height: u64) {

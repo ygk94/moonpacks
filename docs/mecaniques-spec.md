@@ -495,3 +495,50 @@ Chaque `require!` et chaque panique commence par un code stable `E_…: `, suivi
 complète (texte français, proposition anglaise, qui peut la provoquer) : `contract/ERRORS.md`. Le test
 `tests_v3::every_error_has_a_stable_code_listed_in_errors_md` casse si un message n'a pas de code ou si la liste n'est
 pas à jour.
+
+## 13. Types de packs : packs thématiques dans la même série (v4, 14/11)
+
+Un pack thématique (Dog, Cat, Solana, OG…) n'est plus une série à part : c'est un **type de pack** de la série,
+`SeriesTable.kinds[i]` (`PackKind`). Il est tiré dans la **même table**, avec les **mêmes compteurs** `minted` et
+les mêmes plafonds que le pack de base. Un thème ne réimprime donc aucune carte : une carte tirée dans un pack Dog
+compte pour son plafond dans toute la série, et la rareté d'une carte du pack de base n'est pas diluée.
+
+**Champs** (dans cet ordre, hachés avec la table ; `kinds` est absent du JSON quand il vaut `None`, donc une table
+sans types garde ses octets et son hash) : `name` (1 à 32 octets, unique), `price` (yoctoNEAR), `cards_per_pack`
+(1 à 10), `pool` (index des cartes tirables, strictement croissants ; vide = toutes), `mythics` (les mythiques
+peuvent-elles sortir), `slots` (une règle par carte du pack, ou `null`), `value` (table de valeur de la série
+appliquée à ce type). Le champ s'appelle `pool` et non `cards` : le motif `"cards":[` doit rester unique dans
+l'en-tête (hachage par lots, `hash_stream`).
+
+**Achat.** `buy_pack(series_id, kind)` : `kind` absent = pack de base. Dépôt : prix du type + stockage du pire cas de
+la série (qui couvre le plus grand type). `pack_bought` et `pack_revealed` portent `kind` seulement pour un type :
+l'événement d'un pack de base garde exactement sa forme d'avant.
+
+**Tirage d'un pack d'un type** (`draw::draw_pack_mech` avec `kind`) :
+- cartes hors du `pool` à poids 0 (`draw::kind_cards`) ; mythiques exclues si `mythics` est faux (poids de rareté
+  mythique à 0 et aucune mythique tirable) ;
+- jamais de gold pack ni de pitié : le compteur de pitié du compte ne bouge pas ; table rush si le pack est rush ;
+- `cards_per_pack` du type ; la carte `i` suit `slots[i]` s'il y en a : plancher, poids propres (ou poids du pack
+  tronqués sous le plancher), tirage parmi les brûlables (`draw_slot_rule`, comme un emplacement de gold pack) ;
+  sans `slots`, règle par défaut, dont la brûlable garantie en dernier si `value` ;
+- valeur : table de la série, `⌊prix du type × V / 10⁴⌋`, seulement si `value` ; sinon une brûlable tirée garde
+  l'adossement de la table.
+
+**Exemples.** « 1 pack Dog sur 3 avec une brûlable » : `value: false`, sans `slots`, poids des brûlables du `pool`
+réglés pour 4,9 % par carte (8 cartes). « Au moins une rare » : `slots` avec un plancher `rare` sur une carte.
+
+**Validation.** En-tête : nombre de types (16 au plus), nom, prix, taille, `pool` croissant, une règle par carte,
+rien sous le plancher, table de valeur présente si `value`, aucun dépassement de u128. À l'ouverture : index du
+`pool` existants, une commune sans plafond et de poids non nul dans le `pool`, et une brûlable sans plafond si le type
+en garantit une. Erreurs `E_KINDS` (owner) et `E_UNKNOWN_KIND` (achat).
+
+**Vues.** `get_series` liste les types (`kinds`, avec dépôt requis et nombre de cartes) ; `get_pack` donne `kind` et
+le prix payé du type ; `get_kind_rates(series_id, kind, from_index, limit)` donne les taux d'un type (mêmes champs
+que `get_rates`, cartes du `pool` seulement, `kind.slots` pour les règles par carte).
+
+**Vérification.** Le vérificateur Python (`core.kind_table`) et celui du site (`kindTable`) tirent dans la vue du
+type ; leur concordance avec le Rust est testée sur 150 tables aléatoires (`verifier/tests/vectors/kind_vectors.json`,
+généré par `vectorgen`). Le hash se calcule toujours sur la table d'origine.
+
+**Déploiement.** `Pack` gagne un champ (`kind`) et `SeriesTable` aussi : l'état borsh change. Ce n'est pas une mise à
+jour en place de `app3` : il faut un nouveau contrat (v4).

@@ -13,7 +13,7 @@ import { PackArt } from "../components/PackArt";
 import { BLOCK_TIME_S } from "../config";
 import { loadCatalog } from "../lib/catalog";
 import { formatDuration, formatNearExact, formatUsd, yoctoToNumber } from "../lib/format";
-import { cardsOf, PACK_ROWS, PACK_TYPES, regularSeries, seriesFor, type PackRowId, type PackType } from "../lib/packTypes";
+import { cardsOf, offerFor, PACK_ROWS, PACK_TYPES, regularSeries, type PackRowId, type PackType } from "../lib/packTypes";
 import { seriesShareOdds } from "../lib/odds";
 import { nearUsd } from "../lib/prices";
 import { rushTarget } from "../lib/series";
@@ -39,7 +39,7 @@ export function shopRows(list: SeriesView[]): { series: SeriesView; title: strin
 
 const fmtRatio = (r: number) => (Number.isInteger(r) ? String(r) : r.toFixed(1).replace(/\.0$/, ""));
 
-export function Shop({ onBuy }: { onBuy: (s: SeriesView, count: number) => void }) {
+export function Shop({ onBuy }: { onBuy: (s: SeriesView, count: number, packKind?: number) => void }) {
   const { accountId } = useWallet();
   const series = useAsync(async () => {
     const n = await getSeriesCount();
@@ -163,10 +163,10 @@ function ThemedRow({
   catalog: Record<string, import("../lib/catalog").CatalogEntry> | null;
   usd: number | null;
   connected: boolean;
-  onBuy: (s: SeriesView, count: number) => void;
+  onBuy: (s: SeriesView, count: number, packKind?: number) => void;
 }) {
   const types = useMemo(() => PACK_TYPES.filter((t) => t.row === row.id), [row.id]);
-  const live = types.map((t) => seriesFor(t, open));
+  const live = types.map((t) => offerFor(t, open));
   // Calculé une fois par catalogue : la mosaïque du pack ne doit pas se redessiner à chaque rendu.
   const pools = useMemo(() => (catalog ? types.map((t) => cardsOf(t, catalog)) : null), [catalog, types]);
   return (
@@ -183,11 +183,11 @@ function ThemedRow({
           <ThemedOffer
             key={t.id}
             type={t}
-            series={live[i]}
+            offer={live[i]}
             pool={pools ? pools[i] : null}
             usd={usd}
             connected={connected}
-            onBuy={(s) => onBuy(s, 1)}
+            onBuy={(o) => onBuy(o.series, 1, o.kind?.kind)}
           />
         ))}
       </div>
@@ -197,22 +197,22 @@ function ThemedRow({
 
 function ThemedOffer({
   type,
-  series,
+  offer,
   pool,
   usd,
   connected,
   onBuy,
 }: {
   type: PackType;
-  series: SeriesView | undefined;
+  offer: ReturnType<typeof offerFor>;
   pool: string[] | null;
   usd: number | null;
   connected: boolean;
-  onBuy: (s: SeriesView) => void;
+  onBuy: (o: NonNullable<ReturnType<typeof offerFor>>) => void;
 }) {
   const unit = type.row === "families" ? `${type.title.split(" ")[0].toLowerCase()} cards` : "cards";
   return (
-    <article className={`offer-card offer-card--themed${series ? "" : " offer-card--soon"}`}>
+    <article className={`offer-card offer-card--themed${offer ? "" : " offer-card--soon"}`}>
       <div className="pack-stack pack-stack--1">
         <PackArt
           seed={type.id.length * 97 + type.cards * 13}
@@ -229,19 +229,19 @@ function ThemedOffer({
           {type.cards} card{type.cards > 1 ? "s" : ""} per pack{pool ? ` · from ${pool.length} ${unit}` : ""}
         </small>
         {type.note && <small className="offer-card__perk">{type.note}</small>}
-        {series && (
+        {offer && (
           <span className="offer-card__price">
-            {formatNearExact(series.price)} NEAR
-            {usd != null && <small> ≈ {formatUsd(yoctoToNumber(series.price) * usd)}</small>}
+            {formatNearExact(offer.price)} NEAR
+            {usd != null && <small> ≈ {formatUsd(yoctoToNumber(offer.price) * usd)}</small>}
           </span>
         )}
       </div>
-      {!series ? (
+      {!offer ? (
         <button className="btn" disabled>
           Coming soon
         </button>
       ) : connected ? (
-        <button className="btn btn--primary" onClick={() => onBuy(series)}>
+        <button className="btn btn--primary" onClick={() => onBuy(offer)}>
           Open
         </button>
       ) : (

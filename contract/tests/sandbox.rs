@@ -156,6 +156,7 @@ fn mythic_secret(card_id: &str, sel: &[u8; 32], content: &MythicContent) -> Myth
 
 fn table(name: &str, price: u128, w: RarityWeights, cards: Vec<CardDef>, mythics: Vec<MythicCommitment>, royalty_to: &Account) -> SeriesTable {
     SeriesTable {
+        kinds: None,
         name: name.into(),
         price: U128(price),
         cards_per_pack: 5,

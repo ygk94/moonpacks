@@ -151,6 +151,7 @@ fn rand_table(rng: &mut Rng) -> SeriesTable {
         .map(|i| Royalty { account_id: format!("roy{i}.near").parse().unwrap(), bps: rng.below(2500) as u16 })
         .collect();
     SeriesTable {
+        kinds: None,
         name: rand_str(rng, 16),
         price: U128((rng.next() as u128) << 64 | rng.next() as u128),
         cards_per_pack: 1 + rng.below(10) as u8,
@@ -439,9 +440,9 @@ fn mech_vectors() {
         // Le même code que le dernier reçu du contrat (`finalize_pack`) : gold pack à planchers,
         // brûlable garantie, puis valeur du pack.
         let (slot_draws, slots) =
-            draw::draw_pack_mech(&table, mode, &cards, &mut minted, &mut mythic_minted, bv.as_ref(), &acc);
+            draw::draw_pack_mech(&table, mode, None, &cards, &mut minted, &mut mythic_minted, bv.as_ref(), &acc);
         let draws: Vec<Value> = slot_draws.iter().enumerate().map(|(i, d)| draw_json(d, i as u8)).collect();
-        let value = draw::pack_value(&table, mode, &acc, &slots).map(|v| {
+        let value = draw::pack_value(&table, mode, None, &acc, &slots).map(|v| {
             json!({
                 "roll": v.roll, "tier": v.tier, "bps": v.bps, "total": v.total.to_string(),
                 "amounts": v.amounts.iter().map(|a| a.map(|x| x.to_string())).collect::<Vec<_>>(),
@@ -535,6 +536,138 @@ fn mech_vectors() {
             "cases": cases,
             "splits": splits,
             "rushes": rushes,
+        }),
+    );
+}
+
+/// Vecteurs des types de packs (`SeriesTable::kinds`) : sérialisation de la table avec `kinds`, et
+/// tirage d'un pack d'un type avec `kind_cards` (cartes hors du `pool` à poids 0), poids et mythiques
+/// du type, règles par emplacement, valeur au prix du type. Même code que `finalize_pack`.
+#[test]
+fn kind_vectors() {
+    let mut rng = Rng(0x6b69_6e64_7370_6163);
+    let lower = [Rarity::Mythic, Rarity::Legendary, Rarity::Epic, Rarity::Rare, Rarity::Common];
+    let mut cases = Vec::new();
+    for case in 0..150 {
+        let mut table = rand_table(&mut rng);
+        let mech = Mechanics {
+            gold: None,
+            pity: None,
+            burn: rng.chance(1, 2).then(|| BurnParams {
+                floor_bps: rng.below(10_001) as u32,
+                prior_k: if rng.chance(1, 4) { 0 } else { rng.below(40) as u32 },
+            }),
+            rush: rng.chance(1, 2).then(|| rand_rush(&mut rng)),
+            resurrection: None,
+            value: rng.chance(2, 3).then(|| rand_value(&mut rng)),
+        };
+        table.price = U128(table.price.0 % 1_000_000_000_000_000_000_000_000_000_000);
+        let n_cards = table.cards.len() as u64;
+        let kinds: Vec<PackKind> = (0..1 + rng.below(3))
+            .map(|i| {
+                let size = 1 + rng.below(10) as u8;
+                let pool: Vec<u32> = if rng.chance(1, 4) { vec![] } else { (0..n_cards as u32).filter(|_| rng.chance(1, 2)).collect() };
+                let mythics = rng.chance(1, 2);
+                let slots = rng.chance(1, 2).then(|| {
+                    (0..size)
+                        .map(|_| {
+                            let floor = lower[1 + rng.below(4) as usize];
+                            let weights = rng.chance(1, 4).then(|| {
+                                let mut w = rand_weights(&mut rng);
+                                // Rien sous le plancher, et pas de mythique si le type les exclut.
+                                for r in lower {
+                                    if r.index() > floor.index() || (r == Rarity::Mythic && !mythics) {
+                                        match r {
+                                            Rarity::Mythic => w.mythic = 0,
+                                            Rarity::Legendary => w.legendary = 0,
+                                            Rarity::Epic => w.epic = 0,
+                                            Rarity::Rare => w.rare = 0,
+                                            Rarity::Common => w.common = 0,
+                                        }
+                                    }
+                                }
+                                w
+                            });
+                            GoldSlot { floor, weights, burnable: rng.chance(1, 4) }
+                        })
+                        .collect()
+                });
+                PackKind {
+                    name: format!("Kind {i}"),
+                    price: U128(1 + ((rng.next() as u128) << 16 | rng.below(65_536) as u128) % 1_000_000_000_000_000_000_000_000),
+                    cards_per_pack: size,
+                    pool,
+                    mythics,
+                    slots,
+                    value: mech.value.is_some() && rng.chance(1, 2),
+                }
+            })
+            .collect();
+        table.mechanics = Some(mech.clone());
+        table.kinds = Some(kinds.clone());
+        let table_json = serde_json::to_string(&table).unwrap();
+        let table_hash = sha(&[table_json.as_bytes()]);
+        let k = rng.below(kinds.len() as u64) as usize;
+        let kind = &kinds[k];
+        let acc = rng.bytes32();
+        let rush = mech.rush.is_some() && rng.chance(1, 3);
+        let mode = draw::pack_mode(false, rush);
+        let mut minted: Vec<u32> = table
+            .cards
+            .iter()
+            .map(|c| match c.cap {
+                Some(cap) if rng.chance(1, 3) => cap,
+                _ => rng.below(12) as u32,
+            })
+            .collect();
+        let burned: Vec<u32> = minted.iter().map(|m| rng.below(*m as u64 + 1) as u32).collect();
+        let cards: Vec<DrawCard> = table.cards.iter().map(DrawCard::from).collect();
+        let backed: Vec<bool> = cards.iter().map(|c| c.backed).collect();
+        let mut mythic_minted: Vec<u32> =
+            table.mythics.iter().map(|m| (m.cap as u64).saturating_sub(rng.below(3)) as u32).collect();
+        let (minted_before, mythic_before) = (minted.clone(), mythic_minted.clone());
+        let none: Vec<u32> = vec![];
+        let bv = mech.burn.as_ref().map(|b| draw::BurnView {
+            burned: &burned,
+            floor_bps: b.floor_bps,
+            prior_k: b.prior_k,
+            resurrectable: &none,
+        });
+        let kc = draw::kind_cards(&cards, Some(kind));
+        let (slot_draws, slots) =
+            draw::draw_pack_mech(&table, mode, Some(kind), &kc, &mut minted, &mut mythic_minted, bv.as_ref(), &acc);
+        let draws: Vec<Value> = slot_draws.iter().enumerate().map(|(i, d)| draw_json(d, i as u8)).collect();
+        let value = draw::pack_value(&table, mode, Some(kind), &acc, &slots).map(|v| {
+            json!({
+                "roll": v.roll, "tier": v.tier, "bps": v.bps, "total": v.total.to_string(),
+                "amounts": v.amounts.iter().map(|a| a.map(|x| x.to_string())).collect::<Vec<_>>(),
+            })
+        });
+        cases.push(json!({
+            "case": case,
+            "table": table,
+            "table_json": table_json,
+            "table_hash": hex::encode(table_hash),
+            "kind": k,
+            "acc": hex::encode(acc),
+            "rush": rush,
+            "mode": mode,
+            "minted": minted_before,
+            "mythic_minted": mythic_before,
+            "burned": burned,
+            "backed": backed,
+            "draws": draws,
+            "slots": slots.iter().map(|(r, b)| json!([r, b])).collect::<Vec<_>>(),
+            "value": value,
+            "minted_after": minted,
+            "mythic_minted_after": mythic_minted,
+        }));
+    }
+    write_json(
+        "kind_vectors.json",
+        &json!({
+            "source": "memaster::draw (contract/src/draw.rs) : kind_cards, kind_weights, draw_pack_mech avec un type de pack, pack_value au prix du type",
+            "cases": cases,
         }),
     );
 }
@@ -736,6 +869,7 @@ async fn sandbox_vectors() -> anyhow::Result<()> {
         backing: Some(Backing { asset_id: "nep141:zorb.tkn.near".into(), amount: U128(777) }),
     };
     let t0 = SeriesTable {
+        kinds: None,
         name: "Distribution".into(),
         price: U128(NEAR / 20),
         cards_per_pack: 5,
@@ -765,6 +899,7 @@ async fn sandbox_vectors() -> anyhow::Result<()> {
 
     // Série 1 : retombées en cascade (légendaire, épique, rare plafonnées très bas), 10 cartes par booster.
     let t1 = SeriesTable {
+        kinds: None,
         name: "Cascade".into(),
         price: U128(NEAR / 20),
         cards_per_pack: 10,
@@ -785,6 +920,7 @@ async fn sandbox_vectors() -> anyhow::Result<()> {
 
     // Série 2 : chaînes Unicode, échappements JSON, champs nuls ; deux boosters.
     let t2 = SeriesTable {
+        kinds: None,
         name: "Série \"spéciale\" \\ \n\t\u{1}\u{1f}\u{7f} é 🐸 \u{2028} </script>".into(),
         price: U128(NEAR / 20),
         cards_per_pack: 3,

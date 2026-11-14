@@ -136,6 +136,7 @@ mod tests {
 
     fn header() -> SeriesTable {
         SeriesTable {
+            kinds: None,
             // Nom piégé : contient le motif, échappé par serde.
             name: "x\"cards\":[y".into(),
             price: U128(7),

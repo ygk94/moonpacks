@@ -22,10 +22,11 @@
 //!   normal est tiré parmi les brûlables (`draw_slot_rule` avec `burnable_only`).
 
 use crate::types::{
-    CardKind, DrawCard, GoldSlot, MythicCommitment, PackMode, PityParams, Rarity, RarityWeights, RushParams,
+    CardKind, DrawCard, GoldSlot, MythicCommitment, PackKind, PackMode, PityParams, Rarity, RarityWeights, RushParams,
     RushState, SeriesTable, ValueParams, ValueTier,
 };
 use near_sdk::env;
+use std::borrow::Cow;
 
 /// Tags de `roll` : rareté et carte (par emplacement), gold pack et valeur (emplacement 0).
 pub const TAG_RARITY: u8 = 0;
@@ -554,15 +555,59 @@ pub fn draw_slot_rule(
     SlotDraw { rarity_roll, rolled_rarity: rolled, final_rarity, card_roll, kind, index }
 }
 
+// ------------------------------------------------------------------ types de packs
+
+/// Type de pack d'un pack (`None` : pack de base, ou index hors de la table).
+pub fn pack_kind(t: &SeriesTable, kind: Option<u32>) -> Option<&PackKind> {
+    kind.and_then(|k| t.kinds.as_ref()?.get(k as usize))
+}
+
+/// Prix d'un pack : celui de son type, sinon celui de la série.
+pub fn kind_price(t: &SeriesTable, kind: Option<&PackKind>) -> u128 {
+    kind.map(|k| k.price.0).unwrap_or(t.price.0)
+}
+
+/// Cartes tirables d'un pack : poids à 0 hors de `kind.pool`. Les compteurs `minted` restent ceux
+/// de la série : un type de pack ne réimprime rien, il puise dans les mêmes plafonds.
+pub fn kind_cards<'a>(cards: &'a [DrawCard], kind: Option<&PackKind>) -> Cow<'a, [DrawCard]> {
+    match kind {
+        Some(k) if !k.pool.is_empty() => {
+            let mut v: Vec<DrawCard> = cards.iter().map(|c| DrawCard { weight: 0, ..c.clone() }).collect();
+            for &i in &k.pool {
+                if let (Some(dst), Some(src)) = (v.get_mut(i as usize), cards.get(i as usize)) {
+                    dst.weight = src.weight;
+                }
+            }
+            Cow::Owned(v)
+        }
+        _ => Cow::Borrowed(cards),
+    }
+}
+
+/// Poids de rareté d'un pack de ce type : mythique à 0 si le type exclut les mythiques.
+pub fn kind_weights(w: &RarityWeights, kind: Option<&PackKind>) -> RarityWeights {
+    let mut w = w.clone();
+    if kind.is_some_and(|k| !k.mythics) {
+        w.mythic = 0;
+    }
+    w
+}
+
 /// Tous les emplacements d'un pack, comme le dernier reçu : gold pack (un emplacement par entrée de
 /// `mechanics.gold`, avec son plancher), sinon `cards_per_pack` emplacements avec la table de taux du
 /// pack, le dernier tiré parmi les brûlables si la série a une table de valeur. `minted` et
 /// `mythic_minted` sont incrémentés entre deux emplacements. Renvoie les tirages et, par emplacement,
 /// (rareté finale, brûlable au tirage) pour la répartition de la valeur.
+///
+/// Pack d'un type (`kind`) : `cards` doit déjà être `kind_cards(…)` ; jamais de gold pack ;
+/// `kind.cards_per_pack` emplacements ; mythiques exclues si `!kind.mythics` ; la règle de
+/// l'emplacement `i` est `kind.slots[i]` (poids propres, ou poids du pack tronqués sous le plancher),
+/// sinon la règle par défaut, dont la brûlable garantie au dernier emplacement si `kind.value`.
 #[allow(clippy::too_many_arguments)]
 pub fn draw_pack_mech(
     t: &SeriesTable,
     mode: PackMode,
+    kind: Option<&PackKind>,
     cards: &[DrawCard],
     minted: &mut [u32],
     mythic_minted: &mut [u32],
@@ -570,10 +615,12 @@ pub fn draw_pack_mech(
     acc: &[u8; 32],
 ) -> (Vec<SlotDraw>, Vec<(Rarity, bool)>) {
     let m = t.mechanics.as_ref();
-    let gold = m.and_then(|m| m.gold.as_ref()).filter(|_| mode == PackMode::Gold);
-    let value = m.is_some_and(|m| m.value.is_some());
-    let weights = mode_weights(t, mode);
-    let n = gold.map(|g| g.slots.len() as u8).unwrap_or(t.cards_per_pack);
+    let gold = m.and_then(|m| m.gold.as_ref()).filter(|_| mode == PackMode::Gold && kind.is_none());
+    let value = m.is_some_and(|m| m.value.is_some()) && kind.is_none_or(|k| k.value);
+    let weights = kind_weights(mode_weights(t, mode), kind);
+    let mythics: &[MythicCommitment] = if kind.is_some_and(|k| !k.mythics) { &[] } else { &t.mythics };
+    let rules = kind.and_then(|k| k.slots.as_ref());
+    let n = gold.map(|g| g.slots.len() as u8).unwrap_or(kind.map_or(t.cards_per_pack, |k| k.cards_per_pack));
     let mut draws = Vec::with_capacity(n as usize);
     let mut slots = Vec::with_capacity(n as usize);
     for slot in 0..n {
@@ -581,10 +628,13 @@ pub fn draw_pack_mech(
             let gs = &g.slots[slot as usize];
             let w = gold_slot_weights(&t.rarity_weights, gs);
             draw_slot_rule(&w, gs.floor, gs.burnable, cards, &t.mythics, minted, mythic_minted, bv, acc, slot)
-        } else if value && slot + 1 == n {
-            draw_slot_rule(weights, Rarity::Common, true, cards, &t.mythics, minted, mythic_minted, bv, acc, slot)
+        } else if let Some(rule) = rules.and_then(|r| r.get(slot as usize)) {
+            let w = kind_weights(&gold_slot_weights(&weights, rule), kind);
+            draw_slot_rule(&w, rule.floor, rule.burnable, cards, mythics, minted, mythic_minted, bv, acc, slot)
+        } else if value && rules.is_none() && slot + 1 == n {
+            draw_slot_rule(&weights, Rarity::Common, true, cards, mythics, minted, mythic_minted, bv, acc, slot)
         } else {
-            draw_slot_mech(weights, cards, &t.mythics, minted, mythic_minted, bv, acc, slot)
+            draw_slot_mech(&weights, cards, mythics, minted, mythic_minted, bv, acc, slot)
         };
         slots.push((d.final_rarity, d.kind == CardKind::Visible && cards[d.index as usize].backed));
         match d.kind {
@@ -609,10 +659,19 @@ pub struct PackValueDraw {
 }
 
 /// Palier, total et répartition d'un pack (`None` sans table de valeur).
-pub fn pack_value(t: &SeriesTable, mode: PackMode, acc: &[u8; 32], slots: &[(Rarity, bool)]) -> Option<PackValueDraw> {
+pub fn pack_value(
+    t: &SeriesTable,
+    mode: PackMode,
+    kind: Option<&PackKind>,
+    acc: &[u8; 32],
+    slots: &[(Rarity, bool)],
+) -> Option<PackValueDraw> {
     let v = t.mechanics.as_ref()?.value.as_ref()?;
+    if kind.is_some_and(|k| !k.value) {
+        return None;
+    }
     let (roll, tier, bps) = value_tier(value_table(v, mode), acc);
-    let total = value_total(t.price.0, bps);
+    let total = value_total(kind_price(t, kind), bps);
     Some(PackValueDraw { roll, tier, bps, total, amounts: split_value(total, slots, &v.multipliers) })
 }
 

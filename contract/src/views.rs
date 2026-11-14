@@ -27,6 +27,9 @@ pub struct SeriesView {
     /// Cartes brûlées par index (rareté pilotée par les burns ; vide sinon) et numéro d'ordre.
     pub burned: Vec<u32>,
     pub burn_seq: u64,
+    /// Types de packs de la série (packs thématiques) : index, nom, prix, dépôt requis, cartes par
+    /// pack, nombre de cartes tirables, mythiques, valeur, règles par emplacement. Vide sans types.
+    pub kinds: Vec<Value>,
 }
 
 use near_sdk::json_types::U64;
@@ -128,6 +131,22 @@ impl Contract {
             mechanics: s.table.mechanics.clone(),
             burned: self.series_burns.get(&series_id).map(|b| b.burned.clone()).unwrap_or_default(),
             burn_seq: self.series_burns.get(&series_id).map(|b| b.seq).unwrap_or(0),
+            kinds: s
+                .table
+                .kinds
+                .iter()
+                .flatten()
+                .enumerate()
+                .map(|(i, k)| {
+                    json!({
+                        "kind": i, "name": k.name, "price": k.price,
+                        "required_deposit": U128(k.price.0 + storage),
+                        "cards_per_pack": k.cards_per_pack,
+                        "card_count": if k.pool.is_empty() { s.draw_cards.len() } else { k.pool.len() },
+                        "mythics": k.mythics, "value": k.value, "slots": k.slots,
+                    })
+                })
+                .collect(),
         }
     }
 
@@ -196,6 +215,90 @@ impl Contract {
     /// liste que les cartes visibles d'index `from_index .. next_index` (les engagements
     /// mythiques, 20 au plus, sont toujours tous listés). Une table de 200 cartes au plus tient
     /// en une page. Page suivante : `from_index = next_index`, tant qu'il n'est pas `null`.
+    /// Taux d'un type de pack (`SeriesTable::kinds[kind]`) : même forme que `get_rates`, avec les
+    /// poids du type (mythique à 0 si exclues) et seulement ses cartes tirables, sans les champs
+    /// gold (jamais de gold pack pour un type) ; `kind` rappelle le type et ses règles par
+    /// emplacement (`slots`), qui changent les chances de l'emplacement concerné.
+    pub fn get_kind_rates(&self, series_id: u32, kind: u32, from_index: Option<u32>, limit: Option<u32>) -> Value {
+        let s = self.series_ref(series_id);
+        let t = &s.table;
+        let k = draw::pack_kind(t, Some(kind)).unwrap_or_else(|| env::panic_str("E_UNKNOWN_KIND: Type de pack inconnu dans cette série"));
+        let (from, to) = self.page(series_id, from_index, limit.unwrap_or(MAX_CARDS_PER_CALL as u32));
+        let page = self.cards_range(series_id, from, to);
+        let dc = draw::kind_cards(&s.draw_cards, Some(k));
+        let w = draw::kind_weights(&t.rarity_weights, Some(k));
+        let rush_w = t.mechanics.as_ref().and_then(|m| m.rush.as_ref()).map(|x| draw::kind_weights(&x.weights, Some(k)));
+        let total = w.total();
+        let in_kind = |i: usize| k.pool.is_empty() || k.pool.binary_search(&(i as u32)).is_ok();
+        let rarities: Vec<Value> = Rarity::ALL
+            .iter()
+            .map(|r| {
+                let rw = w.get(*r) as u64;
+                let (sum, cards): (u64, Vec<Value>) = if *r == Rarity::Mythic {
+                    let sum: u64 = if k.mythics { t.mythics.iter().map(|m| m.weight as u64).sum() } else { 0 };
+                    let cards = if !k.mythics {
+                        vec![]
+                    } else {
+                        t.mythics
+                            .iter()
+                            .enumerate()
+                            .map(|(j, m)| {
+                                json!({
+                                    "mythic_index": j, "commitment": m.commitment, "weight": m.weight,
+                                    "cap": m.cap, "minted": s.mythic_minted[j],
+                                    "ppm": ppm(rw, total, m.weight as u64, sum),
+                                    "ppb": scaled(rw, total, m.weight as u64, sum, 1_000_000_000),
+                                })
+                            })
+                            .collect()
+                    };
+                    (sum, cards)
+                } else {
+                    let sum: u64 = dc.iter().filter(|c| c.rarity == *r).map(|c| c.weight as u64).sum();
+                    let cards = page
+                        .iter()
+                        .enumerate()
+                        .filter(|(kk, c)| c.rarity == *r && in_kind(from as usize + kk))
+                        .map(|(kk, c)| {
+                            let i = from as usize + kk;
+                            json!({
+                                "index": i, "card_id": c.card_id, "weight": c.weight, "cap": c.cap,
+                                "minted": s.minted[i],
+                                "burnable": c.backing.is_some() || self.resurrected.contains_key(&(series_id, i as u32)),
+                                "ppm": ppm(rw, total, c.weight as u64, sum),
+                                "ppb": scaled(rw, total, c.weight as u64, sum, 1_000_000_000),
+                            })
+                        })
+                        .collect();
+                    (sum, cards)
+                };
+                json!({
+                    "rarity": r.as_str(),
+                    "rarity_weight": rw,
+                    "total_rarity_weight": total,
+                    "rarity_ppm": if total == 0 { 0 } else { rw * 1_000_000 / total },
+                    "rarity_ppb": if total == 0 { 0 } else { (rw as u128 * 1_000_000_000 / total as u128) as u64 },
+                    "rarity_card_weight": sum,
+                    "rush_rarity_ppm": rush_w.as_ref().map(|x| rarity_ppm(x, *r)),
+                    "rush_rarity_ppb": rush_w.as_ref().map(|x| rarity_scaled(x, *r, 1_000_000_000)),
+                    "gold_slot_ppm": Value::Null,
+                    "gold_slot_ppb": Value::Null,
+                    "cards": cards,
+                })
+            })
+            .collect();
+        let n = s.draw_cards.len() as u32;
+        json!({
+            "series_id": series_id,
+            "kind": { "kind": kind, "name": k.name, "cards_per_pack": k.cards_per_pack, "mythics": k.mythics, "value": k.value, "slots": k.slots },
+            "table_hash": s.table_hash.map(|h| hex32(&h)),
+            "card_count": n,
+            "from_index": from,
+            "next_index": if to < n { Some(to) } else { None },
+            "rarities": rarities,
+        })
+    }
+
     pub fn get_rates(&self, series_id: u32, from_index: Option<u32>, limit: Option<u32>) -> Value {
         let s = self.series_ref(series_id);
         let (from, to) = self.page(series_id, from_index, limit.unwrap_or(MAX_CARDS_PER_CALL as u32));
@@ -308,7 +411,8 @@ impl Contract {
             "series_id": p.series_id,
             "owner_id": p.owner_id,
             // Prix et stockage de la série (figés à l'ouverture) : plus stockés par pack.
-            "price_paid": s.table.price,
+            "price_paid": U128(draw::kind_price(&s.table, draw::pack_kind(&s.table, p.kind))),
+            "kind": p.kind,
             "storage_prepaid": U128(env::storage_byte_cost().as_yoctonear() * s.storage_per_pack as u128),
             // Stockage mesuré du pack (octets) ; au tirage, `storage_prepaid` moins ce montant est rendu.
             "storage_used": p.storage_used,
@@ -326,7 +430,7 @@ impl Contract {
             // Valeur tirée (série à table de valeur) : points de base du prix et part de chaque emplacement.
             "value": p.value.map(|v| json!({
                 "bps": v.bps,
-                "total": U128(draw::value_total(s.table.price.0, v.bps)),
+                "total": U128(draw::value_total(draw::kind_price(&s.table, draw::pack_kind(&s.table, p.kind)), v.bps)),
                 "amounts": (0..p.draws.len()).map(|i| self.slot_value(p, i).map(U128)).collect::<Vec<_>>(),
             })),
         }))

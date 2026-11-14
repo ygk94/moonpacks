@@ -16,6 +16,25 @@ Il n'y a **pas de remise** : le contrat n'a qu'un prix par série. Une remise de
 par carte plus bas (10 cartes au plus par pack, `MAX_CARDS_PER_PACK`) ; c'est à décider avec Hugo (risque « jeu
 d'argent »).
 
+## Contrat v4 : types de packs (recommandé, 14/11)
+
+Le contrat sait maintenant porter les packs thématiques **dans la même série** : `SeriesTable.kinds`
+(`docs/mecaniques-spec.md`, section 13). C'est la bonne façon de les créer : mêmes compteurs et mêmes plafonds que le
+pack de base, donc **aucune réimpression**, pas de dilution de la rareté, et chaque type a ses propres règles (taille,
+cartes, mythiques, plancher par carte, brûlable garantie ou non). Il suffit d'ajouter les types à la table de la série
+Classic (`kinds`, avec `pool` = index des cartes du filtre ci-dessous) et de déployer le contrat v4 sur un nouveau
+compte. Le site trouve tout seul un type de pack du même nom (`offerFor`), sans série dédiée.
+
+Exemples de règles :
+
+| Pack | `cards_per_pack` | `mythics` | `slots` | `value` |
+|---|---:|---|---|---|
+| Dog | 8 | non | aucun (1 pack sur 3 avec une brûlable par les poids) | non |
+| Cat | 5 | non | 5e carte : plancher `rare` | oui (dernière brûlable) |
+| Frog | 3 | non | 3e carte : plancher `rare` | non |
+| Solana | 5 | oui | 1re carte : plancher `epic` ; 5e : brûlable | oui |
+| OG 1, 2, 5 | 1, 2, 5 | non | aucun | non (collection) |
+
 ## Lignes « Coming soon » : séries à créer (Hugo, clés du contrat)
 
 Un pack devient achetable dès qu'une série **ouverte** porte le nom ci-dessous (« Moonpacks » ou « Memaster » devant

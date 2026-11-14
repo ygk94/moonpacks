@@ -42,6 +42,8 @@ mod tests_fuzz;
 mod tests_limits;
 #[cfg(test)]
 mod tests_v3;
+#[cfg(test)]
+mod tests_kinds;
 
 use types::*;
 
@@ -69,6 +71,9 @@ pub const CARDS_PER_CHUNK: u32 = 50;
 pub const MAX_MYTHICS_PER_SERIES: usize = 20;
 pub const MAX_MYTHIC_CAP: u32 = 100;
 pub const MAX_CARDS_PER_PACK: u8 = 10;
+/// Types de packs par série (`SeriesTable::kinds`), et longueur de leur nom.
+pub const MAX_PACK_KINDS: usize = 16;
+pub const MAX_KIND_NAME_LEN: usize = 32;
 pub const MAX_ROYALTIES: usize = 10;
 pub const MAX_ROYALTY_BPS: u32 = 5_000;
 pub const MAX_ID_LEN: usize = 64;

@@ -104,6 +104,85 @@ fn validate_gold(t: &SeriesTable, g: &GoldParams) {
     }
 }
 
+/// Types de packs : contrôles de l'en-tête (avant le chargement des cartes).
+pub(crate) fn validate_kinds_header(t: &SeriesTable) {
+    let Some(kinds) = &t.kinds else { return };
+    require!(!kinds.is_empty() && kinds.len() <= MAX_PACK_KINDS, "E_KINDS: kinds : 1 à 16 types de packs");
+    let mut names = std::collections::BTreeSet::new();
+    for (i, k) in kinds.iter().enumerate() {
+        let what = format!("kinds[{i}]");
+        require!(
+            !k.name.is_empty() && k.name.len() <= MAX_KIND_NAME_LEN,
+            format!("E_KINDS: {what}.name : 1 à {MAX_KIND_NAME_LEN} octets")
+        );
+        require!(names.insert(k.name.as_str()), format!("E_KINDS: {what}.name en double"));
+        require!(k.price.0 > 0, format!("E_KINDS: {what}.price doit être > 0"));
+        require!(
+            k.cards_per_pack >= 1 && k.cards_per_pack <= MAX_CARDS_PER_PACK,
+            format!("E_KINDS: {what}.cards_per_pack hors bornes")
+        );
+        require!(k.pool.windows(2).all(|w| w[0] < w[1]), format!("E_KINDS: {what}.pool : index strictement croissants"));
+        require!(k.pool.len() <= MAX_CARDS_PER_SERIES, format!("E_KINDS: {what}.pool : trop d'index"));
+        if k.value {
+            let v = t.mechanics.as_ref().and_then(|m| m.value.as_ref());
+            let v = v.unwrap_or_else(|| env::panic_str(&format!("E_KINDS: {what}.value sans table de valeur dans la série")));
+            // Aucun dépassement au tirage, comme pour le prix de la série.
+            let max_bps = v.normal.iter().chain(&v.rush).map(|x| x.0).max().unwrap_or(0) as u128;
+            let m = &v.multipliers;
+            let max_mult = [m.legendary, m.epic, m.rare, m.common].into_iter().max().unwrap_or(0) as u128;
+            require!(
+                k.price.0.checked_mul(max_bps).and_then(|x| (x / 10_000).checked_mul(max_mult)).is_some(),
+                format!("E_KINDS: {what}.price trop élevé pour la table de valeur (dépassement de u128)")
+            );
+        }
+        let base = crate::draw::kind_weights(&t.rarity_weights, Some(k));
+        check_weights(t, &base, &what);
+        if let Some(slots) = &k.slots {
+            require!(
+                slots.len() == k.cards_per_pack as usize,
+                format!("E_KINDS: {what}.slots : une règle par carte du pack ({} attendues)", k.cards_per_pack)
+            );
+            for (j, s) in slots.iter().enumerate() {
+                let w = crate::draw::kind_weights(&crate::draw::gold_slot_weights(&base, s), Some(k));
+                check_weights(t, &w, &format!("{what}.slots[{j}]"));
+                for r in Rarity::ALL {
+                    if r.index() > s.floor.index() {
+                        require!(w.get(r) == 0, format!("E_KINDS: {what}.slots[{j}] : poids sous le plancher {}", s.floor.as_str()));
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Types de packs : contrôles sur les cartes (à l'ouverture). Chaque type tire toujours une carte :
+/// une commune illimitée parmi ses cartes, et une brûlable illimitée s'il en garantit une.
+pub(crate) fn validate_kinds_cards(t: &SeriesTable, cards: &[DrawCard]) {
+    let Some(kinds) = &t.kinds else { return };
+    for (i, k) in kinds.iter().enumerate() {
+        let what = format!("kinds[{i}]");
+        require!(
+            k.pool.last().is_none_or(|&last| (last as usize) < cards.len()),
+            format!("E_KINDS: {what}.pool : index de carte inconnu")
+        );
+        let dc = crate::draw::kind_cards(cards, Some(k));
+        require!(
+            dc.iter().any(|c| c.rarity == Rarity::Common && c.cap.is_none() && c.weight > 0),
+            format!("E_KINDS: {what} : il faut une commune sans plafond et de poids non nul parmi ses cartes")
+        );
+        let burnable_slot = k.slots.as_ref().is_some_and(|s| s.iter().any(|r| r.burnable)) || (k.value && k.slots.is_none());
+        if burnable_slot {
+            require!(
+                dc.iter().any(|c| c.backed && c.cap.is_none() && c.weight > 0),
+                format!("E_KINDS: {what} : brûlable garantie sans carte adossée, sans plafond et de poids non nul parmi ses cartes")
+            );
+        }
+        if k.value {
+            require!(burnable_slot, format!("E_KINDS: {what}.value : il faut un emplacement parmi les brûlables"));
+        }
+    }
+}
+
 /// Une rareté est tirable si l'une des tables lui donne un poids.
 pub(crate) fn rarity_used(t: &SeriesTable, r: Rarity) -> bool {
     weight_tables(t).iter().any(|w| w.get(r) > 0)

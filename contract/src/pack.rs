@@ -22,15 +22,22 @@ impl Contract {
     /// Achète un booster. Dépôt ≥ prix + stockage du pire cas (`get_series(id).required_deposit`) ;
     /// gaz ≥ `get_series(id).min_gas`.
     /// L'excédent de dépôt est rendu ; le reste est acquis, sans annulation possible.
+    /// `kind` : type de pack de la série (`SeriesTable::kinds`, son prix) ; absent : pack de base.
     #[payable]
-    pub fn buy_pack(&mut self, series_id: u32) -> U128 {
+    pub fn buy_pack(&mut self, series_id: u32, kind: Option<u32>) -> U128 {
         let start = env::storage_usage();
         let buyer = env::predecessor_account_id();
         let min_gas = self.min_entry_gas();
         require!(env::prepaid_gas() >= min_gas, format!("E_GAS: Gaz insuffisant : {} requis", min_gas));
         let s = self.series_ref(series_id);
         require!(s.status == SeriesStatus::Open, "E_SERIES_NOT_ON_SALE: Série non ouverte à la vente");
-        let price = s.table.price.0;
+        if let Some(k) = kind {
+            require!(
+                s.table.kinds.as_ref().is_some_and(|ks| (k as usize) < ks.len()),
+                "E_UNKNOWN_KIND: Type de pack inconnu dans cette série"
+            );
+        }
+        let price = draw::kind_price(&s.table, draw::pack_kind(&s.table, kind));
         let storage = env::storage_byte_cost().as_yoctonear() * s.storage_per_pack as u128;
         let required = price + storage;
         let deposit = env::attached_deposit().as_yoctonear();
@@ -91,6 +98,7 @@ impl Contract {
             draws: Vec::new(),
             cards: Vec::new(),
             value: None,
+            kind,
             storage_used: 0,
         };
         self.packs.insert(pack_id, pack);
@@ -117,6 +125,10 @@ impl Contract {
         });
         if let Some(r) = rush_ev {
             ev["rush"] = r;
+        }
+        // Absent pour le pack de base : l'événement garde exactement sa forme d'avant les types de packs.
+        if let Some(k) = kind {
+            ev["kind"] = json!(k);
         }
         events::emit("pack_bought", ev);
         Self::refund(&buyer, deposit - required);
@@ -240,9 +252,9 @@ impl Contract {
         require!(pack.status != PackStatus::Refunded, "E_ALREADY_REFUNDED: Pack déjà remboursé");
         require!(pack.status == PackStatus::Stuck, "E_NOT_STUCK: Seul un pack bloqué (stuck) est remboursable");
         require!(pack.cards.is_empty(), "E_ALREADY_REVEALED: Tirage déjà écrit : remboursement interdit");
-        let (owner, series_id, storage_used) = (pack.owner_id.clone(), pack.series_id, pack.storage_used);
+        let (owner, series_id, storage_used, kind) = (pack.owner_id.clone(), pack.series_id, pack.storage_used, pack.kind);
         let s = self.series_ref(series_id);
-        let price = s.table.price.0;
+        let price = draw::kind_price(&s.table, draw::pack_kind(&s.table, kind));
         let storage_refund = cost * s.storage_per_pack.saturating_sub(storage_used as u64) as u128;
         let total = price + storage_refund;
         let escrow = price + cost * s.storage_per_pack as u128;
@@ -295,7 +307,11 @@ impl Contract {
         let owner = pack.owner_id.clone();
         let mut series = self.series.get(series_id).cloned().unwrap_or_else(|| env::panic_str("E_UNKNOWN_SERIES: Série inconnue"));
         let mech = series.table.mechanics.clone();
-        let (price, series_storage_per_pack) = (series.table.price.0, series.storage_per_pack);
+        // Type de pack (pack thématique) : son prix, ses cartes, ses règles ; ni gold pack ni pitié.
+        let kind_idx = pack.kind;
+        let kind = draw::pack_kind(&series.table, kind_idx).cloned();
+        let price = draw::kind_price(&series.table, kind.as_ref());
+        let series_storage_per_pack = series.storage_per_pack;
 
         // Table de taux du pack : pitié (même aléa `acc`, tag 2), rush figé à l'achat.
         let rush = pack.flags & FLAG_RUSH != 0;
@@ -307,7 +323,7 @@ impl Contract {
         if let Some(m) = &mech {
             let mut pity_gold = false;
             let mut pity_n = None;
-            if let Some(p) = &m.pity {
+            if let Some(p) = m.pity.as_ref().filter(|_| kind.is_none()) {
                 let nb = self.pity.get(&(owner.clone(), series_id)).copied().unwrap_or(0);
                 let (g, roll, p_ppb) = draw::pity_is_gold(p, nb, &pack.acc);
                 pity_gold = g;
@@ -355,10 +371,12 @@ impl Contract {
         });
         // Gold pack : un emplacement par plancher de la table gold. Pack normal : `cards_per_pack`
         // emplacements, le dernier tiré parmi les brûlables si la série a une table de valeur.
+        let kind_cards = draw::kind_cards(&series.draw_cards, kind.as_ref());
         let (slot_draws, burnable_slots) = draw::draw_pack_mech(
             &series.table,
             mode,
-            &series.draw_cards,
+            kind.as_ref(),
+            &kind_cards,
             &mut series.minted,
             &mut series.mythic_minted,
             bv.as_ref(),
@@ -408,7 +426,7 @@ impl Contract {
         // Valeur du pack : palier tiré dans la table du pack (tag 3), réparti entre les brûlables.
         let mut value_ev = Value::Null;
         let mut value_backing = 0u128;
-        let pack_value = draw::pack_value(&series.table, mode, &acc, &burnable_slots).map(|v| {
+        let pack_value = draw::pack_value(&series.table, mode, kind.as_ref(), &acc, &burnable_slots).map(|v| {
             value_backing = v.amounts.iter().flatten().sum();
             let mask = burnable_slots.iter().enumerate().fold(0u16, |m, (i, (_, b))| if *b { m | (1u16 << i) } else { m });
             value_ev = json!({
@@ -436,6 +454,9 @@ impl Contract {
             "acc": hex32(&acc),
             "draws": records,
         });
+        if let Some(k) = kind_idx {
+            ev["kind"] = json!(k);
+        }
         if mech.is_some() {
             // État figé qui a servi au tirage : table de taux, rush (figé à l'achat), pitié, burns.
             ev["mechanics"] = json!({

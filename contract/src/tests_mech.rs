@@ -80,6 +80,7 @@ fn w(m: u32, l: u32, e: u32, r: u32, c: u32) -> RarityWeights {
 
 fn table(mechanics: Option<Mechanics>) -> SeriesTable {
     SeriesTable {
+        kinds: None,
         name: "Mécaniques".into(),
         price: U128(NEAR / 10),
         cards_per_pack: 5,
@@ -124,7 +125,7 @@ fn contract_with(t: SeriesTable) -> Contract {
 fn buy_at(c: &mut Contract, buyer: AccountId, height: u64) -> u64 {
     let dep = c.get_series(0).required_deposit.0;
     set(buyer, dep, height);
-    c.buy_pack(0).0 as u64
+    c.buy_pack(0, None).0 as u64
 }
 
 fn reveal(c: &mut Contract, pack_id: u64, seed: u8, height: u64) {
@@ -1312,7 +1313,7 @@ fn storage_covers_longer_gold_packs_and_value() {
     // Le gold pack a bien 7 cartes (pitié absente : on force le mode or par le tirage pur).
     let cards: Vec<DrawCard> = c.series_ref(0).draw_cards.clone();
     let mut minted = vec![0; cards.len()];
-    let (d, slots) = draw::draw_pack_mech(&c.series_ref(0).table, PackMode::Gold, &cards, &mut minted, &mut [0], None, &[7; 32]);
+    let (d, slots) = draw::draw_pack_mech(&c.series_ref(0).table, PackMode::Gold, None, &cards, &mut minted, &mut [0], None, &[7; 32]);
     assert_eq!((d.len(), slots.len()), (7, 7));
     assert!(slots[1].1, "emplacement 2 brûlable");
     let _ = &mut c;

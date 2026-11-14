@@ -163,6 +163,42 @@ pub struct SeriesTable {
     /// octets, donc le hash et les tirages, d'avant leur introduction.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mechanics: Option<Mechanics>,
+    /// Types de packs de la série (packs thématiques, voir `PackKind`), en plus du pack de base.
+    /// **Absent du JSON quand `None`** : une table sans types de packs garde ses octets et son hash.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kinds: Option<Vec<PackKind>>,
+}
+
+/// Type de pack d'une série : un pack thématique (« Dog », « Solana », « OG »…) tiré dans la **même
+/// table** que le pack de base, donc avec les mêmes compteurs `minted` et les mêmes plafonds. Un
+/// thème ne réimprime rien : une carte tirée dans un pack Dog compte pour son plafond dans toute la
+/// série. Chaque type a son prix, son nombre de cartes, ses cartes tirables et, au besoin, une règle
+/// par emplacement (plancher de rareté, emplacement parmi les brûlables).
+///
+/// Tirage d'un pack de ce type : jamais de gold pack ni de pitié (le compteur de pitié n'avance pas) ;
+/// table rush si le pack est rush, sinon table de base ; poids mis à 0 hors de `pool` (et pour les
+/// mythiques si `mythics` est faux) ; `slots` remplace la règle par défaut de la série.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PackKind {
+    /// Nom affiché (1 à 32 caractères), unique dans la série.
+    pub name: String,
+    /// Prix d'un pack de ce type, en yoctoNEAR (hors stockage).
+    pub price: U128,
+    /// 1 à `MAX_CARDS_PER_PACK`.
+    pub cards_per_pack: u8,
+    /// Index des cartes visibles tirables, strictement croissants ; vide = toutes les cartes.
+    /// (Pas « cards » : le motif `"cards":[` doit rester unique dans l'en-tête, voir `hash_stream`.)
+    pub pool: Vec<u32>,
+    /// Les mythiques scellées peuvent-elles sortir dans ce pack ?
+    pub mythics: bool,
+    /// Une règle par emplacement (`cards_per_pack` entrées) : plancher, poids propres et tirage
+    /// parmi les brûlables, comme un emplacement de gold pack. `None` : règle par défaut (cotes de
+    /// la table, et la dernière carte parmi les brûlables si `value`).
+    pub slots: Option<Vec<GoldSlot>>,
+    /// Table de valeur de la série appliquée à ce pack (valeur ∝ prix de ce type). Faux : aucune
+    /// valeur tirée, une brûlable tirée garde l'adossement de la table.
+    pub value: bool,
 }
 
 /// Paramètres des mécaniques d'une série (voir `docs/mecaniques-spec.md`). Tous les champs sont
@@ -512,6 +548,8 @@ pub struct Pack {
     /// Valeur tirée (série à table de valeur) : les montants se recalculent depuis `bps`, le masque
     /// des brûlables et les raretés des tirages (`draw::split_value`), 7 o au lieu de 16 par carte.
     pub value: Option<PackValue>,
+    /// Type de pack (index dans `SeriesTable::kinds`), `None` pour le pack de base.
+    pub kind: Option<u32>,
     /// Stockage mesuré de ce pack, en octets, cumulé reçu par reçu (`buy_pack`, chaque
     /// `reveal_step`, tirage final). Le stockage prépayé non utilisé (`storage_per_pack` moins ce
     /// montant) est rendu à l'acheteur au tirage final, ou avec le prix par `refund_stuck_pack`.

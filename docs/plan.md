@@ -160,6 +160,10 @@ d'espérance ni de pourcentage affichés, pas de choix de chaîne au burn.
   ensemble), puis familles (Dog, Cat, Frog), chaînes (Solana, BNB Chain, Ethereum) et OG (1, 2 et 5 cartes) en
   « Coming soon ». Séries à créer par Hugo : `docs/front/packs-thematiques.md`.
 
+- [x] **3.10 Types de packs** (v4, 14/11) : packs thématiques dans la même série, mêmes compteurs et plafonds, prix,
+  taille, cartes, règles par carte et valeur par type (`docs/mecaniques-spec.md`, 13). Codé et testé (contrat,
+  vérificateur Python, vérificateur du site) ; **à déployer** sur un nouveau compte (l'état change).
+
 ## Prochaines actions proposées (13/11)
 
 1. Site en ligne (6.8), simulation affichée, mentions légales faites.

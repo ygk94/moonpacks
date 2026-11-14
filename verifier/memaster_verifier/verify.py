@@ -384,6 +384,15 @@ def verify_pack(
     acc = verify_acc(rep, ev, th)
     if acc is None:
         return rep
+    # Pack d'un type (pack thématique) : tirage dans la vue de la table propre à ce type.
+    if ev.get("kind") is not None:
+        if not rep.check(
+            0 <= int(ev["kind"]) < len(table.get("kinds") or []),
+            f"type de pack {ev['kind']} : {table['kinds'][int(ev['kind'])]['name'] if 0 <= int(ev['kind']) < len(table.get('kinds') or []) else '?'}",
+            f"type de pack {ev['kind']} absent de la table",
+        ):
+            return rep
+        table = core.kind_table(table, ev["kind"])
     mode, burn, backed, known = verify_mechanics(rep, ev, table, acc, mech)
     if not known:
         minted = None
@@ -568,7 +577,8 @@ class SeriesReplay:
         if self.mech:
             em = ev.get("mechanics") or {}
             mech = {}
-            if self.mech.get("pity"):
+            # Un type de pack n'a ni pitié ni gold pack : le compteur du compte ne bouge pas.
+            if self.mech.get("pity") and ev.get("kind") is None:
                 mech["pity_before"] = self.pity.get(ev["owner_id"], 0)
             if self.mech.get("rush"):
                 # Le drapeau rush est figé à l'achat : sans le `pack_bought` du booster, il n'est pas
@@ -601,7 +611,7 @@ class SeriesReplay:
             rep.errors.append(f"rejeu incomplet : {x}")
         core.apply_event_draws(ev, self.m, self.mm)
         em = ev.get("mechanics") or {}
-        if self.mech and self.mech.get("pity") and isinstance((em.get("pity") or {}).get("after"), int):
+        if self.mech and self.mech.get("pity") and ev.get("kind") is None and isinstance((em.get("pity") or {}).get("after"), int):
             self.pity[ev["owner_id"]] = em["pity"]["after"]
         return rep
 

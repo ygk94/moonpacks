@@ -241,6 +241,7 @@ fn random_table(r: &mut Rng) -> SeriesTable {
         None => (None, NEAR / 10),
     };
     let mut t = SeriesTable {
+        kinds: None,
         name: "Fuzz".into(),
         price: U128(price),
         cards_per_pack: r.range(1, MAX_CARDS_PER_PACK as u64) as u8,
@@ -354,8 +355,8 @@ fn random_case(r: &mut Rng, id: usize) -> Case {
     });
     let minted_before = minted.clone();
     let mythic_before = mythic_minted.clone();
-    let (draws, slots) = draw::draw_pack_mech(&t, mode, &cards, &mut minted, &mut mythic_minted, bv.as_ref(), &acc);
-    let value = draw::pack_value(&t, mode, &acc, &slots);
+    let (draws, slots) = draw::draw_pack_mech(&t, mode, None, &cards, &mut minted, &mut mythic_minted, bv.as_ref(), &acc);
+    let value = draw::pack_value(&t, mode, None, &acc, &slots);
 
     // Pitié : compteur au hasard, jusqu'à u32::MAX.
     let pity = m.as_ref().and_then(|m| m.pity.clone()).map(|p| {

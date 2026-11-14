@@ -202,6 +202,21 @@ def mechanics_json(m: dict) -> str:
     )
 
 
+def pack_kind_json(k: dict) -> str:
+    """`PackKind` (type de pack d'une série), dans l'ordre de `types.rs`."""
+    return _obj(
+        [
+            ("name", _str(k["name"])),
+            ("price", _u128(k["price"])),
+            ("cards_per_pack", _int(k["cards_per_pack"], 0, 1 << 8)),
+            ("pool", "[" + ",".join(_u32(i) for i in k["pool"]) + "]"),
+            ("mythics", _bool(k["mythics"])),
+            ("slots", _opt(k.get("slots"), lambda ss: _arr(ss, gold_slot_json))),
+            ("value", _bool(k["value"])),
+        ]
+    )
+
+
 def table_json(t: dict) -> str:
     """`SeriesTable`. `mechanics` vient en dernier et **n'apparaît pas** quand il vaut `None`
     (`skip_serializing_if`) : une table sans mécanique garde ses octets et son hash."""
@@ -216,6 +231,9 @@ def table_json(t: dict) -> str:
     ]
     if t.get("mechanics") is not None:
         pairs.append(("mechanics", mechanics_json(t["mechanics"])))
+    # Types de packs : après `mechanics`, absent quand `None` (table d'avant : mêmes octets, même hash).
+    if t.get("kinds") is not None:
+        pairs.append(("kinds", _arr(t["kinds"], pack_kind_json)))
     return _obj(pairs)
 
 

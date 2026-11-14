@@ -38,6 +38,8 @@ export const CODE_MESSAGES: Record<string, [fr: string, en: string][]> = {
     ["Montant trop élevé pour le calcul des redevances", "Amount too large for the royalty computation."],
   ],
   E_UNKNOWN_PACK: [["Pack inconnu", "Unknown pack."]],
+  E_UNKNOWN_KIND: [["Type de pack inconnu dans cette série", "Unknown pack type in this series."]],
+  E_KINDS: [["kinds : types de packs invalides (taille, nom, prix, cartes, règles, brûlable garantie)", "Invalid pack types in the series (size, name, price, cards, slot rules or guaranteed burnable)."]],
   E_UNKNOWN_SERIES: [["Série inconnue", "Unknown series."]],
   E_SERIES_NOT_OPEN: [["Série non ouverte", "This series is not open."]],
   E_UNKNOWN_CARD: [["Carte inconnue", "Unknown card."]],

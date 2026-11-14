@@ -211,6 +211,15 @@ paramètre de `new` ; `revoke_price_oracle` immédiat), méthode `set_resurrecte
 couverture de la table rush (≤ 80 %) est fait hors chaîne par `scripts/build_series.py` (moyenne de la table de valeur
 rush).
 
+### Types de packs (v4)
+
+Une série peut proposer, en plus du pack de base, des **types de packs** (`SeriesTable::kinds`, `PackKind`) : packs
+thématiques à leur prix, leur taille (1 à 10 cartes), leurs cartes (`pool`), avec ou sans mythiques, avec des règles
+par carte (plancher de rareté, carte parmi les brûlables) et avec ou sans table de valeur. Ils partagent les compteurs
+et les plafonds de la série : rien n'est réimprimé. Achat : `buy_pack(series_id, kind)`. Détail :
+`docs/mecaniques-spec.md`, section 13. Tests : `src/tests_kinds.rs` (18), concordance Rust / Python / TypeScript par
+`kind_vectors.json`.
+
 ### Marché intégré
 
 `list(token_id, price)` demande un dépôt de 0,005 NEAR, rendu au retrait ou à la vente, et un prix d'au plus 10⁹ NEAR

@@ -33,6 +33,21 @@ export interface SeriesView {
   min_gas: string;
   packs_sold: number;
   card_count: number;
+  /** Types de packs de la série (packs thématiques, contrat avec `kinds`). Absent sur app2 et app3. */
+  kinds?: PackKindView[];
+}
+
+/** Type de pack d'une série, tel que `get_series` le décrit. */
+export interface PackKindView {
+  kind: number;
+  name: string;
+  price: string;
+  required_deposit: string;
+  cards_per_pack: number;
+  card_count: number;
+  mythics: boolean;
+  value: boolean;
+  slots: { floor: Rarity; weights: Record<Rarity, number> | null; burnable: boolean }[] | null;
 }
 
 export interface CardDef {
@@ -70,6 +85,8 @@ export interface DrawRecord {
 
 export interface PackView {
   pack_id: number;
+  /** Type de pack (pack thématique), `null` pour le pack de base. */
+  kind?: number | null;
   series_id: number;
   owner_id: string;
   price_paid: string;

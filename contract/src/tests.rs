@@ -86,6 +86,7 @@ fn table() -> SeriesTable {
     let sel = hex_decode(SEL).unwrap();
     let (c, h) = crate::mythic::compute_commitments("secret", &sel, &mythic_content());
     SeriesTable {
+        kinds: None,
         name: "Serie 1".to_string(),
         price: U128(NEAR),
         cards_per_pack: 5,
@@ -124,7 +125,7 @@ fn required(c: &Contract) -> u128 {
 fn buy_and_reveal(c: &mut Contract, buyer: AccountId, seed_byte: u8) -> u64 {
     let dep = required(c);
     set(buyer, dep, 20);
-    let pack_id = c.buy_pack(0).0 as u64;
+    let pack_id = c.buy_pack(0, None).0 as u64;
     for step in 1..=3u8 {
         set_seed(contract_id(), 20 + step as u64, [seed_byte.wrapping_add(step); 32]);
         let attempt = 0;
@@ -195,7 +196,7 @@ fn paused_series_refuses_sales() {
     c.pause_series(0);
     let dep = required(&c);
     set(alice(), dep, 12);
-    c.buy_pack(0);
+    c.buy_pack(0, None);
 }
 
 // ----------------------------------------------------------------- achat
@@ -206,7 +207,7 @@ fn insufficient_deposit_is_rejected() {
     let mut c = setup();
     let dep = required(&c);
     set(alice(), dep - 1, 12);
-    c.buy_pack(0);
+    c.buy_pack(0, None);
 }
 
 #[test]
@@ -217,7 +218,7 @@ fn insufficient_gas_is_rejected() {
     let mut b = ctx(alice(), dep, 12);
     b.prepaid_gas(Gas::from_tgas(100));
     testing_env!(b.build());
-    c.buy_pack(0);
+    c.buy_pack(0, None);
 }
 
 #[test]
@@ -245,7 +246,7 @@ fn stale_or_out_of_order_steps_are_ignored() {
     let mut c = setup();
     let dep = required(&c);
     set(alice(), dep, 20);
-    let pack_id = c.buy_pack(0).0 as u64;
+    let pack_id = c.buy_pack(0, None).0 as u64;
     set_seed(contract_id(), 21, [1; 32]);
     c.reveal_step(pack_id, 0, 2); // hors ordre
     c.reveal_step(pack_id, 5, 1); // mauvaise tentative
@@ -259,7 +260,7 @@ fn retry_reveal_rules() {
     let mut c = setup();
     let dep = required(&c);
     set(alice(), dep, 20);
-    let pack_id = c.buy_pack(0).0 as u64;
+    let pack_id = c.buy_pack(0, None).0 as u64;
     set_seed(contract_id(), 21, [1; 32]);
     c.reveal_step(pack_id, 0, 1);
 
@@ -286,7 +287,7 @@ fn retry_before_delay_is_forbidden() {
     let mut c = setup();
     let dep = required(&c);
     set(alice(), dep, 20);
-    let pack_id = c.buy_pack(0).0 as u64;
+    let pack_id = c.buy_pack(0, None).0 as u64;
     set(bob(), 0, 60);
     c.retry_reveal(pack_id);
 }
@@ -402,6 +403,7 @@ fn mint_sealed(c: &mut Contract) -> String {
             }],
             cards: vec![],
             value: None,
+            kind: None,
             storage_used: 0,
         },
     );
@@ -645,7 +647,7 @@ fn pack_becomes_stuck_after_max_attempts() {
     let mut c = setup();
     let dep = required(&c);
     set(alice(), dep, 20);
-    let pack_id = c.buy_pack(0).0 as u64;
+    let pack_id = c.buy_pack(0, None).0 as u64;
     let mut h = 20;
     for _ in 1..MAX_ATTEMPTS {
         h += 200;
