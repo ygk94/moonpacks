@@ -111,6 +111,8 @@ Then point the web app at it with `VITE_CONTRACT_ID=app4.<your-account>.testnet`
 - Libraries: near-sdk and near-contract-standards (Rust), sha2; React, framer-motion, `@hot-labs/near-connect`,
   Vite, Vitest; Python standard library, NumPy and PyYAML for the simulation (see `sim/requirements.txt`).
 - AI coding assistants were used during development.
+- Other project by the same team at NEAR HACKATHON: [ONA](https://github.com/enzoblain/ONA), a private AI
+  assistant (Privacy & Private AI track). The two projects are independent and share no code.
 - Market data comes from public CoinGecko and NEAR Intents endpoints (snapshots in `docs/data/`). Card art is generated;
   no coin logos are used.
 
