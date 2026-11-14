@@ -9,9 +9,9 @@ from . import core
 from .canon import cards_json_bytes, table_json_bytes
 
 # Champs de `SeriesTable` dans l'ordre du hash (contract/src/types.rs, verrouillé par un test du contrat).
-# `mechanics` (dernier) n'apparaît que pour une série à mécaniques.
+# `mechanics` n'apparaît que pour une série à mécaniques, `kinds` (v4, dernier) que pour une série à types de packs.
 TABLE_FIELDS = ("name", "price", "cards_per_pack", "rarity_weights", "cards", "mythics", "royalties")
-OPTIONAL_FIELDS = ("mechanics",)
+OPTIONAL_FIELDS = ("mechanics", "kinds")
 # Événements utiles au rejeu d'une série à mécaniques.
 SERIES_EVENTS = ("pack_bought", "pack_revealed", "card_redeemed", "card_resurrected")
 
@@ -182,7 +182,8 @@ def table_from_pages(header_view: dict, pages: list[bytes]) -> tuple[dict, list[
     problems = []
     header = header_view["header"]
     keys = list(header)
-    if keys != list(TABLE_FIELDS) and keys != list(TABLE_FIELDS + OPTIONAL_FIELDS):
+    extra = keys[len(TABLE_FIELDS):]
+    if keys[: len(TABLE_FIELDS)] != list(TABLE_FIELDS) or extra != [f for f in OPTIONAL_FIELDS if f in extra]:
         problems.append(f"champs de l'en-tête inattendus : {keys}")
     if header.get("cards"):
         problems.append("l'en-tête contient des cartes")
@@ -195,8 +196,9 @@ def table_from_pages(header_view: dict, pages: list[bytes]) -> tuple[dict, list[
     if len(cards) != int(header_view["card_count"]):
         problems.append(f"{len(cards)} cartes lues, card_count = {header_view['card_count']}")
     table = {k: header.get(k) for k in TABLE_FIELDS}
-    if header.get("mechanics") is not None:
-        table["mechanics"] = header["mechanics"]
+    for f in OPTIONAL_FIELDS:
+        if header.get(f) is not None:
+            table[f] = header[f]
     table["cards"] = cards
     return table, problems
 

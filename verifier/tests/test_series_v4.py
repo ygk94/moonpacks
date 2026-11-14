@@ -8,6 +8,8 @@ import sys
 import unittest
 
 from memaster_verifier import core
+from memaster_verifier.canon import cards_json_bytes
+from memaster_verifier.verify import verify_table_pages
 from tests import fake_secrets
 
 CONTRACT = fake_secrets.CONTRACT
@@ -55,6 +57,14 @@ class TestSeriesV4(unittest.TestCase):
         self.assertEqual(self.classic["mythics"], self.moon["mythics"])
         for c in self.classic["cards"]:
             self.assertTrue(c["media"].endswith(f"/cards/{c['card_id']}.svg"))
+
+    def test_paged_read_keeps_the_kinds(self):
+        # Contrôle de deploy_testnet.sh avant open_series : en-tête + pages, comme get_series_header/get_series_cards.
+        t = self.classic
+        pages = [cards_json_bytes(t["cards"][i:i + 200]) for i in range(0, len(t["cards"]), 200)]
+        hv = {"header": dict(t, cards=[]), "card_count": len(t["cards"]), "status": "draft", "table_hash": None}
+        rep, _ = verify_table_pages(hv, pages, {"attendu": core.table_hash(t).hex()}, draft=True)
+        self.assertFalse(rep.errors, rep.errors)
 
     def _errors(self, mutate):
         t = copy.deepcopy(self.classic)

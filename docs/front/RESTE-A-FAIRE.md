@@ -4,14 +4,14 @@
 GitHub jusqu'à `956e125` ; les commits suivants (depuis `6540de8`, liste plus bas) ne sont pas encore poussés. Le front vise **`app3`** (contrat v3, deux
 séries).
 
-## À faire maintenant : déployer le contrat v4 (14/11)
+## Contrat v4 : déployé le 14/11 sur `app4.simpletea5483.testnet` (Enzo)
 
 Tout est prêt (tables, script, site) ; détail dans `docs/front/packs-thematiques.md`. Depuis `contract/`, avec les clés
 de `memaster-demo-j7xg7z.testnet` :
 
 ```bash
 ./scripts/deploy_v4.sh
-gh variable set CONTRACT_ID --body app4.memaster-demo-j7xg7z.testnet
+gh variable set CONTRACT_ID --body app4.simpletea5483.testnet
 gh workflow run ci.yml --ref main -f deploy=true
 ```
 

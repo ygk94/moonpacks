@@ -30,6 +30,8 @@
 #   SELS                 build_series.py --sels (sels existants, ex. scripts/secrets/serie-v2.json ; optionnel)
 #   MEDIA_BASE           build_series.py --media-base (ex. ipfs://<CID>/ ; optionnel)
 #   SKIP_BUILD=1         ne pas reconstruire les wasm
+#   KEYCHAIN             « legacy » (défaut, ~/.near-credentials) ou « system » (trousseau du système, clés
+#                        importées avec save-to-keychain) : où lire les clés et ranger celles des sous-comptes
 #   SKIP_CONTROL=1       ne pas créer la série de contrôle sans mécanique
 #   PREBUILT=1           SERIES_OUT contient déjà les arguments (ex. series-v4/classic, de build_v4.py) :
 #                        pas de build_series.py ; SERIES_PARAMS est ignoré
@@ -62,7 +64,11 @@ REVEAL_STEPS=${REVEAL_STEPS:-3}
 RETRY_DELAY_BLOCKS=${RETRY_DELAY_BLOCKS:-100}
 ORACLE_DELAY_BLOCKS=${ORACLE_DELAY_BLOCKS:-30}
 SERIES_PARAMS=${SERIES_PARAMS:-$HERE/serie-exemple.json}
-SIGN=(network-config testnet sign-with-legacy-keychain send)
+case "${KEYCHAIN:-legacy}" in
+  legacy) SIGN=(network-config testnet sign-with-legacy-keychain send); SAVE_KEY=save-to-legacy-keychain ;;
+  system) SIGN=(network-config testnet sign-with-keychain send); SAVE_KEY=save-to-keychain ;;
+  *) echo "KEYCHAIN doit valoir legacy ou system" >&2; exit 1 ;;
+esac
 
 log() { printf '\n== %s\n' "$*"; }
 
@@ -156,7 +162,7 @@ mk_sub() { # mk_sub <compte> <NEAR>
   [ "$st" = 1 ] || { echo "RPC injoignable : existence de $1 inconnue, arrêt" >&2; exit 1; }
   for attempt in 1 2 3; do
     log "Création de $1 ($2 NEAR), essai $attempt"
-    near account create-account fund-myself "$1" "$2 NEAR" autogenerate-new-keypair save-to-legacy-keychain \
+    near account create-account fund-myself "$1" "$2 NEAR" autogenerate-new-keypair "$SAVE_KEY" \
       sign-as "$ROOT_ID" "${SIGN[@]}" 2>&1 | grep -E "Transaction ID|created successfully|rror" || true
     sleep 3
     st=0
@@ -174,7 +180,7 @@ mk_sub() { # mk_sub <compte> <NEAR>
 mk_sub "$CONTRACT_ID" "$CONTRACT_NEAR"
 mk_sub "$REDEEMER_ID" "$MOCK_NEAR"
 mk_sub "$ORACLE_ID" "$MOCK_NEAR"
-for i in $(seq 1 "$BUYERS"); do mk_sub "buyer$i.$ROOT_ID" "$BUYER_NEAR"; done
+for ((i = 1; i <= BUYERS; i++)); do mk_sub "buyer$i.$ROOT_ID" "$BUYER_NEAR"; done
 
 # 3. Contrats
 deploy() { # deploy <compte> <wasm> <args new>

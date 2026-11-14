@@ -5,6 +5,24 @@ Trois déploiements, **testnet uniquement** (aucun mainnet, aucun fonds réel) :
 et la première version sur `app.memaster-demo-j7xg7z.testnet`. Les deux anciennes sont laissées en place, sans
 changement.
 
+## Version 4 (14/11) : `app4.simpletea5483.testnet` (site Moonpacks)
+
+Contrat v4 (types de packs, `SeriesTable.kinds`) déployé par Enzo sur son compte testnet `simpletea5483.testnet`
+(owner), avec `contract/scripts/deploy_v4.sh` (`ROOT_ID=simpletea5483.testnet KEYCHAIN=system`). Le site le lit via la
+variable de dépôt `CONTRACT_ID`.
+
+| Élément | Valeur |
+|---|---|
+| Contrat | [`app4.simpletea5483.testnet`](https://testnet.nearblocks.io/address/app4.simpletea5483.testnet) (11 NEAR) |
+| Redeemer / oracle factices | `redeemer4.simpletea5483.testnet`, `oracle4.simpletea5483.testnet` |
+| wasm (`cargo near build non-reproducible-wasm`) | sha256 `490249ca3678f831371d6f5dbf3467fc0738e0896bd3df42109d8c8fea522a87` |
+| Série 0 « Moonpacks Classic » + 9 types | hash `85b20c22bbb2562a97e24f6a1f46eac6604f56f547ed90081ee8bfaaaf4af8f4`, 0,0552 NEAR |
+| Série 1 « Moonpacks Full Moon » | hash `6508bc63f3b8ce321f5951b741cf51a11c4bdf44ef41203ee82294f37ac4eb21`, 0,1381 NEAR |
+
+Tables : `contract/series-v4/` (`build_v4.py`, depuis les séries de app3). Mêmes engagements de mythiques que app3 :
+leur révélation demande les préimages de Hugo (`scripts/secrets/serie-demo-*.json`). Comptes de test créés au passage :
+`buyer1` et `buyer2.simpletea5483.testnet` (3 NEAR chacun).
+
 ## Version 3 (12/11, nuit) : `app3.memaster-demo-j7xg7z.testnet`
 
 La v3 rend le stockage prépayé non utilisé au tirage et le stockage libéré au burn. Elle permet aussi de rembourser un

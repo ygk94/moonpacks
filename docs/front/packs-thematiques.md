@@ -34,7 +34,7 @@ Tout est prêt dans le dépôt, il ne reste que le déploiement (clés du compte
 
 ```bash
 cd contract && ./scripts/deploy_v4.sh
-gh variable set CONTRACT_ID --body app4.memaster-demo-j7xg7z.testnet
+gh variable set CONTRACT_ID --body app4.simpletea5483.testnet
 gh workflow run ci.yml --ref main -f deploy=true
 ```
 
