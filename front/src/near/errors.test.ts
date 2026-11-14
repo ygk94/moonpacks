@@ -1,24 +1,24 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CODE_MESSAGES, errorCode, humanError } from "./errors";
 import { failureOf } from "./events";
 
-// contract/ERRORS.md : une ligne par message, `| `E_CODE` | texte français | anglais | qui | fichiers |`.
+// contract/ERRORS.md: one row per message, `| `E_CODE` | description | who | files |`.
 const md = readFileSync(resolve(__dirname, "../../../contract/ERRORS.md"), "utf8");
 const rows = md
   .split("\n")
   .filter((l) => l.startsWith("| `E_"))
-  .map((l) => {
-    const cells = l
-      .split(/(?<!\\)\|/)
-      .slice(1, -1)
-      .map((c) => c.trim().replace(/\\\|/g, "|"));
-    return { code: cells[0].replace(/`/g, ""), fr: cells[1], en: cells[2] };
-  });
+  .map((l) => ({ code: l.split("|")[1].trim().replace(/`/g, "") }));
+// On-chain panic texts, read from the contract source: `"E_CODE: text"` (the text after the code is French).
+const src = readdirSync(resolve(__dirname, "../../../contract/src"))
+  .filter((f) => f.endsWith(".rs") && !f.startsWith("tests"))
+  .map((f) => readFileSync(resolve(__dirname, "../../../contract/src", f), "utf8"))
+  .join("\n");
+const messages = [...src.matchAll(/"(E_[A-Z0-9_]+): ((?:[^"\\]|\\.)*)"/g)].map((m) => ({ code: m[1], fr: m[2].replace(/\\"/g, '"') }));
 const documented = new Set(rows.map((r) => r.code));
 const panic = (text: string) => new Error(`Smart contract panicked: ${text}`);
-// Valeurs insérées : un nombre pour chaque `{…}` du texte français.
+// Inserted values: a number for each `{…}` of the message.
 const sample = (fr: string) => fr.replace(/\{[^}]*\}/g, "42");
 
 describe("contract error codes (contract/ERRORS.md)", () => {
@@ -38,14 +38,13 @@ describe("contract error codes (contract/ERRORS.md)", () => {
     expect(unknown, "codes in errors.ts that are not in ERRORS.md").toEqual([]);
   });
 
-  it("knows the French text of every documented message", () => {
-    const known = new Set(Object.entries(CODE_MESSAGES).flatMap(([c, v]) => v.map(([fr]) => `${c}|${fr}`)));
-    const missing = rows.filter((r) => !known.has(`${r.code}|${r.fr}`)).map((r) => `${r.code}: ${r.fr}`);
-    expect(missing).toEqual([]);
+  it("reads the panic messages of the contract source", () => {
+    expect(messages.length).toBeGreaterThan(100);
+    expect(messages.filter((m) => !documented.has(m.code))).toEqual([]);
   });
 
-  it("gives an English text for every documented message, without French or a raw panic", () => {
-    for (const r of rows) {
+  it("gives an English text for every contract message, without French or a raw panic", () => {
+    for (const r of messages) {
       const out = humanError(panic(`${r.code}: ${sample(r.fr)}`));
       expect(out, r.fr).not.toMatch(/[éèàçêô]|panicked|E_[A-Z]|\{/);
       expect(out.length, r.fr).toBeGreaterThan(5);
