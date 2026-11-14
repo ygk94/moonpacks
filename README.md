@@ -12,7 +12,7 @@ Built for **NEAR HACKATHON** (tracks: `nfts`, `memecoins`). Testnet only, never 
 
 ## For automated reviewers
 
-Prerequisites: Rust 1.99 (tested with 1.99.1) with the `wasm32-unknown-unknown` target, Node.js 24, Python 3.12
+Prerequisites: Rust 1.97 or later (tested with 1.97.1 and 1.99.1) with the `wasm32-unknown-unknown` target, Node.js 24, Python 3.12
 (Python 3.8 fails on type hints). No key, no account, no wallet and no Docker for anything in this section. Times were
 measured on a fresh clone on an Apple Silicon laptop on 14/11/2026.
 
@@ -22,7 +22,7 @@ measured on a fresh clone on an Apple Silicon laptop on 14/11/2026.
 | Deployed draw tables | 2 series open on testnet, hashes frozen | testnet RPC, read only | `table` command in [Verify the claims](#verify-the-claims) | about 3 s |
 | Pack verification (seed chain and every roll) | built in Python and in the web app | testnet RPC, read only | `pack` command, or **Verify this pack** in the app | seconds |
 | Python verifier vs the Rust draw code | 110 tests with vectors produced by the contract | none | `cd verifier && python3.12 -m unittest discover -s tests -t .` | about 10 s |
-| Web app | deployed on Vercel, 141 tests | testnet | `cd front && npm ci && npm test -- --run` | under 1 min |
+| Web app | deployed on Vercel, 141 tests | testnet | `cd front && npm ci && npm test` | under 1 min |
 | Card art generator | built | none | `cd art && python3.12 -m unittest discover -s tests` | about 3 s |
 | Token payout on burn | **simulated** (mock redeemer) | testnet | see [Limits](#limits) | |
 | Price oracle for resurrection | **mock**, reads no price | testnet | `contract/mock-oracle/` | |
@@ -39,8 +39,9 @@ measured on a fresh clone on an Apple Silicon laptop on 14/11/2026.
 | C6 | Contract logic | `cd contract && cargo test --lib --locked` | `test result: ok. 163 passed` | behaviour on a live network (integration tests: `cargo test --test sandbox`, needs near-sandbox) |
 | C7 | Full Moon burnable cards hold 2.5× the tokens of Classic ones, at 2.5× the price | compare `backing.amount` of a card and `price` in the two `table.json` files | e.g. Black Dragon 3.07e31 vs 7.68e31 units; 0.0552 vs 0.1381 NEAR | that a payout is real (it is simulated) |
 
-Testnet usage as of 14/11/2026 (`get_series`): 3 Classic packs sold, 0 Full Moon, no mythic drawn. Gold packs, pity,
-rush windows, burns and resurrections are covered by unit tests; they have not been demonstrated on testnet.
+Testnet usage as of 14/11/2026 (`get_series`): 3 Classic packs sold, 0 Full Moon, no mythic drawn. A burnable card has been
+burned on testnet (simulated payout through the mock redeemer). Gold packs, pity, rush windows and resurrections are
+covered by unit tests; they have not been demonstrated on testnet.
 
 ## The problem
 
@@ -122,8 +123,8 @@ wallet for end-to-end runs, loaded only in dev mode; it contains no key (the tes
 
 ## Run it locally
 
-Requirements: Rust 1.99 with `wasm32-unknown-unknown`, Node.js 24, Python 3.12. Versions are not pinned by a
-toolchain file; these are the ones tested.
+Requirements: Rust 1.97 or later with `wasm32-unknown-unknown`, Node.js 24, Python 3.12. Versions are not pinned by
+a toolchain file; Rust 1.97.1 and 1.99.1 were tested.
 
 ```bash
 # Web app against the deployed testnet contract
@@ -132,7 +133,7 @@ cd front && npm ci && npm run dev          # http://localhost:5173
 # Tests
 cd contract && cargo test --lib --locked   # contract unit tests
 cd verifier && python3.12 -m unittest discover -s tests -t .
-cd front && npm test -- --run
+cd front && npm test
 cd art && python3.12 -m unittest discover -s tests
 cd sim && pip install -r requirements.txt && python3.12 -m pytest -q tests
 ```
