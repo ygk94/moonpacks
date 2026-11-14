@@ -42,7 +42,7 @@ est accepté) et le bon nombre de cartes par pack. Rien d'autre à changer dans 
 
 | Pack | Nom de la série | Cartes par pack | Cartes de la table (filtre de `front/src/lib/packTypes.ts`) | Cartes publiques |
 |---|---|---:|---|---:|
-| Dog | `Moonpacks Dog` | **8** | nom ou ticker : doge, shib, inu, dog, bonk, floki, wif, puppy, corgi, shiba (hors chats) | 291 |
+| Dog | `Moonpacks Dog` | **8** | nom ou ticker : dog, shib, inu, bonk, floki, wif, puppy, corgi (hors chats) | 293 |
 | Cat | `Moonpacks Cat` | 5 | cat, kitty, kitten, popcat, mew, meow, neko, nyan | 100 |
 | Frog | `Moonpacks Frog` | 5 | pepe, frog, toad, ribbit, kek | 59 |
 | Solana | `Moonpacks Solana` | 5 | chaîne Solana | 199 |

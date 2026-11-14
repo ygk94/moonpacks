@@ -4,6 +4,7 @@ import { DemoBanner, Header } from "./components/Header";
 import { BRAND } from "./lib/brand";
 import { useRoute } from "./lib/router";
 import type { OpeningRequest } from "./pages/Opening";
+import { Home } from "./pages/Home";
 import { Shop } from "./pages/Shop";
 
 // Pages secondaires chargées à la demande : la boutique s'affiche plus vite.
@@ -38,7 +39,8 @@ export function App() {
   else if (path.startsWith("/market")) page = <Market />;
   else if (path.startsWith("/rates")) page = <Transparency />;
   else if (path.startsWith("/legal")) page = <Legal />;
-  else page = <Shop onBuy={(series, count, packKind) => setOpening({ kind: "buy", series, count, packKind })} />;
+  else if (path.startsWith("/shop")) page = <Shop onBuy={(series, count, packKind) => setOpening({ kind: "buy", series, count, packKind })} />;
+  else page = <Home onBuy={(series, count) => setOpening({ kind: "buy", series, count })} />;
 
   return (
     <div className="app">

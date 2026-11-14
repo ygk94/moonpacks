@@ -28,7 +28,7 @@ export interface PackType {
 const text = (e: CatalogEntry) => `${e.name} ${e.ticker}`.toLowerCase();
 const word = (re: RegExp) => (e: CatalogEntry) => re.test(text(e));
 
-export const DOG = /doge|shib|\binu\b|inu\b|\bdog|dog\b|bonk|floki|\bwif\b|puppy|corgi|pup\b|shiba/;
+export const DOG = /dog|shib|\binu\b|inu\b|bonk|floki|\bwif\b|puppy|corgi|pup\b/;
 export const CAT = /\bcat|cat\b|kitty|kitten|popcat|\bmew\b|meow|neko|\bnyan/;
 export const FROG = /pepe|frog|toad|ribbit|\bkek\b/;
 export const OG_ERA = "2013-2018";
@@ -49,7 +49,7 @@ export const PACK_TYPES: PackType[] = [
 export const PACK_ROWS: { id: PackRowId; title: string; lead: string }[] = [
   { id: "families", title: "Meme families", lead: "One family per pack: only dogs, only cats or only frogs." },
   { id: "chains", title: "Chain packs", lead: "Memecoins from a single chain." },
-  { id: "og", title: "OG packs", lead: "Only the memecoins of 2013 to 2018, the Doge era. Small packs." },
+  { id: "og", title: "OG packs", lead: "Only the memecoins of 2013 to 2018, the first wave. Small packs." },
 ];
 
 /** Identifiants des cartes du catalogue qui entrent dans un pack (mythiques jamais incluses : absentes du catalogue). */

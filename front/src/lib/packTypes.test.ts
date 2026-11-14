@@ -7,7 +7,7 @@ const e = (name: string, ticker: string, extra: Partial<CatalogEntry> = {}): Cat
   no: "1", name, ticker, chain: null, state: "dead", address: null, coingecko: null, era: null, ...extra,
 });
 const catalog: Record<string, CatalogEntry> = {
-  doge: e("Dogecoin", "DOGE", { era: "2013-2018" }),
+  woof: e("Woofcoin", "WOOF DOG", { era: "2013-2018" }),
   bonk: e("Bonk", "BONK", { chain: "Solana" }),
   mew: e("cat in a dogs world", "MEW", { chain: "Solana" }),
   popcat: e("Popcat", "POPCAT"),
@@ -19,7 +19,7 @@ const series = (name: string, cards = 5) => ({ series_id: 9, name, cards_per_pac
 
 describe("themed packs", () => {
   it("sorts the catalogue into families, a cat never in the dog pack", () => {
-    expect(cardsOf(type("dog"), catalog).sort()).toEqual(["bonk", "doge"]);
+    expect(cardsOf(type("dog"), catalog).sort()).toEqual(["bonk", "woof"]);
     expect(cardsOf(type("cat"), catalog).sort()).toEqual(["mew", "popcat"]);
     expect(cardsOf(type("frog"), catalog)).toEqual(["pepe"]);
   });
@@ -27,7 +27,7 @@ describe("themed packs", () => {
   it("chain and OG packs", () => {
     expect(cardsOf(type("solana"), catalog).sort()).toEqual(["bonk", "mew"]);
     expect(cardsOf(type("bnb"), catalog)).toEqual(["bnb"]);
-    expect(cardsOf(type("og-5"), catalog)).toEqual(["doge"]);
+    expect(cardsOf(type("og-5"), catalog)).toEqual(["woof"]);
     expect(PACK_TYPES.filter((t) => t.row === "og").map((t) => t.cards)).toEqual([1, 2, 5]);
   });
 

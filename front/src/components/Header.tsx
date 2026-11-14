@@ -38,7 +38,7 @@ export function Header() {
   const [open, setOpen] = useState(false);
   return (
     <header className="header">
-      <a className="header__logo" href="#/shop">
+      <a className="header__logo" href="#/">
         <span className="header__mark">🌙</span>
         <span>{BRAND.toUpperCase()}</span>
       </a>

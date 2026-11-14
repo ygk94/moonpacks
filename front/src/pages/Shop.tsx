@@ -53,15 +53,11 @@ export function Shop({ onBuy }: { onBuy: (s: SeriesView, count: number, packKind
   const catalog = useAsync(() => loadCatalog(), []);
 
   return (
-    <div className="page home">
-      <section className="home__hero">
-        <h1>
-          Rip a pack.
-          <br />
-          <span className="home__accent">Catch the moon.</span>
-        </h1>
-        <p className="home__lead">Memecoin cards from every chain. Pull a burnable card and burn it for the coin's tokens.</p>
-      </section>
+    <div className="page shop">
+      <header className="page-intro shop__intro">
+        <h1>Shop</h1>
+        <p>Every pack, from the classic booster to themed packs. Odds are one click away on each row.</p>
+      </header>
 
       {series.loading && !series.data && <div className="shop-row shop-row--loading" aria-busy />}
       {series.error != null && <p className="error">Could not load the packs. Please refresh.</p>}
@@ -124,17 +120,11 @@ export function Shop({ onBuy }: { onBuy: (s: SeriesView, count: number, packKind
             onBuy={onBuy}
           />
         ))}
-
-      <section className="steps-row" aria-label="How it works">
-        <Step n={1} title="Open" text="Cards drawn on-chain, revealed one by one." />
-        <Step n={2} title="Collect" text="Keep them, trade them on the market." />
-        <Step n={3} title="Burn" text="Burnable cards hold tokens of their memecoin." />
-      </section>
     </div>
   );
 }
 
-function Step({ n, title, text }: { n: number; title: string; text: string }) {
+export function Step({ n, title, text }: { n: number; title: string; text: string }) {
   return (
     <div className="step">
       <span className="step__n">{n}</span>
@@ -251,7 +241,7 @@ function ThemedOffer({
   );
 }
 
-function Offer({
+export function Offer({
   series,
   count,
   variant,
