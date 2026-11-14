@@ -16,26 +16,50 @@ Il n'y a **pas de remise** : le contrat n'a qu'un prix par série. Une remise de
 par carte plus bas (10 cartes au plus par pack, `MAX_CARDS_PER_PACK`) ; c'est à décider avec Hugo (risque « jeu
 d'argent »).
 
-## Contrat v4 : types de packs (recommandé, 14/11)
+## Contrat v4 : types de packs (prêt à déployer, 14/11)
 
-Le contrat sait maintenant porter les packs thématiques **dans la même série** : `SeriesTable.kinds`
-(`docs/mecaniques-spec.md`, section 13). C'est la bonne façon de les créer : mêmes compteurs et mêmes plafonds que le
-pack de base, donc **aucune réimpression**, pas de dilution de la rareté, et chaque type a ses propres règles (taille,
-cartes, mythiques, plancher par carte, brûlable garantie ou non). Il suffit d'ajouter les types à la table de la série
-Classic (`kinds`, avec `pool` = index des cartes du filtre ci-dessous) et de déployer le contrat v4 sur un nouveau
-compte. Le site trouve tout seul un type de pack du même nom (`offerFor`), sans série dédiée.
+Le contrat porte les packs thématiques **dans la même série** : `SeriesTable.kinds` (`docs/mecaniques-spec.md`,
+section 13). Mêmes compteurs et mêmes plafonds que le pack de base, donc **aucune réimpression** ni dilution de la
+rareté ; chaque type a ses règles (taille, cartes, mythiques, plancher par carte, brûlable garantie ou non). Le site
+trouve tout seul un type de pack du même nom et de la même taille (`offerFor`).
 
-Exemples de règles :
+Tout est prêt dans le dépôt, il ne reste que le déploiement (clés du compte owner, machine de Hugo) :
 
-| Pack | `cards_per_pack` | `mythics` | `slots` | `value` |
-|---|---:|---|---|---|
-| Dog | 8 | non | aucun (1 pack sur 3 avec une brûlable par les poids) | non |
-| Cat | 5 | non | 5e carte : plancher `rare` | oui (dernière brûlable) |
-| Frog | 3 | non | 3e carte : plancher `rare` | non |
-| Solana | 5 | oui | 1re carte : plancher `epic` ; 5e : brûlable | oui |
-| OG 1, 2, 5 | 1, 2, 5 | non | aucun | non (collection) |
+- `contract/scripts/build_v4.py` relit sur la chaîne les deux séries de `app3`, vérifie leur hash, et écrit
+  `contract/series-v4/classic` et `contract/series-v4/full-moon` (versionnés, sans secret). Mêmes cartes, mêmes
+  mythiques (mêmes engagements : les préimages de app3 les révèlent), noms « Moonpacks Classic » et « Moonpacks Full
+  Moon », visuels servis par le site ;
+- `contract/scripts/deploy_v4.sh` déploie le tout sur `app4` (avec `redeemer4`, `oracle4`) en une commande ;
+- le site lit le contrat de la variable de dépôt `CONTRACT_ID` (CI) ; vide, il reste sur `app3`.
 
-## Lignes « Coming soon » : séries à créer (Hugo, clés du contrat)
+```bash
+cd contract && ./scripts/deploy_v4.sh
+gh variable set CONTRACT_ID --body app4.memaster-demo-j7xg7z.testnet
+gh workflow run ci.yml --ref main -f deploy=true
+```
+
+Les 9 types de la série Classic (`contract/series-v4/classic/manifest.json`) :
+
+| Pack | Cartes | Prix (NEAR) | Cartes possibles | Mythiques | Règles par carte | Valeur (table) |
+|---|---:|---:|---:|---|---|---|
+| Dog | 8 | 0,088 | 282 | non | aucune ; 1 pack sur 3 avec une brûlable (poids) | non |
+| Cat | 5 | 0,066 | 98 | non | 5e : au moins `rare` | non |
+| Frog | 3 | 0,040 | 57 | non | 3e : au moins `rare` | non |
+| Solana | 5 | 0,083 | 170 | **oui** | 1re : au moins `epic` ; 5e : brûlable | oui |
+| BNB Chain | 10 | 0,110 | 214 | non | aucune | non |
+| Ethereum | 3 | 0,066 | 122 | non | 1re : au moins `epic` | non |
+| OG 1 / OG 2 / OG 5 | 1 / 2 / 5 | 0,011 / 0,022 / 0,055 | 94 | non | aucune | non (collection) |
+
+Prix : 0,011 NEAR par carte comme le Classic (0,0552 les 5), un peu plus quand le pack a un plancher ou une brûlable
+garantie. Cat et Ethereum n'ont pas de brûlable sans plafond dans leurs cartes : le contrat refuserait une brûlable
+garantie, donc pas de valeur, seulement un plancher. Les prix sont des propositions, faciles à changer dans
+`build_v4.py` avant le déploiement (le hash change, rien d'autre).
+
+**Effet du pack Dog sur le Classic.** Les 3 brûlables communes passent à un poids de 4 (au lieu de 1) dans la série
+Classic, pour le pack Dog. Dans le pack Classic de base, une commune est donc brûlable 1,1 % du temps au lieu de 0,3 %,
+sans changer les cotes par rareté ni la valeur moyenne (validée par `validate_series.py`). Full Moon ne change pas.
+
+## Autre voie : une série par pack (sans contrat v4)
 
 Un pack devient achetable dès qu'une série **ouverte** porte le nom ci-dessous (« Moonpacks » ou « Memaster » devant
 est accepté) et le bon nombre de cartes par pack. Rien d'autre à changer dans le site.
@@ -44,10 +68,10 @@ est accepté) et le bon nombre de cartes par pack. Rien d'autre à changer dans 
 |---|---|---:|---|---:|
 | Dog | `Moonpacks Dog` | **8** | nom ou ticker : dog, shib, inu, bonk, floki, wif, puppy, corgi (hors chats) | 293 |
 | Cat | `Moonpacks Cat` | 5 | cat, kitty, kitten, popcat, mew, meow, neko, nyan | 100 |
-| Frog | `Moonpacks Frog` | 5 | pepe, frog, toad, ribbit, kek | 59 |
+| Frog | `Moonpacks Frog` | 3 | pepe, frog, toad, ribbit, kek | 59 |
 | Solana | `Moonpacks Solana` | 5 | chaîne Solana | 199 |
-| BNB Chain | `Moonpacks BNB Chain` | 5 | chaîne BNB Chain | 236 |
-| Ethereum | `Moonpacks Ethereum` | 5 | chaîne Ethereum | 133 |
+| BNB Chain | `Moonpacks BNB Chain` | 10 | chaîne BNB Chain | 236 |
+| Ethereum | `Moonpacks Ethereum` | 3 | chaîne Ethereum | 133 |
 | OG single | `Moonpacks OG 1` | 1 | époque 2013-2018 | 123 |
 | OG duo | `Moonpacks OG 2` | 2 | époque 2013-2018 | 123 |
 | OG pack | `Moonpacks OG 5` | 5 | époque 2013-2018 | 123 |

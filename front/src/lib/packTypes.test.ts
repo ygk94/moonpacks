@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { SeriesView } from "../near/types";
 import type { CatalogEntry } from "./catalog";
@@ -53,5 +55,11 @@ describe("themed packs", () => {
     expect(offerFor(type("cat"), [base])).toBeUndefined();
     // Une série dédiée garde la priorité.
     expect(offerFor(type("dog"), [base, series("Moonpacks Dog", 8)])?.kind).toBeNull();
+  });
+
+  it("matches the pack types of the v4 Classic series, name and size (contract/series-v4)", () => {
+    const m = JSON.parse(readFileSync(resolve(__dirname, "../../../contract/series-v4/classic/manifest.json"), "utf8"));
+    const kinds = m.kinds.map((k: { name: string; cards_per_pack: number }) => `${k.name}/${k.cards_per_pack}`);
+    expect(kinds).toEqual(PACK_TYPES.map((t) => `${t.seriesName}/${t.cards}`));
   });
 });

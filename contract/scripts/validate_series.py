@@ -288,8 +288,8 @@ def validate_table(t: dict) -> Result:
         return res
     expected = ["name", "price", "cards_per_pack", "rarity_weights", "cards", "mythics", "royalties"]
     keys = list(t)
-    if keys[:7] != expected or keys[7:] not in ([], ["mechanics"]):
-        res.err(f"table : champs {', '.join(expected)} (puis mechanics) attendus, dans cet ordre (ordre haché)")
+    if keys[:7] != expected or keys[7:] not in ([], ["mechanics"], ["kinds"], ["mechanics", "kinds"]):
+        res.err(f"table : champs {', '.join(expected)} (puis mechanics, kinds) attendus, dans cet ordre (ordre haché)")
         return res
     _check_len(res, t["name"], MAX_TITLE_LEN, "name")
     price = _u128(t["price"])
@@ -383,7 +383,70 @@ def validate_table(t: dict) -> Result:
             res.err(f"resurrection.eligible : carte {i} ni épique ni légendaire")
         elif cards[i]["backing"] is not None:
             res.err(f"resurrection.eligible : carte {i} déjà adossée par la table")
+    _validate_kinds(res, t, cards)
     return res
+
+
+MAX_PACK_KINDS = 16
+MAX_KIND_NAME_LEN = 32
+KIND_KEYS = ["name", "price", "cards_per_pack", "pool", "mythics", "slots", "value"]
+
+
+def _validate_kinds(res, t, cards):
+    """Types de packs (contrat : mechanics::validate_kinds_header et validate_kinds_cards, erreurs E_KINDS)."""
+    kinds = t.get("kinds")
+    if kinds is None:
+        return
+    if not isinstance(kinds, list) or not 1 <= len(kinds) <= MAX_PACK_KINDS:
+        res.err("kinds : 1 à 16 types de packs")
+        return
+    names = set()
+    value = (t.get("mechanics") or {}).get("value")
+    for i, k in enumerate(kinds):
+        what = f"kinds[{i}]"
+        if not isinstance(k, dict) or list(k) != KIND_KEYS:
+            res.err(f"{what} : champs {', '.join(KIND_KEYS)} attendus, dans cet ordre")
+            continue
+        if not isinstance(k["name"], str) or not 1 <= len(k["name"].encode()) <= MAX_KIND_NAME_LEN:
+            res.err(f"{what}.name : 1 à {MAX_KIND_NAME_LEN} octets")
+        elif k["name"] in names:
+            res.err(f"{what}.name en double")
+        names.add(k["name"])
+        price = _u128(k["price"])
+        if not price:
+            res.err(f"{what}.price doit être > 0")
+        if not _is_uint(k["cards_per_pack"], 255) or not 1 <= k["cards_per_pack"] <= MAX_CARDS_PER_PACK:
+            res.err(f"{what}.cards_per_pack hors bornes")
+            continue
+        pool = k["pool"]
+        if any(not _is_uint(x, U32) for x in pool) or any(a >= b for a, b in zip(pool, pool[1:])):
+            res.err(f"{what}.pool : index strictement croissants")
+            continue
+        if pool and pool[-1] >= len(cards):
+            res.err(f"{what}.pool : index de carte inconnu")
+            continue
+        if k["value"] and not value:
+            res.err(f"{what}.value sans table de valeur dans la série")
+        kt = core.kind_table(t, i)
+        base = kt["rarity_weights"]
+        _check_weights(res, kt, base, what)
+        if k["slots"] is not None:
+            if len(k["slots"]) != k["cards_per_pack"]:
+                res.err(f"{what}.slots : une règle par carte du pack ({k['cards_per_pack']} attendues)")
+            for j, s in enumerate(k["slots"]):
+                w = core.kind_slot_weights(kt, base, s)
+                _check_weights(res, kt, w, f"{what}.slots[{j}]")
+                f = RARITIES.index(s["floor"])
+                if any(w[r] > 0 for r in RARITIES[f + 1:]):
+                    res.err(f"{what}.slots[{j}] : poids sous le plancher {s['floor']}")
+        kc = kt["cards"]
+        if not any(c["rarity"] == "common" and c["cap"] is None and c["weight"] > 0 for c in kc):
+            res.err(f"{what} : il faut une commune sans plafond et de poids non nul parmi ses cartes")
+        burnable_slot = (k["slots"] is not None and any(s["burnable"] for s in k["slots"])) or (k["value"] and k["slots"] is None)
+        if burnable_slot and not any(c["backing"] and c["cap"] is None and c["weight"] > 0 for c in kc):
+            res.err(f"{what} : brûlable garantie sans carte adossée, sans plafond et de poids non nul parmi ses cartes")
+        if k["value"] and not burnable_slot:
+            res.err(f"{what}.value : il faut un emplacement parmi les brûlables")
 
 
 # ------------------------------------------------------------------ poids, plafonds, valeur

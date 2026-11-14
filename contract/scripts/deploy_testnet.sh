@@ -31,6 +31,10 @@
 #   MEDIA_BASE           build_series.py --media-base (ex. ipfs://<CID>/ ; optionnel)
 #   SKIP_BUILD=1         ne pas reconstruire les wasm
 #   SKIP_CONTROL=1       ne pas créer la série de contrôle sans mécanique
+#   PREBUILT=1           SERIES_OUT contient déjà les arguments (ex. series-v4/classic, de build_v4.py) :
+#                        pas de build_series.py ; SERIES_PARAMS est ignoré
+#   SECRETS              préimages des mythiques pour validate_series.py (défaut scripts/secrets/<slug>.json
+#                        s'il existe ; sans fichier, la validation se fait sans contrôle des préimages)
 set -euo pipefail
 
 NETWORK=${NETWORK:-testnet}
@@ -205,8 +209,18 @@ fi
 
 # 5. Série à mécaniques n° SERIES_ID (par lots, dépôts du manifeste)
 SERIES_ID=${SERIES_ID:-0}
-SLUG=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['slug'])" "$SERIES_PARAMS")
-OUT=${SERIES_OUT:-$CONTRACT_DIR/scripts/out/$SLUG}
+if [ "${PREBUILT:-0}" = 1 ]; then
+  : "${SERIES_OUT:?SERIES_OUT requis avec PREBUILT=1}"
+  [ -f "$SERIES_OUT/manifest.json" ] || { echo "$SERIES_OUT/manifest.json absent" >&2; exit 1; }
+  OUT=$SERIES_OUT
+  SLUG=$(basename "$OUT")
+else
+  SLUG=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['slug'])" "$SERIES_PARAMS")
+  OUT=${SERIES_OUT:-$CONTRACT_DIR/scripts/out/$SLUG}
+fi
+SECRETS=${SECRETS:-$HERE/secrets/$SLUG.json}
+VALIDATE=(python3 "$HERE/validate_series.py" "$OUT")
+[ -f "$SECRETS" ] && VALIDATE+=(--secrets "$SECRETS")
 BUILD_ARGS=(--series-id "$SERIES_ID" --out "$OUT")
 [ -n "${TABLES_VALEUR:-}" ] && BUILD_ARGS+=(--tables-valeur "$TABLES_VALEUR")
 [ -n "${CATALOGUE:-}" ] && BUILD_ARGS+=(--catalogue "$CATALOGUE")
@@ -217,9 +231,13 @@ if [ "$NSER" -lt "$SERIES_ID" ]; then
   echo "Série $SERIES_ID demandée, mais seulement $NSER série(s) sur le contrat : charger d'abord les précédentes" >&2; exit 1
 fi
 if [ "$NSER" = "$SERIES_ID" ]; then
-  log "Série $SLUG (id $SERIES_ID) : build_series.py"
-  python3 "$HERE/build_series.py" "$SERIES_PARAMS" "${BUILD_ARGS[@]}"
-  python3 "$HERE/validate_series.py" "$OUT" --secrets "$HERE/secrets/$SLUG.json"
+  if [ "${PREBUILT:-0}" = 1 ]; then
+    log "Série $SLUG (id $SERIES_ID) : arguments déjà construits dans $OUT"
+  else
+    log "Série $SLUG (id $SERIES_ID) : build_series.py"
+    python3 "$HERE/build_series.py" "$SERIES_PARAMS" "${BUILD_ARGS[@]}"
+  fi
+  "${VALIDATE[@]}"
   for f in $(python3 -c "import json,sys; print(' '.join(json.load(open(sys.argv[1]))['calls']))" "$OUT/manifest.json"); do
     dep=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['deposits'][sys.argv[2]])" "$OUT/manifest.json" "$f")
     m=${f%%.*}
@@ -241,7 +259,7 @@ if [ "$(view "$CONTRACT_ID" get_series "{\"series_id\":$SERIES_ID}" | jget 'd["s
     exit 1
   fi
   # La table locale est revalidée juste avant l'ouverture (y compris à la reprise, sans rebuild).
-  python3 "$HERE/validate_series.py" "$OUT" --secrets "$HERE/secrets/$SLUG.json" \
+  "${VALIDATE[@]}" \
     || { echo "Table locale refusée par validate_series.py : pas d'ouverture" >&2; exit 1; }
   (cd "$CONTRACT_DIR/../verifier" && python3 -m memaster_verifier table --rpc "$RPC_URL" --contract "$CONTRACT_ID" \
     --series "$SERIES_ID" --draft --expected-hash "$EXPECTED_HASH") \

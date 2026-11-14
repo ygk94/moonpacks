@@ -37,10 +37,10 @@ export const PACK_TYPES: PackType[] = [
   // « cat in a dogs world » est un chat : un coin qui est aussi un chat va dans le pack Cat.
   { id: "dog", row: "families", title: "Dog pack", seriesName: "Dog", cards: 8, emoji: "🐕", note: "1 in 3 packs holds a burnable card", match: (e) => DOG.test(text(e)) && !CAT.test(text(e)) },
   { id: "cat", row: "families", title: "Cat pack", seriesName: "Cat", cards: 5, emoji: "🐈", match: word(CAT) },
-  { id: "frog", row: "families", title: "Frog pack", seriesName: "Frog", cards: 5, emoji: "🐸", match: word(FROG) },
+  { id: "frog", row: "families", title: "Frog pack", seriesName: "Frog", cards: 3, emoji: "🐸", match: word(FROG) },
   { id: "solana", row: "chains", title: "Solana pack", seriesName: "Solana", cards: 5, emoji: "◎", match: (e) => e.chain === "Solana" },
-  { id: "bnb", row: "chains", title: "BNB Chain pack", seriesName: "BNB Chain", cards: 5, emoji: "⬡", match: (e) => e.chain === "BNB Chain" },
-  { id: "ethereum", row: "chains", title: "Ethereum pack", seriesName: "Ethereum", cards: 5, emoji: "Ξ", match: (e) => e.chain === "Ethereum" },
+  { id: "bnb", row: "chains", title: "BNB Chain pack", seriesName: "BNB Chain", cards: 10, emoji: "⬡", match: (e) => e.chain === "BNB Chain" },
+  { id: "ethereum", row: "chains", title: "Ethereum pack", seriesName: "Ethereum", cards: 3, emoji: "Ξ", match: (e) => e.chain === "Ethereum" },
   { id: "og-1", row: "og", title: "OG single", seriesName: "OG 1", cards: 1, emoji: "🏛️", match: (e) => e.era === OG_ERA },
   { id: "og-2", row: "og", title: "OG duo", seriesName: "OG 2", cards: 2, emoji: "🏛️", match: (e) => e.era === OG_ERA },
   { id: "og-5", row: "og", title: "OG pack", seriesName: "OG 5", cards: 5, emoji: "🏛️", match: (e) => e.era === OG_ERA },
