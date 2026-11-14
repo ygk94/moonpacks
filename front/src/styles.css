@@ -715,3 +715,4 @@ h1, h2, h3 { letter-spacing: -0.03em; }
 .offer-card--soon .btn:disabled { opacity: 0.7; }
 .shop-row--og .pack .pack__body { background: linear-gradient(160deg, #4a3a1a, #17110a 55%, #3d2c12); }
 @media (max-width: 760px) { .offer-card__emoji { width: 28px; height: 28px; font-size: 0.9rem; right: -4px; } }
+.offer-card__perk { color: #ffb35c; font-weight: 700; font-size: 0.78rem; }

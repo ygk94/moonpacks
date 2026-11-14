@@ -19,6 +19,8 @@ export interface PackType {
   seriesName: string;
   cards: number;
   emoji: string;
+  /** Particularité annoncée sur la boutique (doit correspondre à la table de la série). */
+  note?: string;
   /** Cartes du catalogue public qui entrent dans le pack. */
   match: (e: CatalogEntry) => boolean;
 }
@@ -33,7 +35,7 @@ export const OG_ERA = "2013-2018";
 
 export const PACK_TYPES: PackType[] = [
   // « cat in a dogs world » est un chat : un coin qui est aussi un chat va dans le pack Cat.
-  { id: "dog", row: "families", title: "Dog pack", seriesName: "Dog", cards: 5, emoji: "🐕", match: (e) => DOG.test(text(e)) && !CAT.test(text(e)) },
+  { id: "dog", row: "families", title: "Dog pack", seriesName: "Dog", cards: 8, emoji: "🐕", note: "1 in 3 packs holds a burnable card", match: (e) => DOG.test(text(e)) && !CAT.test(text(e)) },
   { id: "cat", row: "families", title: "Cat pack", seriesName: "Cat", cards: 5, emoji: "🐈", match: word(CAT) },
   { id: "frog", row: "families", title: "Frog pack", seriesName: "Frog", cards: 5, emoji: "🐸", match: word(FROG) },
   { id: "solana", row: "chains", title: "Solana pack", seriesName: "Solana", cards: 5, emoji: "◎", match: (e) => e.chain === "Solana" },

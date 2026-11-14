@@ -33,7 +33,9 @@ describe("themed packs", () => {
 
   it("a pack becomes buyable once a series with its name and size is open", () => {
     expect(seriesFor(type("dog"), [series("Memaster Entry")])).toBeUndefined();
-    expect(seriesFor(type("dog"), [series("Moonpacks Dog")])?.name).toBe("Moonpacks Dog");
+    expect(seriesFor(type("dog"), [series("Moonpacks Dog", 8)])?.name).toBe("Moonpacks Dog");
+    expect(seriesFor(type("dog"), [series("Moonpacks Dog", 5)])).toBeUndefined();
+    expect(type("dog").cards).toBe(8);
     expect(seriesFor(type("og-2"), [series("Memaster OG 2", 2)])).toBeDefined();
     expect(seriesFor(type("og-2"), [series("Memaster OG 2", 5)])).toBeUndefined();
     expect(regularSeries([series("Memaster Entry"), series("Moonpacks Dog")]).map((s) => s.name)).toEqual(["Memaster Entry"]);

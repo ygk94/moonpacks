@@ -23,7 +23,7 @@ est accepté) et le bon nombre de cartes par pack. Rien d'autre à changer dans 
 
 | Pack | Nom de la série | Cartes par pack | Cartes de la table (filtre de `front/src/lib/packTypes.ts`) | Cartes publiques |
 |---|---|---:|---|---:|
-| Dog | `Moonpacks Dog` | 5 | nom ou ticker : doge, shib, inu, dog, bonk, floki, wif, puppy, corgi, shiba (hors chats) | 291 |
+| Dog | `Moonpacks Dog` | **8** | nom ou ticker : doge, shib, inu, dog, bonk, floki, wif, puppy, corgi, shiba (hors chats) | 291 |
 | Cat | `Moonpacks Cat` | 5 | cat, kitty, kitten, popcat, mew, meow, neko, nyan | 100 |
 | Frog | `Moonpacks Frog` | 5 | pepe, frog, toad, ribbit, kek | 59 |
 | Solana | `Moonpacks Solana` | 5 | chaîne Solana | 199 |
@@ -32,6 +32,24 @@ est accepté) et le bon nombre de cartes par pack. Rien d'autre à changer dans 
 | OG single | `Moonpacks OG 1` | 1 | époque 2013-2018 | 123 |
 | OG duo | `Moonpacks OG 2` | 2 | époque 2013-2018 | 123 |
 | OG pack | `Moonpacks OG 5` | 5 | époque 2013-2018 | 123 |
+
+### Dog : 8 cartes, une carte brûlable dans 1 pack sur 3 (Enzo, 14/11)
+
+Pas de table de valeur, donc pas de brûlable garantie : les brûlables sont des cartes ordinaires de la table, avec leur
+adossement fixe, et leur poids règle la chance d'en tirer une. Pour 1 pack sur 3 avec 8 cartes, il faut environ
+**4,9 % de chances par carte** (1 − (2/3)^(1/8)).
+
+Contrainte : la seule brûlable « chien » de `app3`, `dogwifhat-wif`, est légendaire (0,2 % par carte). Elle ne peut pas
+donner 1 sur 3 à elle seule. Proposition :
+
+- garder WIF dans la table (légendaire, plafond 50) ;
+- ajouter les 3 brûlables communes de `app3` (`black-dragon-blackdragon`, `jambo-meme-cooking-jambo`,
+  `nearkat-nearkat`) avec un **poids de 4** chacune, à côté des 209 communes « chien » de poids 1. Elles font alors
+  5,4 % des communes, soit 4,9 % par carte, et **33 % des packs** ont au moins une brûlable ;
+- ces trois coins ne sont pas des chiens : c'est l'entorse au thème. Autre voie, plus propre, mais à financer : adosser
+  des communes « chien » disponibles sur NEAR Intents.
+
+Le site annonce « 1 in 3 packs holds a burnable card » : la table doit le respecter (vérifiable par `get_rates`).
 
 Points à régler en créant ces séries :
 

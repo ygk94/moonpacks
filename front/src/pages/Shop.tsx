@@ -228,6 +228,7 @@ function ThemedOffer({
         <small className="offer-card__note">
           {type.cards} card{type.cards > 1 ? "s" : ""} per pack{pool ? ` · from ${pool.length} ${unit}` : ""}
         </small>
+        {type.note && <small className="offer-card__perk">{type.note}</small>}
         {series && (
           <span className="offer-card__price">
             {formatNearExact(series.price)} NEAR
