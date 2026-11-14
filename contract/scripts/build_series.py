@@ -13,7 +13,7 @@ au format {"<id catalogue>": {"id": …, "nom": …, …}} (ou une liste d'objet
 Si ce fichier manque, le script se replie sur le champ "secret" du catalogue s'il existe encore,
 et s'arrête avec un message clair sinon.
 
-Tables de valeur (mechanics.value, voir docs/mecaniques-spec.md) : dans les paramètres
+Tables de valeur (mechanics.value, voir docs/mechanics.md) : dans les paramètres
 ("mechanics": {"value": …}) ou dans --tables-valeur, qui les remplace, au format
 {"normale": [[bps, poids], …], "gold": […], "rush": […], "multiplicateurs": {"commune": x, …}}.
 
@@ -44,7 +44,7 @@ Exemple (near-cli-rs) :
         file-args scripts/out/<slug>/append_series_cards.01.json prepaid-gas '300 Tgas' \
         attached-deposit '<deposits[nom] en yoctoNEAR> yoctonear' sign-as <owner> network-config testnet sign-with-keychain send
 
-Mécaniques (`"mechanics"` dans les paramètres, voir docs/mecaniques-spec.md) : gold pack à plancher de
+Mécaniques (`"mechanics"` dans les paramètres, voir docs/mechanics.md) : gold pack à plancher de
 rareté par emplacement (`gold.slots`), table rush
 donnée en poids ou en multiplicateurs des poids de base (la commune compense), pitié, plancher des
 burns (plancher et a priori K), paramètres du rush, cartes ressuscitables (`resurrection` : liste de

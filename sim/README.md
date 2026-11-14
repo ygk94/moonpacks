@@ -1,94 +1,118 @@
-# Simulateur économique Memaster
+# Pack economics simulator
 
-Monte-Carlo des boosters (phase 2.1 de `docs/plan.md`). Les résultats et les recommandations sont dans `RAPPORT.md`.
+Monte-Carlo and exact models of the Moonpacks pack mechanics: card rarities, the NEAR backing paid into each card,
+burn value, the reserve, the pity counter for gold packs, gold rushes, burn-driven rarity and dead-coin
+resurrection. It was used to choose the parameters that the contract now applies. See
+[`docs/mechanics.md`](../docs/mechanics.md) for the mechanics themselves.
 
-## Installation
+Python 3, with `numpy`, `pyyaml` and `pytest` (`requirements.txt`).
+
+## Setup and tests
 
 ```bash
 cd sim
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
+.venv/bin/python -m pytest -q tests
 ```
 
-## Commandes
+CI runs the same thing (`pip install -r requirements.txt`, then `python -m pytest -q tests`).
+
+## Commands
+
+The code was written with French identifiers, so commands and options are in French
+(`boosters` = packs, `trajectoires` = ruin trajectories, `sensibilite` = sensitivity, `tout` = all,
+`pitie` = pity, `rarete-burn` = burn-driven rarity, `--rapide` = quick run with 10x fewer draws).
 
 ```bash
-# une config : tableau markdown à l'écran, plus resultats/<config>.md et .json
+# one config: prints a table, writes resultats/<config>.md and .json
 .venv/bin/python -m memaster_sim run configs/serie1-A-10near.yaml
-
-# plus de tirages, plus de trajectoires de ruine, autre graine
 .venv/bin/python -m memaster_sim run configs/serie1-A-10near.yaml --boosters 5000000 --trajectoires 20000 --seed 4
 
-# grilles de sensibilité (β, poids des légendaires, cote du mythique)
+# sensitivity grids (beta, legendary weights, mythic odds)
 .venv/bin/python -m memaster_sim sensibilite configs/serie1-A-10near.yaml
 
-# toutes les configs de configs/, avec les grilles pour celles qui ont un mythique (environ 4 min)
+# series 1 configs and the worked example (series 2 to 5 have their own commands), about 4 min
 .venv/bin/python -m memaster_sim tout --boosters 2000000
 
-# série 2 (catalogue v2) : régénérer les configs, simuler la grille, sensibilité au facteur entre paliers
+# series 2: regenerate configs, run the grid, sensitivity to the factor between tiers
 .venv/bin/python -m memaster_sim.serie2 configs
 .venv/bin/python -m memaster_sim.serie2 run --boosters 2000000 --trajectoires 20000
 .venv/bin/python -m memaster_sim.serie2 sensibilite --total 150 --prix 5 --trajectoires 20000
 
-# série 3 (packs à bas prix et mécaniques) : régénérer les configs, tout simuler (environ 10 min, --rapide pour essayer)
+# series 3: regenerate configs, run everything (about 10 min) or selected sections
 .venv/bin/python -m memaster_sim.serie3 configs
 .venv/bin/python -m memaster_sim.serie3 run
 .venv/bin/python -m memaster_sim.serie3 run --rapide --sections pitie rush
 
-# série 4 (valeur V tirée par pack, gold pack redéfini) : configs de pack, puis tout (environ 20 s)
+# series 4: pack configs, then everything (about 20 s)
 .venv/bin/python -m memaster_sim.serie4 configs
 .venv/bin/python -m memaster_sim.serie4 run
 
-# série 5 (pitié sans garantie, mythique 1 pour 10⁶, gold 99/1, V moyenne 75 %) : tout (environ 5 s)
-.venv/bin/python -m memaster_sim.serie5
-
-# tests
-.venv/bin/python -m pytest -q tests
+# series 5 (the parameters used by the contract), about 5 s
+.venv/bin/python -m memaster_sim.serie5 [--rapide]
 ```
 
-## Fichiers
+Every command accepts `--sortie <dir>` to write somewhere other than `resultats/`.
 
-| Fichier | Rôle |
+## The five series
+
+| Series | Configs | What it studies |
+|---|---|---|
+| 1 | `serie1-{A,B,C}-*.yaml`, `exemple-4-4.yaml` | First model: 5-slot packs at 5 or 10 NEAR, backing ratio beta, reserve ruin risk, mythic odds. `exemple-4-4` is a small hand-checked example kept as a regression test |
+| 2 | `serie2-NNNbrul-PPnear.yaml` (generated) | Full catalogue (`docs/data/catalogue-v2.json`): number of burnable cards x pack price |
+| 3 | `serie3-PPPc-CCcouv.yaml` (generated), `serie3-mecaniques.yaml` | Low-price packs (15 cents to 1 dollar) x coverage; measured gas and storage costs, pity, rush, burn-driven rarity, resurrection |
+| 4 | `serie4-PPPc.yaml` (generated), `serie4-valeur.yaml` | Value tables V drawn per pack, gold pack, margin, anti-arbitrage bound |
+| 5 | `serie5.yaml` | Final parameters: pity without guarantee, mythic about 1 in a million packs, gold pack 99/1, average V of 75 % |
+
+Generated configs should not be edited by hand; rerun the `configs` command of their series instead.
+
+## Layout
+
+| Path | Role |
 |---|---|
-| `configs/exemple-4-4.yaml` | L'exemple travaillé de `docs/marche-droits-economie.md`, partie 4.4 |
-| `configs/serie1-A-10near.yaml` | Série 1, jeu A : 10 NEAR, mythique 1 sur 5 000 |
-| `configs/serie1-B-10near.yaml` | Série 1, jeu B : 10 NEAR, mythique 1 sur 2 000, petite réserve |
-| `configs/serie1-C-5near.yaml` | Série 1, jeu C : 5 NEAR, mythique 1 sur 10 000 |
-| `configs/serie2-NNNbrul-PPnear.yaml` | Série 2 : catalogue v2, NNN brûlables, PP NEAR (générées, ne pas éditer ; `tout` les ignore) |
-| `memaster_sim/catalogue.py` | Chargeur de `docs/data/catalogue-v2.json` : effectifs par rareté, choix des brûlables à graine fixe |
-| `memaster_sim/serie2.py` | Génération des configs et grille de la série 2, résultats dans `resultats/serie2/` |
-| `configs/serie3-PPPc-CCcouv.yaml` | Série 3 : pack à PPP centimes, couverture CC % (générées, ne pas éditer ; `tout` les ignore) |
-| `configs/serie3-mecaniques.yaml` | Série 3 : cours du NEAR, coûts mesurés, paramètres de la pitié, du rush, de la rareté par les burns, de la résurrection |
-| `memaster_sim/serie3.py` | Configs et exécution de la série 3, résultats dans `resultats/serie3/` (une page par section, plus `serie3.md`) |
-| `configs/serie4-PPPc.yaml` | Série 4 : pack à PPP centimes, base série 3 plus 20 communes brûlables (générées, ne pas éditer ; `tout` les ignore) |
-| `configs/serie4-valeur.yaml` | Série 4 : formes et cibles des tables V, multiplicateurs, gold pack, pitié, rush, coûts |
-| `memaster_sim/valeur.py` | Tables de valeur V (calibrage, quantiles, format publié), répartition entre brûlables, gold pack, réserve |
-| `memaster_sim/serie4.py` | Exécution de la série 4, résultats et `tables-valeur.json` dans `resultats/serie4/` |
-| `configs/serie5.yaml` | Série 5 : pitié {p0, k, p_max, N: null}, mythique 5 / 2·10⁷ par emplacement, gold 99/1, rush 75 %, coûts |
-| `memaster_sim/serie5.py` | Série 5 (réutilise `serie4.py`) : fréquences de gold et de mythique, Monte-Carlo, résultats et `tables-valeur.json` dans `resultats/serie5/` |
-| `memaster_sim/couts.py` | Coûts réels d'un pack (gaz, stockage, achat groupé), marge, prix de seuil, packs pour les coûts fixes |
-| `memaster_sim/gold.py` | Table « or », mélange de tables avec un κ commun, réserve avec des gold packs (indépendants ou groupés) |
-| `memaster_sim/pitie.py` | Compteur de pitié (avec garantie N, ou sans garantie avec plafond p_max) : loi du cycle, g stationnaire (queue géométrique exacte), g_pop exact par renouvellement, population, contrôles Monte-Carlo |
-| `memaster_sim/rush.py` | Gold rush : flux d'achats de Poisson avec pics, fenêtre glissante, palier fixe ou relatif, pause |
-| `memaster_sim/rarete_burn.py` | Rareté pilotée par les burns : poids × en circulation / émises, trois renormalisations, plancher |
-| `memaster_sim/resurrection.py` | Résurrection des coins morts : coût des exemplaires existants, enveloppe et fonds |
-| `memaster_sim/modele.py` | Config, tables d'issues, κ, formules exactes (espérance, variance, borne β, R₀ normale) |
-| `memaster_sim/simulation.py` | Tirages vectorisés, statistiques, borne β simulée, simulation de ruine |
-| `memaster_sim/rapport.py` | Sorties markdown et JSON, grilles de sensibilité |
-| `tests/` | Pytest : tirages, exemple 4.4, contraintes de la série 1, chargeur du catalogue v2 et configs de la série 2, coûts et mécaniques de la série 3, tables V des séries 4 et 5 |
-| `resultats/` | Sorties générées (régénérables) |
+| `memaster_sim/modele.py` | Config loading, outcome tables, kappa, exact formulas (mean, variance, beta bound, normal reserve) |
+| `memaster_sim/simulation.py` | Vectorised draws, statistics, simulated beta bound, ruin simulation |
+| `memaster_sim/rapport.py` | Markdown and JSON output, sensitivity grids |
+| `memaster_sim/catalogue.py` | Loader for `docs/data/catalogue-v2.json`: counts per rarity, seeded choice of burnable cards |
+| `memaster_sim/couts.py` | Real cost of a pack (gas, storage, batched token purchase), margin, break-even price |
+| `memaster_sim/valeur.py` | Value tables V (calibration, quantiles, published format), reserve |
+| `memaster_sim/gold.py` | Gold table, mixing tables with a shared kappa, reserve with gold packs |
+| `memaster_sim/pitie.py` | Pity counter (with or without a guarantee): cycle law, stationary rate, exact population rate, Monte-Carlo checks |
+| `memaster_sim/rush.py` | Gold rush: Poisson purchase flow with spikes, sliding window, fixed or relative threshold, pause |
+| `memaster_sim/rarete_burn.py` | Burn-driven rarity: weight x circulating / minted, three renormalisations, floor |
+| `memaster_sim/resurrection.py` | Dead-coin resurrection: cost of existing copies, budget and fund |
+| `memaster_sim/serie2.py` ... `serie5.py` | Config generation and runs for each series |
+| `configs/` | YAML configs; every key is commented in `configs/serie1-A-10near.yaml` |
+| `resultats/` | Committed JSON outputs, one file or folder per series (regenerable) |
+| `tests/` | Pytest suite: draws, the worked example, series constraints, catalogue loader, costs, mechanics, value tables, burn rules shared with the contract |
 
-## Écrire une config
+Running the commands also writes markdown reports next to the JSON files; only the JSON outputs are kept in the
+repository.
 
-Chaque clé est commentée dans `configs/serie1-A-10near.yaml`. L'essentiel :
+## Writing a config
 
-- `raretes.<nom>` : `poids` (w), `part_brulable` (probabilité qu'une carte tirée dans cette rareté soit brûlable),
-  `plafond` (adossement maximal d'une carte, NEAR), `revente` (prix moyen d'une carte de collection, NEAR),
-  `effectif` et `brulables` (catalogue), `multiplicateur` facultatif (remplace le multiplicateur global).
-- `emplacements.tables` : une table de probabilités par type d'emplacement ; `emplacements.ordre` : le type de chaque
-  emplacement (5 entrées).
-- `beta`, `delta` (part du prix versée à la réserve), `epsilon`, `v_cap`, `couts` (`s_achat`, `f_burn`,
+The main keys (see the comments in `configs/serie1-A-10near.yaml`):
+
+- `raretes.<name>`: `poids` (weight), `part_brulable` (probability that a card drawn in this rarity is burnable),
+  `plafond` (maximum backing of one card, NEAR), `revente` (average resale price of a collectible card, NEAR),
+  `effectif` and `brulables` (catalogue counts), optional `multiplicateur` (overrides the global multiplier).
+- `emplacements.tables`: one probability table per slot type; `emplacements.ordre`: the type of each of the 5 slots.
+- `beta`, `delta` (share of the price paid into the reserve), `epsilon`, `v_cap`, `couts` (`s_achat`, `f_burn`,
   `f_burn_fixe`, `s_vente`, `phi`).
-- `calibrer_avec_plafonds: true` recalcule κ pour que l'adossement moyen reste égal à β·P malgré les plafonds par carte.
+- `calibrer_avec_plafonds: true` recomputes kappa so that the mean backing stays equal to beta x price despite
+  per-card caps.
 
-Les raretés sont libres : on peut en ajouter ou en retirer, du moment que les tables les nomment.
+Rarities are free-form: add or remove them as long as the tables name them.
+
+## Key results (series 5, `resultats/serie5/serie5.json`)
+
+With NEAR at 2.50 dollars and packs at 0.20 or 0.50 dollars:
+
+- Normal and rush packs return an average value V of 75 % of the price; a gold pack returns 200 %.
+- Burning a whole pack immediately returns about 73 % of the price, under the 85 % anti-arbitrage bound.
+- Gold pack chance starts at 1 in 50,000 and rises to 1 in 25,000 after 1,000 packs without one (no guarantee);
+  over the long run that is about 1 gold pack per 25,000 packs.
+- A mythic appears in about 1 in a million classic packs, and in about 1 % of gold packs.
+- In the cautious case where the project pays the gas, the margin is about 0.037 dollar per pack at 0.20 dollar
+  (18 %) and about 0.11 dollar at 0.50 dollar (22 %).

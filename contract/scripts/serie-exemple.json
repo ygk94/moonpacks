@@ -49,7 +49,7 @@
   ],
   "royalties": [],
   "mechanics": {
-    "_doc": "Paramètres par défaut de docs/mecaniques-spec.md. Hauteurs en blocs, 0,6 s par bloc supposé (non vérifié).",
+    "_doc": "Paramètres par défaut de docs/mechanics.md. Hauteurs en blocs, 0,6 s par bloc supposé (non vérifié).",
     "gold": {
       "_doc": "Gold pack (pitié, ultra rare, sans garantie) : 5 cartes, aucune commune. Plancher de rareté par emplacement : 1 et 2 rare ou mieux (poids de base tronqués), 3 et 4 épique ou mieux, 5 légendaire 99 % ou mythique 1 %. Rareté épuisée : vers le bas jusqu'au plancher, puis vers le haut, puis sous le plancher. L'emplacement 2 est tiré parmi les brûlables (la valeur du pack y est adossée).",
       "slots": [

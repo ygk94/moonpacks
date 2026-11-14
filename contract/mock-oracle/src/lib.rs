@@ -1,6 +1,6 @@
 //! Oracle de prix factice pour les tests (résurrection des coins morts).
 //!
-//! Un vrai oracle (voir `docs/mecaniques-spec.md`, « Résurrection ») lirait un cours fiable,
+//! Un vrai oracle (voir `docs/mechanics.md`, « Résurrection ») lirait un cours fiable,
 //! constaterait qu'un coin « mort » repasse au-dessus de son seuil, s'assurerait que le stock de
 //! jetons est acheté, puis appellerait `set_resurrected`. Ici, l'opérateur du mock pousse
 //! directement la décision : aucun prix n'est lu.

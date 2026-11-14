@@ -3,7 +3,7 @@
 const env = import.meta.env;
 
 export const NETWORK = (env.VITE_NETWORK ?? "testnet") as "testnet" | "mainnet";
-export const CONTRACT_ID: string = env.VITE_CONTRACT_ID || "app3.memaster-demo-j7xg7z.testnet";
+export const CONTRACT_ID: string = env.VITE_CONTRACT_ID || "app4.simpletea5483.testnet";
 // fastnear : l'ancien rpc.testnet.near.org renvoie des 429.
 export const RPC_URL: string = env.VITE_RPC_URL ?? "https://rpc.testnet.fastnear.com";
 export const SERIES_ID = Number(env.VITE_SERIES_ID ?? 0);

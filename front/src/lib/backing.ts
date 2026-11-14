@@ -1,6 +1,6 @@
 // Quantité de jetons d'une carte brûlable.
 //
-// Sur testnet, l'adossement (`amount`) est une part de la valeur du pack en yoctoNEAR (docs/mecaniques-spec.md,
+// Sur testnet, l'adossement (`amount`) est une part de la valeur du pack en yoctoNEAR (docs/mechanics.md,
 // « Adossement transmis ») : la conversion en jetons dépend du financement, pas encore décidé. Le front l'estime
 // donc avec les cours publics (NEAR/USD et cours du coin). On n'affiche que la quantité de jetons, jamais un
 // rendement ni une « valeur garantie ».

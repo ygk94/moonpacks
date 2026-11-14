@@ -9,7 +9,7 @@
 //! 3. `card_roll = u128_be(sha256(acc || slot || 0x01)[0..16]) mod somme_des_poids_disponibles`
 //!    choisit la carte par cumul, dans l'ordre de la table.
 //!
-//! Mécaniques (`docs/mecaniques-spec.md`), toutes désactivées pour une table sans `mechanics` :
+//! Mécaniques (`docs/mechanics.md`), toutes désactivées pour une table sans `mechanics` :
 //! - la table de poids de rareté du pack (base, or, rush) est choisie avant les emplacements ;
 //!   pitié : `gold_roll = u128_be(sha256(acc || 0x00 || 0x02)[0..16]) mod 10⁹` ;
 //! - rareté pilotée par les burns : le tirage de rareté ne change pas ; dans la rareté, les

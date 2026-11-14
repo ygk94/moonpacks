@@ -1,6 +1,6 @@
-# CI Moonpacks : tests de chaque partie du dépôt à chaque push et pull request, puis mise en ligne du site sur
-# Vercel depuis `main` (ou à la demande). Aucun secret n'est nécessaire pour les tests ; le fichier secret des
-# mythiques n'est jamais dans la CI (le contrôle anti-fuite s'y limite à la structure).
+# Moonpacks CI: tests every part of the repository on each push and pull request, then deploys the site to
+# Vercel from `main` (or on demand). No secret is needed for the tests; the mythic secrets file is never available
+# in CI (the leak check there is limited to structure).
 
 name: CI
 
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy:
-        description: "Mettre le site en ligne sur Vercel après les tests"
+        description: "Deploy the site to Vercel after the tests"
         type: boolean
         default: false
 
@@ -35,17 +35,17 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: front/package-lock.json
-      # Python : prepare-assets génère les visuels avec art/.
+      # Python: prepare-assets generates the card visuals with art/.
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: npm ci
       - run: npm test
-      # Build de production : types, visuels, absence du wallet de test, contrôle anti-fuite des mythiques.
+      # Production build: types, visuals, no test wallet, mythic leak check.
       - run: npm run build
 
   python:
-    name: Python (art, vérificateur, simulation)
+    name: Python (art, verifier, simulation)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -57,7 +57,7 @@ jobs:
       - name: Art
         working-directory: art
         run: python -m unittest discover -s tests
-      - name: Vérificateur
+      - name: Verifier
         working-directory: verifier
         run: python -m unittest discover -s tests -t .
       - name: Simulation
@@ -67,7 +67,7 @@ jobs:
           python -m pytest -q tests
 
   contract:
-    name: Contrat (tests unitaires)
+    name: Contract (unit tests)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -78,13 +78,13 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      # Les tests sandbox (near-workspaces, ~90 s, binaire near-sandbox téléchargé) restent à lancer à la main.
+      # Sandbox tests (near-workspaces, ~90 s, downloads the near-sandbox binary) are run manually.
       - name: cargo test --lib
         working-directory: contract
         run: cargo test --lib
 
   deploy:
-    name: Mise en ligne (Vercel)
+    name: Deploy (Vercel)
     needs: [front, python, contract]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' && inputs.deploy
     runs-on: ubuntu-latest
@@ -96,7 +96,7 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      # Contrat lu par le site : variable du dépôt (Settings > Variables) ; vide → app3 (front/src/config.ts).
+      # Contract read by the site: repository variable (Settings > Variables); empty means the default in front/src/config.ts.
       VITE_CONTRACT_ID: ${{ vars.CONTRACT_ID }}
     steps:
       - uses: actions/checkout@v7
@@ -108,10 +108,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Secrets Vercel présents
+      - name: Check Vercel secrets
         run: |
           for v in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
-            [ -n "${!v}" ] || { echo "::error::secret $v manquant (Settings > Secrets and variables > Actions)"; exit 1; }
+            [ -n "${!v}" ] || { echo "::error::secret $v missing (Settings > Secrets and variables > Actions)"; exit 1; }
           done
       - run: npm ci
       - run: npm run deploy

@@ -1,136 +1,109 @@
-# Visuels des cartes Memaster
+# Card art generator
 
-Générateur hors ligne des visuels de cartes, en SVG, avec leurs métadonnées NEP-177. Ce n'est pas le front.
-Python 3, bibliothèque standard uniquement.
+Offline generator for the Moonpacks card visuals: one SVG per card plus its NEP-177 metadata. Python 3, standard
+library only. The front calls it at build time (`front/scripts/prepare-assets.mjs`); it is not part of the site.
 
-## Commandes
+## Commands
 
-Depuis `art/` :
-
-```sh
-python3 -m memaster_art --catalogue ../docs/catalogue-final.md --out out/ [--limit N] [--planche]
-python3 -m unittest discover -s tests                     # tests
-python3 -m memaster_art.exemples --catalogue ../docs/catalogue-final.md --dest exemples --png
-python3 outils/rendre_png.py out/0010-bonk.svg --dest /tmp/png   # relecture en PNG
-```
-
-Catalogue v2 (JSON, détecté par l'extension) :
+From `art/`:
 
 ```sh
-python3 -m memaster_art --catalogue ../docs/data/catalogue-v2.json --out out/v2/ [--inclure-a-decider]
+# full catalogue (JSON, detected by its extension), English card text as used by the front
+python3 -m memaster_art --catalogue ../docs/data/catalogue-v2.json --out out/ --langue en [--limit N] [--planche]
+
+# demo catalogue
+python3 -m memaster_art --catalogue ../docs/data/catalogue-demo.json --out out/demo/ --planche
+
+# regenerate the committed examples in exemples/v2 (with PNG previews)
 python3 -m memaster_art.exemples --catalogue ../docs/data/catalogue-v2.json --dest exemples/v2 --png
+
+# tests
+python3 -m unittest discover -s tests
+
+# PNG preview of one SVG
+python3 outils/rendre_png.py out/bonk-bonk.svg --dest /tmp/png
 ```
 
-Depuis la racine du dépôt : `PYTHONPATH=art python3 -m memaster_art --catalogue docs/catalogue-final.md --out art/out/`.
+From the repository root: `PYTHONPATH=art python3 -m memaster_art --catalogue docs/data/catalogue-v2.json --out art/out/`.
 
-Options :
+Options:
 
-- `--langue en` : textes visibles des SVG en anglais (libellés de rareté, état, pic, mention). Le ticker et le nom du
-  coin ne changent pas. Le front s'en sert (`front/scripts/prepare-assets.mjs`) ; les métadonnées JSON restent en français.
-- `--planche` : planches HTML de contact, 50 cartes par page (`planche-01.html`, …), à ouvrir dans un navigateur.
-- `--base-url https://…/` : préfixe des champs `media` et `reference`. Vide par défaut : chemins relatifs.
-- `--mythiques 12,40` : passe ces N° en mythique (règle v2). On peut aussi donner un ticker, mais il vise toutes
-  les cartes qui le portent (homonymes compris). Un catalogue v2 dont la
-  colonne Rareté vaut déjà « mythique » n'a pas besoin de cette option.
+- `--langue en`: visible SVG text in English (rarity labels, state, peak year, disclaimer). The default is `fr`.
+  Ticker and coin name never change. The JSON metadata text stays in the generator's original language (French).
+- `--planche`: HTML contact sheets, 50 cards per page (`planche-01.html`, ...).
+- `--base-url https://.../`: prefix for the `media` and `reference` fields. Empty by default (relative paths).
+- `--inclure-a-decider`: also render the catalogue's "to be decided" section (by default only `catalogue` is read).
+- `--mythiques 12,40`: force these card numbers (or tickers) to mythic. Not needed when the catalogue already marks them.
+- `--limit N`: only the first N cards.
 
-`out/` est ignoré par git (`art/.gitignore`). `exemples/v2/` est versionné ; `exemples/` (v1) se régénère : 9 cartes, plus 2 mythiques scellées et le dos si le fichier secret est là, en SVG,
-PNG et JSON, plus une planche.
+The CLI also reads the older markdown catalogue format (first table of a `## Cartes` section, columns matched by
+name); `tests/data/catalogue-v1.md` is such a catalogue and is used by the tests.
 
-## Catalogue v2 (`docs/data/catalogue-v2.json`)
+`out/` is ignored by git. `exemples/v2/` is committed: two cards per rarity (one alive, one dead when possible),
+the sealed mythic back and a contact sheet (`planche-v2.svg`, `planche-v2.png`).
 
-- Seule la section `catalogue` est lue (1 649 cartes) ; `--inclure-a-decider` ajoute les 101 « à décider ».
-- L'identifiant de carte est l'`id` stable (slug) : nom des fichiers (`bonk-bonk.svg`), graine de l'art,
-  `identifiant` des métadonnées. Le N° (« 12 », « M1 », « AD3 ») n'est qu'affiché.
-- Champs lus : liste blanche `CHAMPS_LUS` de `catalogue_v2.py` ; `drapeau` n'est pas lu (rien sur la carte).
-  Le JSON public n'a plus de champ `secret` : les vrais noms des mythiques sont dans `docs/data/secrets/mythiques.json`
-  (ignoré par git), que ce générateur ne lit jamais. Un ancien JSON qui aurait encore `secret` le voit jeté au décodage.
-- Mythiques : toujours anonymes, avant comme après la révélation. Pas de recto : titre « ? », description « ? »,
-  image `dos-mythique.svg` (le dos « ? » commun) ; `mythique-m1.json`, `-m2`, `-m3` sont identiques octet pour octet à
-  `dos-mythique.json` (ni id, ni N°, ni référence). Si `docs/data/secrets/mythiques.json` existe, un test vérifie
-  qu'aucun vrai nom, ticker, id CoinGecko ou adresse n'apparaît dans leurs sorties.
-- État : « mort… » donne le style cimetière, « en déclin… », « actif », sinon « à vérifier ».
-- Chaîne : `chaine_normalisee`. Année du pic : première année du `pic`, sinon du `lancement`.
-- Burn : « à définir » n'est pas affiché ; `burn: null` dans le `.ref.json`, avec l'`adresse` si connue.
-- Démo : `docs/data/catalogue-demo.json` (`consolider.py --demo`) se lit de la même façon :
-  `python3 -m memaster_art --catalogue ../docs/data/catalogue-demo.json --out out/demo/ --planche`.
-- `exemples/v2/` : 2 cartes par rareté (une vivante, une morte si possible) et le dos, plus `planche-v2.png`.
+## Output per card
 
-## Sorties par carte
-
-| Fichier | Contenu |
+| File | Content |
 |---|---|
-| `0010-bonk.svg` | Visuel, 500 × 700 (5:7), 4 à 15 Ko |
-| `0010-bonk.json` | Métadonnées NEP-177 : `title`, `description`, `media`, `media_hash`, `extra`, `reference`, `reference_hash` |
-| `0010-bonk.ref.json` | JSON hors chaîne pointé par `reference` |
-| `dos-mythique.svg` / `.json` | Dos scellé « ? », commun à toutes les mythiques (s'il y en a) |
+| `<id>.svg` | The visual, 500 x 700 (5:7), 4 to 15 KB |
+| `<id>.json` | NEP-177 metadata: `title`, `description`, `media`, `media_hash`, `extra`, `reference`, `reference_hash` |
+| `<id>.ref.json` | Off-chain JSON pointed to by `reference` |
+| `dos-mythique.svg` / `.json` | The sealed "?" back shared by every mythic card |
+| `mythique-m1.json`, ... | Mythic metadata, byte-identical to `dos-mythique.json` |
 
-`media_hash` et `reference_hash` sont le sha256 du fichier, en base64. `extra` est une chaîne JSON, comme le veut
-NEP-177 : rareté, état, chaîne, année du pic, identifiant, N°, mention de non-affiliation.
+`<id>` is the stable slug from the catalogue (`bonk-bonk`); it names the files, seeds the art and is the
+metadata identifier. `media_hash` and `reference_hash` are the base64 sha256 of the file. `extra` is a JSON string,
+as NEP-177 requires: rarity, state, chain, peak year, identifier, number, non-affiliation notice.
 
-## Lecture du catalogue
+## Mythic cards
 
-Le CLI lit le premier tableau de la section `## Cartes`, par nom de colonne : N°, Nom, Ticker, Chaîne,
-Période de gloire (ou Lancement), Pic de capitalisation, État (ou État actuel), Rareté (ou Rareté proposée), Adresse.
+Mythics are always anonymous, before and after reveal: no front, title "?", description "?", and the common
+sealed back. Their metadata contains no id, number, ticker or reference. The real mythic list lives in a file
+that is never committed (`docs/data/secrets/`, ignored by git) and that this generator never reads. When that file
+is present locally, a test checks that no real name, ticker or address leaks into the generated output.
 
-- Rareté : `*` retiré, accents tolérés, `mythique` accepté. Valeur inconnue : commune.
-- État : `actif (dérivé)` devient `actif`, `en déclin (dérivé)` devient `en déclin`. Tout ce qui n'est ni actif,
-  ni en déclin, ni mort devient `à vérifier` (pastille « état ? »). Rien n'est inventé.
-- Chaîne : première chaîne citée, sans parenthèses. « à vérifier » s'affiche « chaîne ? ».
-- Année du pic : première année trouvée dans la période de gloire, sinon dans le pic. Sinon « pic inconnu ».
-- Identifiant : l'adresse si la cellule en contient une entre backticks, sinon `memaster:<N°>`.
+## Design rules
 
-## Règles de design
+- **Pure function.** A card depends only on (identifier, ticker, name, chain, rarity, state, peak year, number).
+  Same input, same bytes. Randomness comes from sha256 and a small splitmix64 generator, so it does not depend
+  on the Python version.
+- **Art.** The seed (identifier, ticker, chain) picks a palette (analogous, complementary, triad, split), one of
+  six patterns (tiling, orbits, waves, shards, constellation, sun) and a central geometric emblem. Rarity and state
+  only change the frame and effects, so a card keeps its art if its rarity changes.
+- **Frames.**
 
-- **Fonction pure.** Une carte dépend de (identifiant, ticker, nom, chaîne, rareté, état, année du pic, N°).
-  Même entrée, même octets. Le hasard vient d'un sha256 et d'un générateur splitmix64 maison, pour ne pas
-  dépendre de la version de Python.
-- **Art.** La graine (identifiant, ticker, chaîne) choisit une palette (analogue, complémentaire, triade,
-  fendue), un motif parmi six (pavage, orbites, ondes, éclats, constellation, soleil) et un emblème géométrique
-  central (étoile, polygones emboîtés, anneau cranté). Rareté et état ne changent que le cadre et les effets :
-  une carte garde son art si sa rareté change.
-- **Cadres.**
-
-| Rareté | Cadre et effets |
+| Rarity | Frame and effects |
 |---|---|
-| commune | Pierre grise mouchetée, fenêtre en arche de pierre tombale, herbe au pied, épitaphe « CIMETIÈRE DES MÈMES », couleurs passées |
-| rare | Acier bleu, losanges aux coins |
-| épique | Violet, équerres et perles aux coins, filet épais |
-| légendaire | Or, voile holographique arc-en-ciel et reflet diagonal sur l'art, étincelles sur la bordure |
-| mythique | Recto : obsidienne, or et cramoisi, aura dorée et rayons derrière l'emblème, holo, « MYTHIQUE · SECRÈTE ». Dos : rosace guillochée, sceau rouge « ? », « SCELLÉE » |
+| common | Speckled grey stone, tombstone-arch window, grass at the foot, faded colours |
+| rare | Blue steel, diamonds in the corners |
+| epic | Purple, corner brackets and beads, thick rule |
+| legendary | Gold, rainbow holographic veil and diagonal sheen, sparkles on the border |
+| mythic | Sealed back: guilloche rosette, red "?" seal |
 
-- **États.** `actif` : couleurs pleines. `en déclin` : couleurs désaturées et une fissure. `mort` : gris de pierre
-  légèrement chaud, quatre fissures, « ICI REPOSE » au-dessus du ticker et « † année » gravé dans l'art
-  (« † » seul si l'année est inconnue).
-- **Dos des mythiques.** Il ne dépend d'aucune carte : les trois mythiques ont le même dos, octet pour octet, et
-  ses métadonnées ne contiennent ni ticker ni nom.
-- **Miniature.** Ticker en gras de 64 px (réduit, puis compressé avec `textLength` s'il est long), rareté en
-  capitales espacées, pastille d'état colorée. Tout se lit dans une vignette de 150 px de large.
-- **Poids.** Pas de filtre de flou, chemins regroupés, nombres à une décimale : 4 à 15 Ko par carte sur les
-  786 cartes du catalogue (le test exige moins de 30 Ko).
+- **States.** `active`: full colour. `declining`: desaturated with one crack. `dead`: warm stone grey, four
+  cracks, "here lies" above the ticker and a dagger with the year engraved in the art.
+- **Thumbnail.** Bold 64 px ticker (shrunk or compressed with `textLength` when long), spaced rarity label,
+  coloured state badge. Everything reads at 150 px wide.
+- **Weight.** No blur filters, grouped paths, one-decimal numbers: 4 to 15 KB per card (tests require < 30 KB).
 
-## Garde-fous juridiques
+## Legal safeguards
 
-D'après `docs/marche-droits-economie.md` (section 2.3) et `docs/visuels-droits.md`. Ce n'est pas un avis juridique.
+This is not legal advice.
 
-- **Art 100 % abstrait.** Que des formes géométriques générées. Aucun logo, personnage, animal, grenouille,
-  chien, visage, ni redessin « à la manière de ». Aucun motif ne s'inspire du visuel d'un projet.
-- **Aucune ressource externe.** Pas d'`<image>`, pas de police embarquée, pas de `@font-face`, pas de lien
-  externe. Les polices sont les familles génériques `sans-serif`, `serif` et `monospace` : aucune police d'un
-  projet n'est imitée.
-- **Le ticker n'est qu'une donnée.** Ticker, nom, chaîne et identifiant sont écrits en texte simple, sans
-  stylisation propre à un projet. Le risque de marque n'est pas nul pour autant (section 2.3, point 3).
-- **Mention de non-affiliation.** « Sans lien ni partenariat avec les projets cités » en pied de chaque carte,
-  et la phrase complète dans le `<desc>` du SVG, dans la `description` et dans `extra` des métadonnées.
-- **Retrait possible.** Un visuel se régénère ou se remplace carte par carte, sans toucher aux jetons.
-- **Tests.** `tests/test_rendu.py` refuse les balises `image`, `style`, `script`, `foreignObject`, les liens
-  externes, les polices non génériques et une liste de mots interdits (logo, grenouille, chien, shiba, pepe,
-  kabosu, visage, officiel, …) hors des champs de données. Un test vérifie que ce garde-fou détecte bien un mot
-  interdit.
-- **À faire avant toute mise en ligne.** Faire valider l'approche par un juriste. Les 233 cartes de la liste A de
-  `visuels-droits.md` gardent leur risque de nom et de ticker, même avec un art abstrait.
+- **Fully abstract art.** Only generated geometric shapes: no logos, characters, animals, faces, and no redrawing
+  "in the style of" a project's visuals.
+- **No external resources.** No `<image>`, no embedded fonts, no `@font-face`, no external links. Fonts are the
+  generic `sans-serif`, `serif` and `monospace` families.
+- **The ticker is plain data.** Ticker, name, chain and identifier are written as plain text, with no
+  project-specific styling.
+- **Non-affiliation notice** in the footer of every card, in the SVG `<desc>`, in `description` and in `extra`.
+- **Replaceable.** Any visual can be regenerated or replaced card by card without touching the tokens.
+- **Tests.** `tests/test_rendu.py` rejects `image`, `style`, `script` and `foreignObject` elements, external
+  links, non-generic fonts and a list of forbidden words outside data fields, and checks that this guard does
+  catch a forbidden word.
 
-## Rendu PNG
+## PNG rendering
 
-`outils/rendre_png.py` utilise `rsvg-convert` ou `cairosvg` s'ils sont installés. Sinon, sur macOS, il passe par
-`qlmanage` (vignette carrée) puis `sips` (recadrage en 500 × 700). Les PNG ne servent qu'à la relecture : le
-média de référence est le SVG.
+`outils/rendre_png.py` uses `rsvg-convert` or `cairosvg` when installed, otherwise on macOS `qlmanage` then `sips`
+(crop to 500 x 700). PNGs are only for review; the reference media is the SVG.

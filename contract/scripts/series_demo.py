@@ -19,7 +19,7 @@ Sources :
 
 `amount` des brûlables : quantité indicative du jeton (plus petite unité) qui vaut le prix du pack au cours 1Click du
 relevé. Dans une série à table de valeur, le contrat ne le lit pas pour les exemplaires tirés (la part de valeur du pack,
-en yoctoNEAR, la remplace : docs/mecaniques-spec.md, section 9), mais il doit être > 0.
+en yoctoNEAR, la remplace : docs/mechanics.md, section 9), mais il doit être > 0.
 """
 from __future__ import annotations
 

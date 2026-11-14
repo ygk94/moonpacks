@@ -1,4 +1,4 @@
-//! Mécaniques de série (spécification complète : `docs/mecaniques-spec.md`).
+//! Mécaniques de série (spécification complète : `docs/mechanics.md`).
 //!
 //! - **Pitié** : compteur on-chain `(compte, série) → n`, lu et mis à jour par le dernier reçu du
 //!   tirage ; gold pack si `gold_roll < min(p_max, p0 + k × n)` en ppb (`draw::pity_is_gold`), sans

@@ -201,7 +201,7 @@ pub struct PackKind {
     pub value: bool,
 }
 
-/// Paramètres des mécaniques d'une série (voir `docs/mecaniques-spec.md`). Tous les champs sont
+/// Paramètres des mécaniques d'une série (voir `docs/mechanics.md`). Tous les champs sont
 /// toujours sérialisés (`null` pour une option absente), dans cet ordre.
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq, Eq)]

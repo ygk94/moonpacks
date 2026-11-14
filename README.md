@@ -1,69 +1,125 @@
-# Memaster (nom provisoire)
+# Moonpacks
 
-Second projet de l'équipe pour le NEAR HACKATHON, tracks **NFTs** et **memecoins**. Le nom n'est pas encore choisi.
+Memecoin trading-card packs on NEAR. You buy a pack, the cards are drawn on-chain with verifiable randomness and minted
+as NFTs (NEP-171), and some cards are **burnable**: burning one pays out tokens of the memecoin it shows.
 
-## L'idée
+Built for **NEAR HACKATHON** (tracks: NFTs, Memecoins). Testnet only.
 
-- On paie en NEAR un **booster de 5 cartes NFT** (sur NEAR) représentant des memecoins de toutes les chaînes, avec une rareté.
-- Certaines cartes sont **burnables**, quelle que soit leur rareté : on brûle la carte et on reçoit les jetons du memecoin.
-  Ces jetons sont achetés et bloqués au moment de l'ouverture du booster.
-- Les memecoins morts sont des **cartes de collection**, dans les mêmes boosters.
-- Les taux de drop sont publiés **on-chain**.
-- Wallet visé : MetaMask. Démo : NEAR Intents.
-- Catalogue visé : 500 à 1000 cartes (786 aujourd'hui, dont 13 brûlables via NEAR Intents).
+- **Live demo:** https://moonpacks-ochre.vercel.app (NEAR testnet, MetaMask or any NEAR wallet)
+- **Contract:** [`app4.simpletea5483.testnet`](https://testnet.nearblocks.io/address/app4.simpletea5483.testnet)
 
-## Mécaniques (détail : `docs/mecaniques.md`)
+## The problem
 
-1. **Compteur de pitié** : chaque pack ouvert sans gold pack augmente la chance du suivant ; au bout de N packs, le gold
-   pack est garanti. Compteur on-chain par compte, formule publiée ; variante : le compteur vit dans un NFT revendable.
-2. **Rareté pilotée par les burns** : plus la communauté brûle les cartes d'un memecoin, plus les cartes restantes de ce
-   coin deviennent rares dans les packs suivants.
-3. **Gold rush collectif** : quand la communauté atteint un palier (par exemple 1 000 packs dans la semaine), les taux
-   s'améliorent pour tout le monde pendant une durée fixe.
-4. **Résurrection des coins morts** : si le cours d'un memecoin « mort » remonte au-dessus d'un seuil, ses cartes de
-   collection deviennent burnables (oracle de prix et stock de jetons à cadrer).
+Memecoin culture is mostly charts and speculation. There is no fun, collectible way to own a piece of a meme's history,
+and blind-box products in crypto usually hide their odds and their draws, so nobody can check that a pack was fair.
 
-## Prix du pack
+## The product
 
-Avec 65 % du prix reversé en jetons et un contrat optimisé (~0,05 $ de coûts par pack), le **seuil de rentabilité est
-vers 0,15 $**. À 0,20 $, c'est possible mais à peine rentable (~2 centimes par pack). Pour une marge saine de 20 à 30 %,
-viser **0,35 à 0,50 $**. Piste : pack d'entrée à 0,20 $, pack standard à 0,50–1 $. Hypothèse : NEAR à 2,5 $, chiffres à
-recalculer avec le gaz réel mesuré sur testnet.
+- **1,527 cards**, one per memecoin, from the 2013 classics to recent launches, across many chains. Rarity follows each
+  coin's peak market cap. Dead coins are collection cards; a few cards are sealed **mythics** whose identity is committed
+  on-chain (hash) and revealed only when one is pulled.
+- **Packs**: Classic (5 cards) and Full Moon (same cards, burnable cards hold 2.5× more tokens), sold by 5, 10 or 20
+  cards, plus 9 **themed packs** drawn from the same series: Dog, Cat, Frog, Solana, BNB Chain, Ethereum, OG 1/2/5 (only
+  2013-2018 coins). Themed packs share the series' mint counters and caps, so they never reprint or dilute rarity.
+- **Burnable cards**: a card backed by a token amount can be burned to redeem that amount. Burns feed back into the
+  odds (burned coins get rarer in later packs).
+- **Mechanics** written into the contract: gold packs with a pity counter, community "rush" windows with better odds,
+  burn-driven rarity, resurrection of dead coins whose price comes back, value tables per pack. Full spec:
+  [`docs/mechanics.md`](docs/mechanics.md).
+- **Transparency**: the full draw table is stored on-chain with its SHA-256 hash; every pack logs its random seeds and
+  draws as events, and anyone can recompute a pack in the browser (Odds page) or with the Python verifier.
+- **Market**: cards can be listed and bought between players (NEAR payments, royalties).
 
-## État au 11/11/2026
+## How NEAR is used
 
-Branche `feat/socle-v2` : catalogue v2 et premier socle technique, rien de déployé.
+- **Smart contract (Rust, near-sdk 5)** holds the series tables, sells packs, mints NEP-171 NFTs, runs the market and
+  the burns. Everything a player sees comes from contract views; nothing is decided off-chain.
+- **On-chain randomness**: a pack is revealed over 3 blocks, each step mixing the block's `random_seed` into an
+  accumulator, so the buyer cannot choose the outcome by retrying in one transaction.
+- **Chain abstraction for users**: wallets via `@hot-labs/near-connect`, with MetaMask first (NEAR accounts controlled by
+  an Ethereum wallet), so a memecoin trader does not need a new wallet.
+- **NEAR Intents (designed, simulated on testnet)**: burnable cards are meant to be backed by tokens held through NEAR
+  Intents and paid out on burn. NEAR Intents has no testnet, so on this demo the payout goes to a mock redeemer
+  contract and **no real tokens are sent**; the site says so on every burn.
 
-| Dossier | Contenu |
+## Try it (judges)
+
+All steps use NEAR **testnet**; get free testnet NEAR from https://near-faucet.io.
+
+1. Open https://moonpacks-ochre.vercel.app → you see the landing page and two packs.
+2. Click **Connect wallet**, pick MetaMask or a NEAR wallet on testnet → your account appears in the header.
+3. Go to **Shop**, click **Open** on a Classic 5-card pack (0.0552 NEAR + a refundable storage deposit), confirm in
+   the wallet → the pack opens and the 5 cards are revealed one by one.
+4. In **Shop**, open a themed pack (e.g. **OG single**, 0.011 NEAR) → you get one card from the 2013-2018 era only.
+5. Go to **Collection** → your cards are there as NFTs, grouped by pack. Click **Verify this pack** → the app reads the
+   table and the pack from the chain and recomputes every draw in your browser → all checks pass.
+6. Click a burnable card → it shows its token backing; burn it → the NFT is destroyed and a (simulated) token payout is
+   recorded. Or choose **Sell on the market** to list it.
+7. Go to **Odds** → the drop rates of each pack and, under "Verify it yourself", the contract code hash and the table
+   hash frozen on-chain, with the verifier command to recompute them.
+8. Go to **Market** → buy a card listed by another account.
+
+## Repository
+
+| Folder | What it is |
 |---|---|
-| `docs/catalogue-v2.md` | **Catalogue v2** : 1 649 cartes 100 % mèmes (3 mythiques scellés « ? »), 101 « À décider » ; régénéré par `docs/recherche-v2/consolider.py` |
-| `contract/` | Contrat NFT NEAR (Rust) : boosters, tirage vérifiable, mythiques scellés, marché, burn abstrait, séries par lots |
-| `verifier/` | Vérificateur public des tirages (Python) |
-| `sim/` | Simulation Monte-Carlo de l'économie (séries 1 et 2) |
-| `art/` | Générateur de visuels originaux (SVG) |
+| [`contract/`](contract/README.md) | NEAR smart contract (Rust): series, packs, reveal, NFTs, market, burn, mechanics, pack kinds; mock redeemer and price-oracle contracts; deployment scripts |
+| [`front/`](front/README.md) | Web app (Vite, React, TypeScript), deployed to Vercel by CI |
+| [`verifier/`](verifier/README.md) | Independent Python verifier of table hashes and pack draws, with cross-language test vectors from the Rust code |
+| [`sim/`](sim/README.md) | Monte-Carlo simulation of the pack economy used to set prices, odds and value tables |
+| [`art/`](art/README.md) | Procedural card-art generator (original SVG artwork, no third-party logos) |
+| `docs/` | Mechanics spec and the data the series were built from (catalogue, CoinGecko snapshot, NEAR Intents token lists) |
 
-**Le plan de travail est dans `docs/plan.md`.** La recherche est dans `docs/` :
+## Run it locally
 
-| Fichier | Contenu |
-|---|---|
-| `mecaniques.md` | Les 4 mécaniques retenues et le calcul du prix du pack |
-| `historique-echanges.md` | Nos échanges sur le projet : demandes, décisions, questions ouvertes |
-| `intents-et-garde.md` | Garde des jetons via NEAR Intents, relayeur, burn |
-| `wallets-et-alea.md` | MetaMask sur NEAR, tirage aléatoire, marketplace |
-| `marche-droits-economie.md` | Marché, droit français des jeux, économie du booster |
-| `plan.md` | **Le plan de travail**, par phases, avec les décisions à prendre |
-| `intents-couverture.md` | Memecoins réellement disponibles sur NEAR Intents (relevé du 11/11), coûts d'achat et de retrait |
-| `catalogue-final.md` | **Le catalogue retenu** : 786 cartes, avec rareté, burn (statut Intents réel) et chaîne, plus 77 jetons « à décider » |
-| `catalogue*.md` | Catalogues intermédiaires (général, Solana, Base et autres, historiques, CoinGecko brut) |
-| `visuels-droits.md` | Droits sur les visuels : 233 cartes avec ayant droit identifiable, 0 sous licence ouverte, 553 sans licence connue |
-| `devis-intents.py`, `data/` | Script de devis 1Click `dry` et relevés bruts du 11/11 |
-| `recuperer-images.py` | Télécharge les logos et adresses depuis CoinGecko (`python3 docs/recuperer-images.py`) |
+Requirements: Rust (stable) with `wasm32-unknown-unknown`, Node.js 24, Python 3.12.
 
-## Points de vigilance
+```bash
+# Web app against the deployed testnet contract
+cd front && npm ci && npm run dev          # http://localhost:5173
 
-- **Juridique** : un paquet aléatoire payant à valeur revendable remplit sans doute les critères des jeux d'argent en France.
-  Testnet ou démo fermée seulement, avis juridique avant tout mainnet.
-- **Visuels** : aucun logo n'est réutilisable publiquement tel quel. Les images téléchargées (`docs/images/`) restent
-  internes et ne sont pas versionnées. Visuels originaux à générer.
-- **Secrets** : aucune clé dans le dépôt, seulement des variables d'environnement.
-- **Garder le dépôt privé** tant que l'équipe n'a pas décidé de le publier.
+# Tests
+cd contract && cargo test --lib            # contract unit tests
+cd verifier && python -m unittest discover -s tests -t .
+cd front && npm test
+cd art && python -m unittest discover -s tests
+cd sim && pip install -r requirements.txt && python -m pytest -q tests
+```
+
+Deploy your own copy on testnet (needs `near-cli-rs` and `cargo-near`, and a funded testnet account whose key is in
+the NEAR CLI keychain):
+
+```bash
+cd contract
+ROOT_ID=<your-account>.testnet KEYCHAIN=system ./scripts/deploy_v4.sh
+```
+
+Then point the web app at it with `VITE_CONTRACT_ID=app4.<your-account>.testnet` (see `front/.env.example`).
+
+## Deployments (testnet)
+
+| Version | Contract | Notes |
+|---|---|---|
+| v4 (current) | `app4.simpletea5483.testnet` | Pack kinds (themed packs); series 0 "Moonpacks Classic" + 9 kinds, series 1 "Moonpacks Full Moon" |
+| v3 | `app3.memaster-demo-j7xg7z.testnet` | Two series, storage refunds |
+| v2, v1 | `app2.` / `app.memaster-demo-j7xg7z.testnet` | Earlier iterations |
+
+## Hackathon disclosure
+
+- All code in this repository was written during the hackathon window (first commit 2026-11-11); there is no
+  pre-existing codebase.
+- Libraries: near-sdk and near-contract-standards (Rust), sha2; React, framer-motion, `@hot-labs/near-connect`,
+  Vite, Vitest; Python standard library, NumPy and PyYAML for the simulation (see `sim/requirements.txt`).
+- AI coding assistants were used during development.
+- Market data comes from public CoinGecko and NEAR Intents endpoints (snapshots in `docs/data/`). Card art is generated;
+  no coin logos are used.
+
+## Limits
+
+- Testnet only. Paid random packs with resellable value may fall under gambling law in some countries; no mainnet
+  launch without legal review.
+- Token payouts on burn are simulated (see above). The price oracle used for dead-coin resurrection is a mock on testnet.
+
+## License
+
+[MIT](LICENSE)

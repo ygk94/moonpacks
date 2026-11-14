@@ -1,8 +1,8 @@
-# Logos tiers : usage interne, droits des auteurs (voir docs/visuels-droits.md)
+# Third-party logos: internal use only, rights belong to their owners
 docs/images/
 .env*
 .DS_Store
 __pycache__/
 *.pyc
-# Vrais noms des mythiques (écrits par consolider.py, lus par build_series.py) : jamais dans git
+# Real mythic card names (read by the contract's series build script): never committed
 docs/data/secrets/

@@ -6,7 +6,7 @@ Usage (depuis contract/) :
         [--catalog ../front/public/catalog.json] [--media-base https://moonpacks-ochre.vercel.app/cards]
 
 Aucun secret n'est nécessaire : les mythiques sont reprises **telles quelles** de app3 (engagements publics,
-mêmes sels), donc le fichier de secrets existant de Hugo (scripts/secrets/serie-demo-entree.json et
+mêmes sels), donc le fichier de secrets existant (scripts/secrets/serie-demo-entree.json et
 -standard.json) suffit pour les révéler. Les tables source sont relues sur la chaîne, et leur hash recalculé
 (verifier/canon.py) doit être celui enregistré à l'ouverture : on part exactement de ce qui est déployé.
 

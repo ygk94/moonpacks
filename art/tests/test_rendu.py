@@ -18,7 +18,7 @@ from memaster_art.cli import generer  # noqa: E402
 from memaster_art.metadonnees import hash_b64, metadonnees_carte  # noqa: E402
 from memaster_art.rendu import rendre_carte, rendre_dos  # noqa: E402
 
-CATALOGUE = os.path.join(ICI, "..", "..", "docs", "catalogue-final.md")
+CATALOGUE = os.path.join(ICI, "data", "catalogue-v1.md")
 SVG = "{http://www.w3.org/2000/svg}"
 
 # Mots qui ne doivent jamais apparaître hors des champs de données (ticker, nom, chaîne, identifiant).

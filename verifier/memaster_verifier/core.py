@@ -8,7 +8,7 @@ Tout est calculé octet par octet comme le contrat :
 - ``table_hash = sha256(serde_json::to_vec(table))`` (voir ``canon.py``)
 - ``commitment = sha256(card_id_utf8 || sel)``, ``content_hash = sha256(json(content) || sel)``
 
-Mécaniques (``docs/mecaniques-spec.md``), réimplémentées à part de ``draw.rs`` :
+Mécaniques (``docs/mechanics.md``), réimplémentées à part de ``draw.rs`` :
 
 - ``gold_roll = roll(acc, 0, 2) mod 10⁹`` ; gold pack si ``gold_roll < min(p_max, p0 + k·n)`` (ppb), ou si la
   garantie optionnelle ``n_max`` est atteinte ; le compteur ne repart à 0 qu'après un gold pack (ancien format en ppm
