@@ -201,6 +201,8 @@ function ThemedOffer({
   onBuy: (o: NonNullable<ReturnType<typeof offerFor>>) => void;
 }) {
   const unit = type.row === "families" ? `${type.title.split(" ")[0].toLowerCase()} cards` : "cards";
+  // Contrat à types de packs : nombre exact de cartes du type, lu sur la chaîne ; sinon, le filtre du catalogue.
+  const count = offer?.kind?.card_count ?? pool?.length ?? null;
   return (
     <article className={`offer-card offer-card--themed${offer ? "" : " offer-card--soon"}`}>
       <div className="pack-stack pack-stack--1">
@@ -216,7 +218,7 @@ function ThemedOffer({
       <div className="offer-card__body">
         <strong className="offer-card__cards">{type.title}</strong>
         <small className="offer-card__note">
-          {type.cards} card{type.cards > 1 ? "s" : ""} per pack{pool ? ` · from ${pool.length} ${unit}` : ""}
+          {type.cards} card{type.cards > 1 ? "s" : ""} per pack{count != null ? ` · from ${count} ${unit}` : ""}
         </small>
         {type.note && <small className="offer-card__perk">{type.note}</small>}
         {offer && (
