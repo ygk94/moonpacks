@@ -111,8 +111,6 @@ Then point the web app at it with `VITE_CONTRACT_ID=app4.<your-account>.testnet`
 - Libraries: near-sdk and near-contract-standards (Rust), sha2; React, framer-motion, `@hot-labs/near-connect`,
   Vite, Vitest; Python standard library, NumPy and PyYAML for the simulation (see `sim/requirements.txt`).
 - AI coding assistants were used during development.
-- Other project by the same team at NEAR HACKATHON: [ONA](https://github.com/enzoblain/ONA), a private AI
-  assistant (Privacy & Private AI track). The two projects are independent.
 - Market data comes from public CoinGecko and NEAR Intents endpoints (snapshots in `docs/data/`). Card art is generated;
   no coin logos are used.
 
@@ -121,6 +119,12 @@ Then point the web app at it with `VITE_CONTRACT_ID=app4.<your-account>.testnet`
 - Testnet only. Paid random packs with resellable value may fall under gambling law in some countries; no mainnet
   launch without legal review.
 - Token payouts on burn are simulated (see above). The price oracle used for dead-coin resurrection is a mock on testnet.
+
+## Related project
+
+Some team members also built **ONA** at NEAR HACKATHON (track `privacy`): a private end-to-end AI agent, a separate
+project with its own repository: https://github.com/enzoblain/ONA. No code, contract or server is shared between the two
+projects.
 
 ## License
 
