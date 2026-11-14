@@ -32,6 +32,12 @@ interface WalletState {
   disconnect: () => Promise<void>;
   /** Signe et envoie un appel au contrat ; rejette avec le message de panique si la transaction échoue. */
   call: (method: string, args: Record<string, unknown>, opts?: CallOptions) => Promise<TxOutcome>;
+  /**
+   * Plusieurs appels, une transaction chacun (un `buy_pack` prend jusqu'à 300 Tgas : on ne peut pas les grouper dans
+   * une seule transaction). Une seule validation si le wallet sait signer un lot, sinon une par appel. Renvoie les
+   * transactions réussies et le nombre d'échecs ; rejette seulement si aucune n'a réussi.
+   */
+  callMany: (calls: { method: string; args: Record<string, unknown>; opts?: CallOptions }[]) => Promise<{ outcomes: TxOutcome[]; failed: number; firstError?: unknown }>;
 }
 
 const Ctx = createContext<WalletState | null>(null);
@@ -167,6 +173,75 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [wallet, accountId],
   );
 
+  const callMany = useCallback(
+    async (calls: { method: string; args: Record<string, unknown>; opts?: CallOptions }[]) => {
+      if (!wallet || !accountId) throw new Error("Connect a wallet first.");
+      const outcomes: TxOutcome[] = [];
+      let failed = 0;
+      let firstError: unknown;
+      const settle = async (out: unknown) => {
+        const o = out as Partial<TxOutcome>;
+        let full: TxOutcome;
+        if (o?.receipts_outcome && o.status) full = o as TxOutcome;
+        else {
+          const hash = txHashOf(out);
+          if (!hash) throw new Error("The wallet did not return the transaction. Check your wallet history before retrying.");
+          full = await txStatus(hash, accountId);
+        }
+        const failure = failureOf(full);
+        if (failure) throw new Error(failure);
+        return full;
+      };
+      const batch = calls.length > 1 && wallet.manifest.features?.signAndSendTransactions;
+      if (batch) {
+        let results: unknown[] | null = null;
+        try {
+          results = (await wallet.signAndSendTransactions({
+            network: NETWORK,
+            signerId: accountId,
+            transactions: calls.map((c) => ({
+              receiverId: CONTRACT_ID,
+              actions: [
+                {
+                  type: "FunctionCall" as const,
+                  params: { methodName: c.method, args: c.args, gas: c.opts?.gas ?? "100000000000000", deposit: c.opts?.deposit ?? "0" },
+                },
+              ],
+            })),
+          })) as unknown[];
+        } catch (e) {
+          // Refus dans le wallet : rien n'est parti. Autre erreur : on retombe sur une signature par appel.
+          if (/reject|cancel|denied|closed/i.test(String((e as Error)?.message ?? e))) throw e;
+        }
+        if (results) {
+          for (const out of results) {
+            try {
+              outcomes.push(await settle(out));
+            } catch (e) {
+              failed++;
+              firstError ??= e;
+            }
+          }
+          if (!outcomes.length) throw firstError ?? new Error("No transaction went through.");
+          return { outcomes, failed, firstError };
+        }
+      }
+      for (const c of calls) {
+        try {
+          outcomes.push(await call(c.method, c.args, c.opts));
+        } catch (e) {
+          // Le premier refus arrête le lot ; les packs déjà achetés restent ouverts.
+          if (!outcomes.length) throw e;
+          failed += calls.length - outcomes.length;
+          firstError = e;
+          break;
+        }
+      }
+      return { outcomes, failed, firstError };
+    },
+    [wallet, accountId, call],
+  );
+
   const value = useMemo<WalletState>(
     () => ({
       accountId,
@@ -177,8 +252,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       connect,
       disconnect,
       call,
+      callMany,
     }),
-    [accountId, wallet, ready, options, connect, disconnect, call],
+    [accountId, wallet, ready, options, connect, disconnect, call, callMany],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -5,10 +5,13 @@ import { useEffect, useState } from "react";
 import { cardImage, loadCatalog } from "../lib/catalog";
 
 interface Props {
-  variant?: "standard" | "gold";
+  /** gold : gold pack (révélé à l'ouverture) ; moon : packs « Full Moon » de la boutique. */
+  variant?: "standard" | "gold" | "moon";
   seed?: number;
   label?: string;
   className?: string;
+  /** Cartes parmi lesquelles choisir la mosaïque (pack thématique) ; par défaut, les coins à chaîne connue. */
+  pool?: string[];
 }
 
 function pick(ids: string[], n: number, seed: number): string[] {
@@ -26,17 +29,19 @@ function pick(ids: string[], n: number, seed: number): string[] {
   return [...out];
 }
 
-export function PackArt({ variant = "standard", seed = 7, label = "5 CARDS", className = "" }: Props) {
+export function PackArt({ variant = "standard", seed = 7, label = "5 CARDS", className = "", pool }: Props) {
   const [ids, setIds] = useState<string[]>([]);
   useEffect(() => {
     loadCatalog().then((c) => {
       // Des coins connus de toutes les chaînes : ceux qui ont une chaîne identifiée.
-      const known = Object.entries(c)
-        .filter(([, e]) => e.chain)
-        .map(([id]) => id);
+      const known = pool?.length
+        ? pool.filter((id) => c[id])
+        : Object.entries(c)
+            .filter(([, e]) => e.chain)
+            .map(([id]) => id);
       setIds(pick(known, 12, seed));
     });
-  }, [seed]);
+  }, [seed, pool]);
 
   return (
     <div className={`pack pack--${variant} ${className}`}>
@@ -50,7 +55,7 @@ export function PackArt({ variant = "standard", seed = 7, label = "5 CARDS", cla
         <div className="pack__foil" />
         <div className="pack__brand">
           <span className="pack__logo">MOONPACKS</span>
-          <span className="pack__sub">{variant === "gold" ? "GOLD" : "MEMECOIN BOOSTER"}</span>
+          <span className="pack__sub">{variant === "gold" ? "GOLD" : variant === "moon" ? "FULL MOON" : "MEMECOIN BOOSTER"}</span>
         </div>
         <div className="pack__count">{label}</div>
       </div>

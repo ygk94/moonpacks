@@ -11,6 +11,8 @@ export interface CatalogEntry {
   state: "active" | "declining" | "dead" | "unknown";
   address: string | null;
   coingecko: string | null;
+  /** Époque du coin, par exemple « 2013-2018 » (null si inconnue). */
+  era?: string | null;
 }
 
 let catalog: Promise<Record<string, CatalogEntry>> | null = null;

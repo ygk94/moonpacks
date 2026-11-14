@@ -156,6 +156,10 @@ d'espérance ni de pourcentage affichés, pas de choix de chaîne au burn.
 
 ---
 
+- [x] **6.9 Boutique en lignes** (14/11) : Classic et Full Moon en 5, 10 et 20 cartes (10 et 20 = 2 et 4 packs ouverts
+  ensemble), puis familles (Dog, Cat, Frog), chaînes (Solana, BNB Chain, Ethereum) et OG (1, 2 et 5 cartes) en
+  « Coming soon ». Séries à créer par Hugo : `docs/front/packs-thematiques.md`.
+
 ## Prochaines actions proposées (13/11)
 
 1. Site en ligne (6.8), simulation affichée, mentions légales faites.

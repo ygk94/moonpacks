@@ -55,6 +55,8 @@ for (const c of brut) {
     state: etat(c),
     address: propre(c.adresse),
     coingecko: propre(c.coingecko_id),
+    // Époque du coin (« 2013-2018 », « 2019-2022 », « 2023-2026 ») : packs « OG » de la boutique.
+    era: propre(c.epoque) && c.epoque !== "inconnue" ? c.epoque : null,
   };
 }
 mkdirSync(dirname(sortieCatalogue), { recursive: true });

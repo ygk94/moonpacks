@@ -38,7 +38,7 @@ export function App() {
   else if (path.startsWith("/market")) page = <Market />;
   else if (path.startsWith("/rates")) page = <Transparency />;
   else if (path.startsWith("/legal")) page = <Legal />;
-  else page = <Shop onBuy={(series) => setOpening({ kind: "buy", series })} />;
+  else page = <Shop onBuy={(series, count) => setOpening({ kind: "buy", series, count })} />;
 
   return (
     <div className="app">

@@ -24,7 +24,8 @@ import type { PackMode, PackView, Rarity, SeriesView } from "../near/types";
 import { useWallet } from "../near/wallet";
 import { VerifyPanel } from "../verify/VerifyPanel";
 
-export type OpeningRequest = { kind: "buy"; series: SeriesView } | { kind: "replay"; packId: number };
+/** `count` : nombre de packs de 5 cartes achetés d'un coup (10 cartes = 2 packs, 20 = 4), ouverts ensemble. */
+export type OpeningRequest = { kind: "buy"; series: SeriesView; count?: number } | { kind: "replay"; packId: number };
 
 type Phase = "signing" | "sealing" | "drawing" | "tearing" | "revealing" | "done" | "error" | "stuck" | "refunded";
 
@@ -47,9 +48,14 @@ const POLL_MS = 500;
 const MAX_GAS = "300000000000000";
 
 export function Opening({ request, onClose }: { request: OpeningRequest; onClose: () => void }) {
-  const { call, accountId } = useWallet();
+  const { call, callMany, accountId } = useWallet();
   const [phase, setPhase] = useState<Phase>(request.kind === "buy" ? "signing" : "sealing");
+  // Packs ouverts ensemble ; `packId` est celui qu'on attend encore (relance, remboursement), le premier sinon.
+  const [packIds, setPackIds] = useState<number[]>(request.kind === "replay" ? [request.packId] : []);
   const [packId, setPackId] = useState<number | null>(request.kind === "replay" ? request.packId : null);
+  const [goldAny, setGoldAny] = useState(false);
+  const [rushAny, setRushAny] = useState(false);
+  const [bundleNote, setBundleNote] = useState<string | null>(null);
   const [pack, setPack] = useState<PackView | null>(null);
   const [cards, setCards] = useState<RevealCard[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -82,47 +88,68 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
     started.current = true;
     const s = request.series;
     const gas = BigInt(s.min_gas) > BigInt(MAX_GAS) ? s.min_gas : MAX_GAS;
-    call("buy_pack", { series_id: s.series_id }, { deposit: s.required_deposit, gas })
-      .then((out) => {
-        const events = eventsOf(out);
-        const ev = findEvent(events, "pack_bought");
-        const id = Number(ev?.pack_id ?? returnValue<string>(out));
-        if (!Number.isFinite(id)) throw new Error("Pack id not found in the transaction.");
-        // v3 : stockage non utilisé rendu au tirage, lu dans `pack_revealed.storage` s'il est déjà dans la réponse.
-        const refund = revealStorageRefund(findEvent(events, "pack_revealed"));
-        if (refund != null) setStorageRefund(refund);
-        setPackId(id);
+    const count = Math.max(1, request.count ?? 1);
+    const buy = { method: "buy_pack", args: { series_id: s.series_id }, opts: { deposit: s.required_deposit, gas } };
+    callMany(Array.from({ length: count }, () => buy))
+      .then(({ outcomes, failed, firstError }) => {
+        const ids: number[] = [];
+        let refundSum: bigint | null = null;
+        for (const out of outcomes) {
+          const events = eventsOf(out);
+          const ev = findEvent(events, "pack_bought");
+          const id = Number(ev?.pack_id ?? returnValue<string>(out));
+          if (Number.isFinite(id)) ids.push(id);
+          // v3 : stockage non utilisé rendu au tirage, lu dans `pack_revealed.storage` s'il est déjà dans la réponse.
+          const refund = revealStorageRefund(findEvent(events, "pack_revealed"));
+          if (refund != null) refundSum = (refundSum ?? 0n) + refund;
+        }
+        if (!ids.length) throw new Error("Pack id not found in the transaction.");
+        if (failed > 0)
+          setBundleNote(
+            `${failed} of ${count} packs could not be bought (${humanError(firstError)}). The ${ids.length} other${ids.length > 1 ? "s are" : " is"} opened below.`,
+          );
+        if (refundSum != null && ids.length === 1) setStorageRefund(refundSum);
+        setPackIds(ids);
+        setPackId(ids[0]);
         setPhase("sealing");
       })
       .catch((e) => {
         setError(humanError(e));
         setPhase("error");
       });
-  }, [request, call]);
+  }, [request, callMany]);
 
-  // 2. Attente du tirage : get_pack toutes les 500 ms ; relance proposée si le pack ne progresse plus.
+  // 2. Attente du tirage : get_pack de chaque pack toutes les 500 ms ; relance proposée si un pack ne progresse plus.
   useEffect(() => {
-    if (packId == null || !["sealing", "drawing"].includes(phase)) return;
+    if (!packIds.length || !["sealing", "drawing"].includes(phase)) return;
     let stop = false;
     const tick = async () => {
       try {
-        const p = await getPack(packId);
+        const ps = await Promise.all(packIds.map((id) => getPack(id)));
         if (stop) return;
-        if (!p) throw new Error("Pack not found.");
-        setPack(p);
-        setStep(p.step);
-        if (p.status === "revealed") {
+        if (ps.some((p) => !p)) throw new Error("Pack not found.");
+        const packs = ps as PackView[];
+        const waiting = packs.find((p) => p.status !== "revealed");
+        if (!waiting) {
           // Sinon, même montant relu dans `get_pack` (storage_used ne change plus après le tirage).
-          const unused = unusedStorage(p);
-          if (unused != null) setStorageRefund((r) => r ?? unused);
-          const resolved = await resolveCards(p);
-          // Visuels des 5 cartes chargés avant la déchirure, pour une révélation sans image vide
+          const unused = packs.map(unusedStorage);
+          if (unused.every((u) => u != null)) setStorageRefund((r) => (packs.length === 1 ? (r ?? unused[0]) : unused.reduce((a, b) => a! + b!, 0n)));
+          setPack(packs[0]);
+          setGoldAny(packs.some((p) => p.mode === "gold"));
+          setRushAny(packs.some((p) => p.rush));
+          // Cartes de tous les packs, brûlables en dernier sur l'ensemble.
+          const resolved = burnableLast((await Promise.all(packs.map(resolveCards))).flat());
+          // Visuels chargés avant la déchirure, pour une révélation sans image vide
           // (attente plafonnée : l'animation ne doit jamais rester bloquée sur le réseau).
           await preloadImages(resolved.map((c) => cardImage(c.rarity === "mythic" ? null : c.cardId)), 1500);
           setCards(resolved);
           if (!stop) setPhase("tearing");
           return;
         }
+        const p = waiting;
+        setPackId(p.pack_id);
+        setPack(p);
+        setStep(p.step);
         if (p.status === "stuck") {
           setPhase("stuck");
           return;
@@ -145,7 +172,7 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
     return () => {
       stop = true;
     };
-  }, [packId, phase]);
+  }, [packIds, phase]);
 
   const retry = async () => {
     if (packId == null) return;
@@ -182,16 +209,18 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
     }
   };
 
-  const mode: PackMode = pack?.mode ?? "base";
+  const mode: PackMode = goldAny ? "gold" : (pack?.mode ?? "base");
   const gold = mode === "gold" && ["tearing", "revealing", "done"].includes(phase);
+  const many = packIds.length > 1 || (request.kind === "buy" && (request.count ?? 1) > 1);
+  const totalCards = (request.kind === "buy" ? (request.count ?? 1) : 1) * (request.kind === "buy" ? request.series.cards_per_pack : 5);
 
   return (
     <div className={`opening${gold ? " opening--gold" : ""}`}>
       <div className="opening__bg" aria-hidden />
       <header className="opening__top">
         <span className="opening__title">
-          {packId != null ? `Pack #${packId}` : "New pack"}
-          {pack?.rush && <span className="pill pill--rush">Rush pack</span>}
+          {many ? `${totalCards}-card pack` : packId != null ? `Pack #${packId}` : "New pack"}
+          {(rushAny || pack?.rush) && <span className="pill pill--rush">Rush pack</span>}
           {gold && <span className="pill pill--gold">Gold pack</span>}
         </span>
         {["done", "error", "stuck", "refunded"].includes(phase) || request.kind === "replay" ? (
@@ -204,16 +233,16 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
       <div className="opening__stage">
         <AnimatePresence mode="wait">
           {(phase === "signing" || phase === "sealing" || phase === "drawing") && (
-            <PackStage key="pack" phase={phase} step={step} steps={steps} />
+            <PackStage key="pack" phase={phase} step={step} steps={steps} count={many ? packIds.length || (request.kind === "buy" ? request.count ?? 1 : 1) : 1} />
           )}
           {phase === "tearing" && <TearStage key="tear" gold={mode === "gold"} onDone={() => setPhase("revealing")} />}
           {phase === "revealing" && (
             <RevealStage key="reveal" cards={cards} gold={mode === "gold"} onDone={() => setPhase("done")} />
           )}
-          {phase === "done" && <Summary key="done" cards={cards} packId={packId} storageRefund={storageRefund} />}
+          {phase === "done" && <Summary key="done" cards={cards} packIds={packIds} storageRefund={storageRefund} note={bundleNote} />}
           {phase === "error" && (
             <motion.div key="err" className="opening__message" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <h2>The pack was not bought</h2>
+              <h2>{many ? "The packs were not bought" : "The pack was not bought"}</h2>
               <p>{error}</p>
               <p className="muted">Nothing was charged if the transaction did not go through.</p>
             </motion.div>
@@ -268,6 +297,11 @@ export function Opening({ request, onClose }: { request: OpeningRequest; onClose
             </button>
             {error && <p className="error">{error}</p>}
           </div>
+        )}
+        {phase === "revealing" && cards.length > 5 && (
+          <button className="btn btn--ghost" onClick={() => setPhase("done")}>
+            Skip to all {cards.length} cards
+          </button>
         )}
         {phase === "done" && (
           <div className="opening__actions">
@@ -341,12 +375,16 @@ async function resolveCards(p: PackView): Promise<RevealCard[]> {
 
 // --- Étapes de la scène ------------------------------------------------------------------------
 
-function PackStage({ phase, step, steps }: { phase: Phase; step: number; steps: number }) {
+function PackStage({ phase, step, steps, count = 1 }: { phase: Phase; step: number; steps: number; count?: number }) {
   const text =
     phase === "signing"
-      ? "Confirm the purchase in your wallet"
+      ? count > 1
+        ? `Confirm the ${count} packs in your wallet`
+        : "Confirm the purchase in your wallet"
       : phase === "sealing"
-        ? "Sealing your pack on-chain…"
+        ? count > 1
+          ? `Sealing your ${count} packs on-chain…`
+          : "Sealing your pack on-chain…"
         : `Drawing your cards… block ${Math.min(step + 1, steps)} of ${steps}`;
   return (
     <motion.div
@@ -369,6 +407,7 @@ function PackStage({ phase, step, steps }: { phase: Phase; step: number; steps: 
             : { duration: 3.2, repeat: Infinity, ease: "easeInOut" }
         }
       >
+        {count > 1 && <span className="pack-stage__count">×{count}</span>}
         <PackArt seed={11} />
         <div className="pack-stage__charge" style={{ opacity: phase === "drawing" ? 0.35 + (0.6 * step) / steps : 0 }} />
       </motion.div>
@@ -521,7 +560,7 @@ function RevealStage({ cards, gold, onDone }: { cards: RevealCard[]; gold: boole
           )}
         </AnimatePresence>
       </div>
-      <div className="reveal__tray">
+      <div className={`reveal__tray${cards.length > 5 ? " reveal__tray--many" : ""}`}>
         {cards.map((c, i) => (
           <div key={c.tokenId} className={`reveal__slot${i === index ? " reveal__slot--live" : ""}`}>
             {i < index || (i === index && flipped) ? (
@@ -592,16 +631,20 @@ function BurnableLine({ card }: { card: RevealCard }) {
 
 function Summary({
   cards,
-  packId,
+  packIds,
   storageRefund,
+  note,
 }: {
   cards: RevealCard[];
-  packId: number | null;
+  packIds: number[];
   storageRefund: bigint | null;
+  note: string | null;
 }) {
+  const many = cards.length > 5;
   return (
-    <motion.div className="summary" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-      <h2>Your pack</h2>
+    <motion.div className={`summary${many ? " summary--many" : ""}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      <h2>{many ? `Your ${cards.length} cards` : "Your pack"}</h2>
+      {note && <p className="error small">{note}</p>}
       <div className="summary__grid">
         {cards.map((c, i) => (
           <motion.div
@@ -609,7 +652,7 @@ function Summary({
             className="summary__item"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
+            transition={{ delay: Math.min(i, 12) * 0.06 }}
           >
             <Card cardId={c.cardId} rarity={c.rarity} burnable={c.burnable} size="md" />
             <div className="summary__caption">
@@ -628,10 +671,22 @@ function Summary({
       )}
       {storageRefund != null && storageRefund > 0n && (
         <p className="muted small">
-          Unused storage deposit returned when the pack was opened: {formatNearExact(storageRefund)} NEAR.
+          Unused storage deposit returned when {packIds.length > 1 ? "the packs were" : "the pack was"} opened:{" "}
+          {formatNearExact(storageRefund)} NEAR.
         </p>
       )}
-      {packId != null && <VerifyPanel packId={packId} />}
+      {packIds.length === 1 && <VerifyPanel packId={packIds[0]} />}
+      {packIds.length > 1 && (
+        <details className="fold summary__verify">
+          <summary>Verify these {packIds.length} packs</summary>
+          {packIds.map((id) => (
+            <div key={id} className="summary__verify-row">
+              <span className="muted">Pack #{id}</span>
+              <VerifyPanel packId={id} />
+            </div>
+          ))}
+        </details>
+      )}
     </motion.div>
   );
 }

@@ -1,22 +1,45 @@
-// Accueil et boutique : un titre court, les packs en vente, « Open pack » ouvre directement (le wallet affiche le
-// montant à signer). La consigne est tenue : prix en NEAR et en dollars, dépôt de stockage indiqué, lien vers les
-// taux sur chaque pack, gold rush réel, aucun minuteur inventé ni compteur de pitié.
+// Accueil et boutique : deux lignes de packs, « Classic » et « Full Moon », chacune en 5, 10 et 20 cartes.
+//
+// Sur le contrat, un pack fait toujours 5 cartes : 10 et 20 cartes sont 2 et 4 packs achetés d'un coup (une seule
+// validation si le wallet sait signer un lot) et ouverts ensemble. « Full Moon » est la série au prix le plus haut :
+// mêmes cartes et mêmes cotes, la carte brûlable y bloque plus de jetons (valeur proportionnelle au prix).
+// Consigne tenue : prix en NEAR et en dollars, dépôt de stockage indiqué, lien vers les cotes sur chaque ligne,
+// gold rush réel, aucun minuteur inventé ni compteur de pitié. « Open » ouvre directement : le wallet affiche le
+// montant à signer.
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ConnectButton } from "../components/Header";
 import { PackArt } from "../components/PackArt";
 import { BLOCK_TIME_S } from "../config";
-import { seriesName } from "../lib/brand";
+import { loadCatalog } from "../lib/catalog";
 import { formatDuration, formatNearExact, formatUsd, yoctoToNumber } from "../lib/format";
+import { cardsOf, PACK_ROWS, PACK_TYPES, regularSeries, seriesFor, type PackRowId, type PackType } from "../lib/packTypes";
+import { seriesShareOdds } from "../lib/odds";
 import { nearUsd } from "../lib/prices";
-import { packBlurb, seriesShareOdds } from "../lib/odds";
 import { rushTarget } from "../lib/series";
 import { useAsync } from "../lib/useAsync";
 import { getRushState, getSeries, getSeriesCount, isV3Contract } from "../near/contract";
 import type { RushState, SeriesView } from "../near/types";
 import { useWallet } from "../near/wallet";
 
-export function Shop({ onBuy }: { onBuy: (s: SeriesView) => void }) {
+/** Tailles proposées, en nombre de packs de 5 cartes. */
+export const BUNDLES = [1, 2, 4];
+
+/** Les lignes de la boutique : séries triées par prix, la moins chère « Classic », les suivantes « Full Moon ». */
+export function shopRows(list: SeriesView[]): { series: SeriesView; title: string; variant: "standard" | "moon"; ratio: number }[] {
+  const sorted = [...list].sort((a, b) => (BigInt(a.price) < BigInt(b.price) ? -1 : 1));
+  const base = sorted.length ? BigInt(sorted[0].price) : 1n;
+  return sorted.map((s, i) => ({
+    series: s,
+    title: i === 0 ? "Classic" : sorted.length > 2 ? `Full Moon ${i}` : "Full Moon",
+    variant: i === 0 ? "standard" : "moon",
+    ratio: Number((BigInt(s.price) * 100n) / base) / 100,
+  }));
+}
+
+const fmtRatio = (r: number) => (Number.isInteger(r) ? String(r) : r.toFixed(1).replace(/\.0$/, ""));
+
+export function Shop({ onBuy }: { onBuy: (s: SeriesView, count: number) => void }) {
   const { accountId } = useWallet();
   const series = useAsync(async () => {
     const n = await getSeriesCount();
@@ -26,6 +49,8 @@ export function Shop({ onBuy }: { onBuy: (s: SeriesView) => void }) {
   const usd = useAsync(() => nearUsd(), []);
   const v3 = useAsync(() => isV3Contract(), []);
   const shared = useAsync(() => (series.data ? seriesShareOdds(series.data) : Promise.resolve(false)), [series.data]);
+  const rows = series.data ? shopRows(regularSeries(series.data)) : [];
+  const catalog = useAsync(() => loadCatalog(), []);
 
   return (
     <div className="page home">
@@ -35,32 +60,73 @@ export function Shop({ onBuy }: { onBuy: (s: SeriesView) => void }) {
           <br />
           <span className="home__accent">Catch the moon.</span>
         </h1>
-        <p className="home__lead">
-          Booster packs of memecoin cards from every chain. Pull a burnable card and burn it for the coin's tokens.
-        </p>
+        <p className="home__lead">Memecoin cards from every chain. Pull a burnable card and burn it for the coin's tokens.</p>
       </section>
 
-      {series.loading && !series.data && <div className="home__packs home__packs--loading" aria-busy />}
+      {series.loading && !series.data && <div className="shop-row shop-row--loading" aria-busy />}
       {series.error != null && <p className="error">Could not load the packs. Please refresh.</p>}
-      <div className="home__packs">
-        {series.data?.map((s, i) => (
-          <PackOffer
-            key={s.series_id}
-            series={s}
-            featured={i === series.data!.length - 1}
-            blurb={packBlurb(s, series.data!, shared.data === true)}
+      {series.data && !series.data.length && <p className="muted">No pack is on sale right now.</p>}
+
+      {rows.map((row) => (
+        <section key={row.series.series_id} className={`shop-row shop-row--${row.variant}`}>
+          <header className="shop-row__head">
+            <div>
+              <h2>
+                {row.title} <span>packs</span>
+              </h2>
+              <p>
+                {row.variant === "standard"
+                  ? `${row.series.cards_per_pack} memecoin cards per pack, at least one burnable.`
+                  : shared.data
+                    ? `Exactly the same cards and odds as Classic. Burnable cards hold ${fmtRatio(row.ratio)}× the tokens.`
+                    : `Burnable cards hold more tokens.`}
+              </p>
+            </div>
+            <a className="shop-row__odds" href={`#/rates?series=${row.series.series_id}`}>
+              Odds
+            </a>
+          </header>
+
+          <div className="shop-row__offers">
+            {BUNDLES.map((n) => (
+              <Offer
+                key={n}
+                series={row.series}
+                count={n}
+                variant={row.variant}
+                badge={row.variant === "moon" && shared.data ? `${fmtRatio(row.ratio)}× tokens` : null}
+                usd={usd.data ?? null}
+                connected={!!accountId}
+                onBuy={() => onBuy(row.series, n)}
+              />
+            ))}
+          </div>
+
+          <footer className="shop-row__foot">
+            <span>
+              + {formatNearExact(BigInt(row.series.required_deposit) - BigInt(row.series.price))} NEAR storage deposit per
+              pack{v3.data ? ", unused part refunded" : ""}
+            </span>
+            <RushPanel accountId={accountId} series={row.series} multi={false} />
+          </footer>
+        </section>
+      ))}
+
+      {series.data &&
+        PACK_ROWS.map((row) => (
+          <ThemedRow
+            key={row.id}
+            row={row}
+            open={series.data!}
+            catalog={catalog.data ?? null}
             usd={usd.data ?? null}
             connected={!!accountId}
-            accountId={accountId}
-            storageReturned={v3.data === true}
-            onBuy={() => onBuy(s)}
+            onBuy={onBuy}
           />
         ))}
-        {series.data && !series.data.length && <p className="muted">No pack is on sale right now.</p>}
-      </div>
 
       <section className="steps-row" aria-label="How it works">
-        <Step n={1} title="Open" text="5 cards drawn on-chain, revealed one by one." />
+        <Step n={1} title="Open" text="Cards drawn on-chain, revealed one by one." />
         <Step n={2} title="Collect" text="Keep them, trade them on the market." />
         <Step n={3} title="Burn" text="Burnable cards hold tokens of their memecoin." />
       </section>
@@ -80,58 +146,150 @@ function Step({ n, title, text }: { n: number; title: string; text: string }) {
   );
 }
 
-function PackOffer({
-  series,
-  featured,
-  blurb,
+/**
+ * Ligne de packs thématiques. Un pack dont la série n'existe pas encore sur le contrat est montré « Coming soon »,
+ * sans prix ni bouton d'achat ; il devient achetable dès que sa série est ouverte (`seriesFor`).
+ */
+function ThemedRow({
+  row,
+  open,
+  catalog,
   usd,
   connected,
-  accountId,
-  storageReturned,
+  onBuy,
+}: {
+  row: { id: PackRowId; title: string; lead: string };
+  open: SeriesView[];
+  catalog: Record<string, import("../lib/catalog").CatalogEntry> | null;
+  usd: number | null;
+  connected: boolean;
+  onBuy: (s: SeriesView, count: number) => void;
+}) {
+  const types = useMemo(() => PACK_TYPES.filter((t) => t.row === row.id), [row.id]);
+  const live = types.map((t) => seriesFor(t, open));
+  // Calculé une fois par catalogue : la mosaïque du pack ne doit pas se redessiner à chaque rendu.
+  const pools = useMemo(() => (catalog ? types.map((t) => cardsOf(t, catalog)) : null), [catalog, types]);
+  return (
+    <section className={`shop-row shop-row--themed shop-row--${row.id}`}>
+      <header className="shop-row__head">
+        <div>
+          <h2>{row.title}</h2>
+          <p>{row.lead}</p>
+        </div>
+        {live.every((s) => !s) && <span className="soon-pill">Coming soon</span>}
+      </header>
+      <div className="shop-row__offers">
+        {types.map((t, i) => (
+          <ThemedOffer
+            key={t.id}
+            type={t}
+            series={live[i]}
+            pool={pools ? pools[i] : null}
+            usd={usd}
+            connected={connected}
+            onBuy={(s) => onBuy(s, 1)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ThemedOffer({
+  type,
+  series,
+  pool,
+  usd,
+  connected,
+  onBuy,
+}: {
+  type: PackType;
+  series: SeriesView | undefined;
+  pool: string[] | null;
+  usd: number | null;
+  connected: boolean;
+  onBuy: (s: SeriesView) => void;
+}) {
+  const unit = type.row === "families" ? `${type.title.split(" ")[0].toLowerCase()} cards` : "cards";
+  return (
+    <article className={`offer-card offer-card--themed${series ? "" : " offer-card--soon"}`}>
+      <div className="pack-stack pack-stack--1">
+        <PackArt
+          seed={type.id.length * 97 + type.cards * 13}
+          pool={pool ?? undefined}
+          label={`${type.cards} CARD${type.cards > 1 ? "S" : ""}`}
+        />
+        <span className="offer-card__emoji" aria-hidden>
+          {type.emoji}
+        </span>
+      </div>
+      <div className="offer-card__body">
+        <strong className="offer-card__cards">{type.title}</strong>
+        <small className="offer-card__note">
+          {type.cards} card{type.cards > 1 ? "s" : ""} per pack{pool ? ` · from ${pool.length} ${unit}` : ""}
+        </small>
+        {series && (
+          <span className="offer-card__price">
+            {formatNearExact(series.price)} NEAR
+            {usd != null && <small> ≈ {formatUsd(yoctoToNumber(series.price) * usd)}</small>}
+          </span>
+        )}
+      </div>
+      {!series ? (
+        <button className="btn" disabled>
+          Coming soon
+        </button>
+      ) : connected ? (
+        <button className="btn btn--primary" onClick={() => onBuy(series)}>
+          Open
+        </button>
+      ) : (
+        <ConnectButton label="Connect to open" />
+      )}
+    </article>
+  );
+}
+
+function Offer({
+  series,
+  count,
+  variant,
+  badge,
+  usd,
+  connected,
   onBuy,
 }: {
   series: SeriesView;
-  featured: boolean;
-  blurb: string;
+  count: number;
+  variant: "standard" | "moon";
+  badge: string | null;
   usd: number | null;
   connected: boolean;
-  accountId: string | null;
-  storageReturned: boolean;
   onBuy: () => void;
 }) {
-  const storage = BigInt(series.required_deposit) - BigInt(series.price);
-  const price = yoctoToNumber(series.price);
-  // « Memaster Entry » → « Entry » : la marque est déjà dans l'en-tête.
-  const short = seriesName(series.name).replace(/^Moonpacks\s+/i, "") || seriesName(series.name);
+  const cards = count * series.cards_per_pack;
+  const price = BigInt(series.price) * BigInt(count);
   return (
-    <article className={`pack-offer${featured ? " pack-offer--featured" : ""}`}>
-      <div className="pack-offer__art">
-        <PackArt seed={series.series_id * 31 + 11} label={`${short.toUpperCase()} · 5 CARDS`} />
+    <article className={`offer-card offer-card--${count}`}>
+      {badge && <span className="offer-card__badge">{badge}</span>}
+      <div className={`pack-stack pack-stack--${Math.min(count, 4)}`}>
+        <PackArt seed={series.series_id * 31 + count * 7 + 11} variant={variant} label={`${cards} CARDS`} />
       </div>
-      <div className="pack-offer__info">
-        <div className="pack-offer__head">
-          <h2>{short} pack</h2>
-          <a className="pack-offer__odds" href={`#/rates?series=${series.series_id}`}>
-            Odds
-          </a>
-        </div>
-        <p className="pack-offer__blurb">{blurb}</p>
-        <div className="pack-offer__price">
-          <strong>{formatNearExact(series.price)} NEAR</strong>
-          {usd != null && <span>≈ {formatUsd(price * usd)}</span>}
-        </div>
-        {connected ? (
-          <button className="btn btn--primary btn--big" onClick={onBuy}>
-            Open pack
-          </button>
-        ) : (
-          <ConnectButton big label="Connect to open" />
-        )}
-        <p className="pack-offer__fine">
-          + {formatNearExact(storage)} NEAR storage deposit{storageReturned ? ", unused part refunded" : ""}
-        </p>
-        <RushPanel accountId={accountId} series={series} multi={false} />
+      <div className="offer-card__body">
+        <strong className="offer-card__cards">{cards} cards</strong>
+        <span className="offer-card__price">
+          {formatNearExact(price)} NEAR
+          {usd != null && <small> ≈ {formatUsd(yoctoToNumber(price) * usd)}</small>}
+        </span>
+        {count > 1 && <small className="offer-card__note">{count} packs, opened together</small>}
       </div>
+      {connected ? (
+        <button className="btn btn--primary" onClick={onBuy}>
+          Open
+        </button>
+      ) : (
+        <ConnectButton label="Connect to open" />
+      )}
     </article>
   );
 }
@@ -161,7 +319,7 @@ export function RushPanel({ accountId, series, multi }: { accountId: string | nu
     };
   }, [accountId, series.series_id]);
 
-  return <RushView rush={rush} name={multi ? seriesName(series.name) : null} now={now} fetchedAt={fetchedAt} />;
+  return <RushView rush={rush} name={multi ? series.name : null} now={now} fetchedAt={fetchedAt} />;
 }
 
 /** Rendu compact d'un état de rush (séparé pour les tests). */
@@ -192,7 +350,10 @@ export function RushView({ rush, name, now, fetchedAt }: { rush: RushState | nul
   const pct = Math.min(100, (window / target) * 100);
   const paused = rush.pause_until != null && height <= rush.pause_until;
   return (
-    <div className="rush-mini" title={`When the community opens ${target} packs within ${formatDuration(p.window_blocks * BLOCK_TIME_S)}, odds improve for everyone for about ${formatDuration(p.duration_blocks * BLOCK_TIME_S)}.`}>
+    <div
+      className="rush-mini"
+      title={`When the community opens ${target} packs within ${formatDuration(p.window_blocks * BLOCK_TIME_S)}, odds improve for everyone for about ${formatDuration(p.duration_blocks * BLOCK_TIME_S)}.`}
+    >
       <div className="rush-mini__top">
         <span>Gold rush{suffix}</span>
         <small>
